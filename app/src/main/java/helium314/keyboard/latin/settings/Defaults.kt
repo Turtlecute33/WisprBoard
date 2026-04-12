@@ -178,4 +178,8 @@ object Defaults {
     const val PREF_USER_MORE_COLORS = 0
     const val PREF_USER_ALL_COLORS = ""
     const val PREF_SAVE_SUBTYPE_PER_APP = false
+    const val PREF_VOICE_INPUT_ENABLED = false
+    const val PREF_OPENROUTER_API_KEY = ""
+    const val PREF_VOICE_MODEL = "google/gemini-3-flash-preview"
+    const val PREF_VOICE_MODEL_CUSTOM = ""
 }
