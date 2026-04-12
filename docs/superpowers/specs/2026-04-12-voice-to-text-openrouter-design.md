@@ -10,7 +10,7 @@ Add voice-to-text functionality to HeliBoard using OpenRouter's chat completions
 
 1. **Setup:** User goes to Settings > Toolbar, enables Voice Input, enters OpenRouter API key, optionally selects a model (default: `google/gemini-3-flash-preview`). When enabling voice input, the settings screen prompts for `RECORD_AUDIO` permission (since the IME service cannot request runtime permissions).
 2. **Activation:** While typing, user long-presses the return/enter key, swipes to the voice button, and releases. The VOICE toolbar key can also be tapped directly if visible in the toolbar strip. Both trigger `KeyCode.VOICE_INPUT`.
-3. **Recording:** The suggestion strip is replaced with a minimal looping dot animation. Audio recording begins via Android's `AudioRecord` API. Maximum recording duration: 60 seconds (auto-stops with a brief vibration).
+3. **Recording:** The suggestion strip is replaced with a minimal looping dot animation. Audio recording begins via Android's `AudioRecord` API. Maximum recording duration: 90 seconds (auto-stops with a brief vibration).
 4. **Stop:** User taps anywhere on the keyboard. Recording stops.
 5. **Cancel:** User can swipe down on the recording overlay to cancel without transcribing.
 6. **Transcription:** Audio is encoded as base64, sent to OpenRouter's `/api/v1/chat/completions` endpoint. A "Transcribing..." indicator replaces the dot animation.
@@ -41,7 +41,7 @@ New file: `helium314.keyboard.latin.voice.AudioRecorder`
 - Returns `ByteArray` of the WAV file on stop.
 - Lifecycle: `start()` / `stop(): ByteArray` / `cancel()`.
 - Runs recording on a background thread via `Thread` (no coroutines dependency needed).
-- Maximum duration: 60 seconds (~1.9MB WAV, ~2.5MB base64). Auto-stops when limit reached.
+- Maximum duration: 90 seconds (~2.8MB WAV, ~3.8MB base64). Auto-stops when limit reached.
 
 ### 3. OpenRouter Client (`OpenRouterClient.kt`)
 
