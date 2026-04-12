@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -23,20 +22,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.core.graphics.drawable.toBitmap
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
-import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.ToolbarMode
-import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.getStringResourceOrName
-import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
-import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.dialogs.ToolbarKeysCustomizer
 import helium314.keyboard.settings.initPreview
@@ -46,29 +42,50 @@ import androidx.activity.result.contract.ActivityResultContracts
 import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.Preference
+import helium314.keyboard.settings.preferences.rememberBooleanPreferenceState
+import helium314.keyboard.settings.preferences.rememberStringPreferenceState
 import helium314.keyboard.settings.preferences.ReorderSwitchPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
+import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
 
 @Composable
 fun ToolbarScreen(
     onClickBack: () -> Unit,
 ) {
-    val prefs = LocalContext.current.prefs()
-    val b = (LocalContext.current.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
-    if ((b?.value ?: 0) < 0)
-        Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
-    val toolbarMode = Settings.readToolbarMode(prefs)
-    val clipboardToolbarVisible = toolbarMode != ToolbarMode.HIDDEN
-        || !prefs.getBoolean(Settings.PREF_TOOLBAR_HIDING_GLOBAL, Defaults.PREF_TOOLBAR_HIDING_GLOBAL)
-    val items = listOf(
+    val toolbarModeName by rememberStringPreferenceState(Settings.PREF_TOOLBAR_MODE, Defaults.PREF_TOOLBAR_MODE)
+    val toolbarHidingGlobal by rememberBooleanPreferenceState(Settings.PREF_TOOLBAR_HIDING_GLOBAL, Defaults.PREF_TOOLBAR_HIDING_GLOBAL)
+    val voiceInputEnabled by rememberBooleanPreferenceState(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED)
+    val voiceModel by rememberStringPreferenceState(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+    val items = buildToolbarScreenItems(
+        toolbarMode = ToolbarMode.valueOf(toolbarModeName),
+        toolbarHidingGlobal = toolbarHidingGlobal,
+        voiceInputEnabled = voiceInputEnabled,
+        voiceModel = voiceModel,
+    )
+
+    SearchSettingsScreen(
+        onClickBack = onClickBack,
+        title = stringResource(R.string.settings_screen_toolbar),
+        settings = items
+    )
+}
+
+internal fun buildToolbarScreenItems(
+    toolbarMode: ToolbarMode,
+    toolbarHidingGlobal: Boolean,
+    voiceInputEnabled: Boolean,
+    voiceModel: String,
+): List<Any?> {
+    val clipboardToolbarVisible = toolbarMode != ToolbarMode.HIDDEN || !toolbarHidingGlobal
+    return listOf(
         Settings.PREF_TOOLBAR_MODE,
         if (toolbarMode == ToolbarMode.HIDDEN) Settings.PREF_TOOLBAR_HIDING_GLOBAL else null,
         if (toolbarMode != ToolbarMode.HIDDEN) Settings.PREF_TOOLBAR_SWIPE_DOWN_TO_HIDE else null,
-        if (toolbarMode in listOf(ToolbarMode.EXPANDABLE, ToolbarMode.TOOLBAR_KEYS))
+        if (toolbarMode == ToolbarMode.EXPANDABLE || toolbarMode == ToolbarMode.TOOLBAR_KEYS)
             Settings.PREF_TOOLBAR_KEYS else null,
-        if (toolbarMode in listOf(ToolbarMode.EXPANDABLE, ToolbarMode.SUGGESTION_STRIP))
+        if (toolbarMode == ToolbarMode.EXPANDABLE || toolbarMode == ToolbarMode.SUGGESTION_STRIP)
             Settings.PREF_PINNED_TOOLBAR_KEYS else null,
         if (clipboardToolbarVisible) Settings.PREF_CLIPBOARD_TOOLBAR_KEYS else null,
         if (clipboardToolbarVisible) Settings.PREF_TOOLBAR_CUSTOM_KEY_CODES else null,
@@ -76,15 +93,12 @@ fun ToolbarScreen(
         if (toolbarMode == ToolbarMode.EXPANDABLE) Settings.PREF_AUTO_SHOW_TOOLBAR else null,
         if (toolbarMode == ToolbarMode.EXPANDABLE) Settings.PREF_AUTO_HIDE_TOOLBAR else null,
         if (toolbarMode != ToolbarMode.HIDDEN) Settings.PREF_VARIABLE_TOOLBAR_DIRECTION else null,
+        R.string.voice_input_title,
         Settings.PREF_VOICE_INPUT_ENABLED,
-        Settings.PREF_OPENROUTER_API_KEY,
-        Settings.PREF_VOICE_MODEL,
-        Settings.PREF_VOICE_MODEL_CUSTOM,
-    )
-    SearchSettingsScreen(
-        onClickBack = onClickBack,
-        title = stringResource(R.string.settings_screen_toolbar),
-        settings = items
+        if (voiceInputEnabled) Settings.PREF_OPENROUTER_API_KEY else null,
+        if (voiceInputEnabled) Settings.PREF_VOICE_MODEL else null,
+        if (voiceInputEnabled && voiceModel == "custom") Settings.PREF_VOICE_MODEL_CUSTOM else null,
+        if (voiceInputEnabled) Settings.PREF_VOICE_TRANSCRIPTION_PROMPT else null,
     )
 }
 
@@ -173,6 +187,22 @@ fun createToolbarSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_VOICE_MODEL_CUSTOM, R.string.voice_model_custom, R.string.voice_model_custom_summary) {
         TextInputPreference(it, Defaults.PREF_VOICE_MODEL_CUSTOM)
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_TRANSCRIPTION_PROMPT,
+        R.string.voice_transcription_prompt,
+        R.string.voice_transcription_prompt_summary
+    ) {
+        val prefs = LocalContext.current.prefs()
+        TextInputPreference(
+            setting = it,
+            default = Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT,
+            singleLine = false,
+            neutralButtonText = stringResource(R.string.button_default),
+            onNeutral = { prefs.edit { remove(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT) } },
+            checkTextValid = { text -> text.isNotBlank() }
+        )
     },
 )
 

@@ -15,14 +15,24 @@ import helium314.keyboard.settings.dialogs.TextInputDialog
 import androidx.core.content.edit
 
 @Composable
-fun TextInputPreference(setting: Setting, default: String, info: String? = null, isPassword: Boolean = false, checkTextValid: (String) -> Boolean = { true }) {
+fun TextInputPreference(
+    setting: Setting,
+    default: String,
+    info: String? = null,
+    isPassword: Boolean = false,
+    singleLine: Boolean = true,
+    neutralButtonText: String? = null,
+    onNeutral: (() -> Unit)? = null,
+    checkTextValid: (String) -> Boolean = { true }
+) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val prefs = LocalContext.current.prefs()
-    val currentValue = prefs.getString(setting.key, default)?.takeIf { it.isNotEmpty() }
+    val currentValue by rememberStringPreferenceState(setting.key, default)
+    val displayValue = currentValue.takeIf { it.isNotEmpty() }
     Preference(
         name = setting.title,
         onClick = { showDialog = true },
-        description = if (isPassword && currentValue != null) "••••••••" else currentValue
+        description = if (isPassword && displayValue != null) "••••••••" else displayValue
     )
     if (showDialog) {
         TextInputDialog(
@@ -34,6 +44,12 @@ fun TextInputPreference(setting: Setting, default: String, info: String? = null,
             initialText = prefs.getString(setting.key, default) ?: "",
             title = { Text(setting.title) },
             description = if (info == null) null else { { Text(info) } },
+            neutralButtonText = neutralButtonText,
+            onNeutral = {
+                onNeutral?.invoke()
+                KeyboardSwitcher.getInstance().setThemeNeedsReload()
+            },
+            singleLine = singleLine,
             checkTextValid = checkTextValid
         )
     }

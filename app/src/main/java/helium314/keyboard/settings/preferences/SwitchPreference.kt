@@ -3,7 +3,6 @@ package helium314.keyboard.settings.preferences
 
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -14,13 +13,10 @@ import androidx.compose.ui.res.stringResource
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.Links
 import helium314.keyboard.latin.utils.DictionaryInfoUtils
-import helium314.keyboard.latin.utils.Log
-import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.htmlToAnnotated
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.withHtmlLink
 import helium314.keyboard.settings.Setting
-import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.dialogs.InfoDialog
 import androidx.core.content.edit
 
@@ -53,13 +49,10 @@ fun SwitchPreference(
 ) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
-    val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
-    if ((b?.value ?: 0) < 0)
-        Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
-    var value = prefs.getBoolean(key, default)
+    var value by rememberBooleanPreferenceState(key, default)
+
     fun switched(newValue: Boolean) {
         if (!allowCheckedChange(newValue)) {
-            value = !newValue
             return
         }
         value = newValue

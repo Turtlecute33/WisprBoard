@@ -71,6 +71,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_OPENROUTER_API_KEY = "openrouter_api_key";
     public static final String PREF_VOICE_MODEL = "voice_model";
     public static final String PREF_VOICE_MODEL_CUSTOM = "voice_model_custom";
+    public static final String PREF_VOICE_TRANSCRIPTION_PROMPT = "voice_transcription_prompt";
 
     public static final String PREF_AUTO_CAP = "auto_cap";
     public static final String PREF_VIBRATE_ON = "vibrate_on";

@@ -1095,15 +1095,19 @@ New dictionary:
     <!-- Voice Input -->
     <string name="voice_input_title">Voice Input</string>
     <string name="voice_input_enabled">Enable Voice Input</string>
-    <string name="voice_input_enabled_summary">Use OpenRouter for voice-to-text transcription</string>
+    <string name="voice_input_enabled_summary">Send recorded audio to OpenRouter for transcription</string>
     <string name="openrouter_api_key">OpenRouter API Key</string>
-    <string name="openrouter_api_key_summary">Enter your OpenRouter API key</string>
+    <string name="openrouter_api_key_summary">Required to use voice input with your OpenRouter account</string>
     <string name="voice_model">Voice Model</string>
     <string name="voice_model_custom">Custom Model ID</string>
-    <string name="voice_model_custom_summary">Enter a custom OpenRouter model ID</string>
+    <string name="voice_model_custom_summary">Only used when Voice Model is set to Custom</string>
+    <string name="voice_transcription_prompt">Transcription Prompt</string>
+    <string name="voice_transcription_prompt_summary">Full instruction sent to the AI for shaping the transcript output</string>
     <string name="voice_recording">Recording…</string>
     <string name="voice_transcribing">Transcribing…</string>
     <string name="voice_error_no_api_key">Set OpenRouter API key in settings</string>
+    <string name="voice_error_no_model">Choose a voice model in settings</string>
+    <string name="voice_error_no_audio">No audio captured</string>
     <string name="voice_error_not_enabled">Enable Voice Input in settings</string>
     <string name="voice_error_no_permission">Grant microphone permission in settings</string>
     <string name="voice_error_no_network">No internet connection</string>

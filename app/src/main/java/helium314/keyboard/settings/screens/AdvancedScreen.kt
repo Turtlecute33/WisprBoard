@@ -7,7 +7,6 @@ import android.os.Build
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,26 +48,28 @@ import helium314.keyboard.settings.dialogs.TextInputDialog
 import helium314.keyboard.settings.preferences.BackupRestorePreference
 import helium314.keyboard.settings.preferences.LoadGestureLibPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
+import helium314.keyboard.settings.preferences.rememberBooleanPreferenceState
+import helium314.keyboard.settings.preferences.rememberStringPreferenceState
 import helium314.keyboard.latin.utils.previewDark
 import androidx.core.content.edit
-import helium314.keyboard.latin.utils.Log
-import helium314.keyboard.latin.utils.getActivity
 
 @Composable
 fun AdvancedSettingsScreen(
     onClickBack: () -> Unit,
 ) {
-    val prefs = LocalContext.current.prefs()
-    val b = (LocalContext.current.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
-    if ((b?.value ?: 0) < 0)
-        Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
+    val horizontalSwipe by rememberStringPreferenceState(Settings.PREF_SPACE_HORIZONTAL_SWIPE, Defaults.PREF_SPACE_HORIZONTAL_SWIPE)
+    val verticalSwipe by rememberStringPreferenceState(Settings.PREF_SPACE_VERTICAL_SWIPE, Defaults.PREF_SPACE_VERTICAL_SWIPE)
+    val showDebugSettings by rememberBooleanPreferenceState(
+        DebugSettings.PREF_SHOW_DEBUG_SETTINGS,
+        Defaults.PREF_SHOW_DEBUG_SETTINGS
+    )
     val items = listOf(
         Settings.PREF_ALWAYS_INCOGNITO_MODE,
         Settings.PREF_KEY_LONGPRESS_TIMEOUT,
         Settings.PREF_SPACE_HORIZONTAL_SWIPE,
         Settings.PREF_SPACE_VERTICAL_SWIPE,
-        if (Settings.readHorizontalSpaceSwipe(prefs) == KeyboardActionListener.SWIPE_SWITCH_LANGUAGE
-            || Settings.readVerticalSpaceSwipe(prefs) == KeyboardActionListener.SWIPE_SWITCH_LANGUAGE)
+        if (horizontalSwipe == "switch_language"
+            || verticalSwipe == "switch_language")
             Settings.PREF_LANGUAGE_SWIPE_DISTANCE else null,
         Settings.PREF_DELETE_SWIPE,
         Settings.PREF_SPACE_TO_CHANGE_LANG,
@@ -83,7 +84,7 @@ fun AdvancedSettingsScreen(
         Settings.PREF_MORE_POPUP_KEYS,
         Settings.PREF_TIMESTAMP_FORMAT,
         SettingsWithoutKey.BACKUP_RESTORE,
-        if (BuildConfig.DEBUG || prefs.getBoolean(DebugSettings.PREF_SHOW_DEBUG_SETTINGS, Defaults.PREF_SHOW_DEBUG_SETTINGS))
+        if (BuildConfig.DEBUG || showDebugSettings)
             SettingsWithoutKey.DEBUG_SETTINGS else null,
         R.string.settings_category_experimental,
         Settings.PREF_EMOJI_MAX_SDK,

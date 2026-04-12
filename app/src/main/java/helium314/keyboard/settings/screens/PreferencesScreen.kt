@@ -5,7 +5,7 @@ import android.content.Context
 import android.media.AudioManager
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -16,20 +16,17 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
-import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
-import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.locale
-import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.ReorderSwitchPreference
 import helium314.keyboard.settings.SearchSettingsScreen
-import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.settings.initPreview
+import helium314.keyboard.settings.preferences.rememberBooleanPreferenceState
 import helium314.keyboard.settings.preferences.SwitchPreferenceWithEmojiDictWarning
 import helium314.keyboard.latin.utils.previewDark
 
@@ -37,15 +34,18 @@ import helium314.keyboard.latin.utils.previewDark
 fun PreferencesScreen(
     onClickBack: () -> Unit,
 ) {
-    val prefs = LocalContext.current.prefs()
-    val b = (LocalContext.current.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
-    if ((b?.value ?: 0) < 0)
-        Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
-    val clipboardHistoryEnabled = prefs.getBoolean(Settings.PREF_ENABLE_CLIPBOARD_HISTORY, Defaults.PREF_ENABLE_CLIPBOARD_HISTORY)
+    val showHints by rememberBooleanPreferenceState(Settings.PREF_SHOW_HINTS, Defaults.PREF_SHOW_HINTS)
+    val vibrateOn by rememberBooleanPreferenceState(Settings.PREF_VIBRATE_ON, Defaults.PREF_VIBRATE_ON)
+    val soundOn by rememberBooleanPreferenceState(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON)
+    val showNumberRow by rememberBooleanPreferenceState(Settings.PREF_SHOW_NUMBER_ROW, Defaults.PREF_SHOW_NUMBER_ROW)
+    val clipboardHistoryEnabled by rememberBooleanPreferenceState(
+        Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
+        Defaults.PREF_ENABLE_CLIPBOARD_HISTORY
+    )
     val items = listOf(
         R.string.settings_category_input,
         Settings.PREF_SHOW_HINTS,
-        if (prefs.getBoolean(Settings.PREF_SHOW_HINTS, Defaults.PREF_SHOW_HINTS))
+        if (showHints)
             Settings.PREF_POPUP_KEYS_LABELS_ORDER else null,
         Settings.PREF_POPUP_KEYS_ORDER,
         Settings.PREF_SHOW_POPUP_HINTS,
@@ -53,12 +53,12 @@ fun PreferencesScreen(
         Settings.PREF_POPUP_ON,
         if (AudioAndHapticFeedbackManager.getInstance().hasVibrator())
             Settings.PREF_VIBRATE_ON else null,
-        if (prefs.getBoolean(Settings.PREF_VIBRATE_ON, Defaults.PREF_VIBRATE_ON))
+        if (vibrateOn)
             Settings.PREF_VIBRATION_DURATION_SETTINGS else null,
-        if (prefs.getBoolean(Settings.PREF_VIBRATE_ON, Defaults.PREF_VIBRATE_ON))
+        if (vibrateOn)
             Settings.PREF_VIBRATE_IN_DND_MODE else null,
         Settings.PREF_SOUND_ON,
-        if (prefs.getBoolean(Settings.PREF_SOUND_ON, Defaults.PREF_SOUND_ON))
+        if (soundOn)
             Settings.PREF_KEYPRESS_SOUND_VOLUME else null,
         Settings.PREF_SAVE_SUBTYPE_PER_APP,
         Settings.PREF_SHOW_EMOJI_DESCRIPTIONS,
@@ -66,10 +66,9 @@ fun PreferencesScreen(
         Settings.PREF_SHOW_NUMBER_ROW,
         if (SubtypeSettings.getEnabledSubtypes(true).any { it.locale().language in localesWithLocalizedNumberRow })
             Settings.PREF_LOCALIZED_NUMBER_ROW else null,
-        if (prefs.getBoolean(Settings.PREF_SHOW_HINTS, Defaults.PREF_SHOW_HINTS)
-            && prefs.getBoolean(Settings.PREF_SHOW_NUMBER_ROW, Defaults.PREF_SHOW_NUMBER_ROW))
+        if (showHints && showNumberRow)
             Settings.PREF_SHOW_NUMBER_ROW_HINTS else null,
-        if (!prefs.getBoolean(Settings.PREF_SHOW_NUMBER_ROW, Defaults.PREF_SHOW_NUMBER_ROW))
+        if (!showNumberRow)
             Settings.PREF_SHOW_NUMBER_ROW_IN_SYMBOLS else null,
         Settings.PREF_SHOW_LANGUAGE_SWITCH_KEY,
         Settings.PREF_LANGUAGE_SWITCH_KEY,

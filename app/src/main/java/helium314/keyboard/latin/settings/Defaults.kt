@@ -182,4 +182,5 @@ object Defaults {
     const val PREF_OPENROUTER_API_KEY = ""
     const val PREF_VOICE_MODEL = "google/gemini-3-flash-preview"
     const val PREF_VOICE_MODEL_CUSTOM = ""
+    const val PREF_VOICE_TRANSCRIPTION_PROMPT = "Transcribe this audio exactly as spoken. Output only the transcription, nothing else."
 }

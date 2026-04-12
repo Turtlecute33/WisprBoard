@@ -23,7 +23,16 @@ fun <T: Any> ListPreference(
 ) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val prefs = LocalContext.current.prefs()
-    val selected = items.firstOrNull { it.second == getPrefOfType(prefs, setting.key, default) }
+    @Suppress("UNCHECKED_CAST")
+    val selectedValue = when (default) {
+        is String -> rememberStringPreferenceState(setting.key, default).value
+        is Int -> rememberIntPreferenceState(setting.key, default).value
+        is Long -> rememberLongPreferenceState(setting.key, default).value
+        is Float -> rememberFloatPreferenceState(setting.key, default).value
+        is Boolean -> rememberBooleanPreferenceState(setting.key, default).value
+        else -> throw IllegalArgumentException("unknown type ${default.javaClass}")
+    } as T
+    val selected = items.firstOrNull { it.second == selectedValue }
     Preference(
         name = setting.title,
         description = selected?.first,

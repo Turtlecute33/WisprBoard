@@ -17,7 +17,8 @@ import java.net.URL
  */
 class OpenRouterClient(
     private val apiKey: String,
-    private val model: String
+    private val model: String,
+    private val prompt: String
 ) {
     companion object {
         private const val TAG = "OpenRouterClient"
@@ -39,7 +40,7 @@ class OpenRouterClient(
 
         val textContent = JSONObject().apply {
             put("type", "text")
-            put("text", "Transcribe this audio exactly as spoken. Output only the transcription, nothing else.")
+            put("text", prompt)
         }
 
         val message = JSONObject().apply {

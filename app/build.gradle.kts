@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "helium314.keyboard.turtle"
+        applicationId = "helium314.keyboard.turtleboard"
         minSdk = 21
         targetSdk = 35
         versionCode = 3901

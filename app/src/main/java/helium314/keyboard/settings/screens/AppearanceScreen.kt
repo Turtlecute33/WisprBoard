@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Build
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -18,8 +17,6 @@ import helium314.keyboard.keyboard.KeyboardTheme
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
-import helium314.keyboard.latin.utils.Log
-import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.getStringResourceOrName
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.preferences.ListPreference
@@ -27,7 +24,6 @@ import helium314.keyboard.settings.SettingsWithoutKey
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.SearchSettingsScreen
-import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.preferences.SliderPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.latin.utils.Theme
@@ -38,6 +34,10 @@ import helium314.keyboard.settings.preferences.BackgroundImagePref
 import helium314.keyboard.settings.preferences.CustomFontPreference
 import helium314.keyboard.settings.preferences.MultiSliderPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
+import helium314.keyboard.settings.preferences.rememberBooleanPreferenceState
+import helium314.keyboard.settings.preferences.rememberFloatPreferenceState
+import helium314.keyboard.settings.preferences.rememberIntPreferenceState
+import helium314.keyboard.settings.preferences.rememberStringPreferenceState
 import helium314.keyboard.latin.utils.previewDark
 import androidx.core.content.edit
 import helium314.keyboard.latin.settings.Settings
@@ -46,12 +46,16 @@ import helium314.keyboard.latin.settings.Settings
 fun AppearanceScreen(
     onClickBack: () -> Unit,
 ) {
-    val ctx = LocalContext.current
-    val prefs = ctx.prefs()
-    val b = (LocalContext.current.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
-    if ((b?.value ?: 0) < 0)
-        Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
-    val dayNightMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && prefs.getBoolean(Settings.PREF_THEME_DAY_NIGHT, Defaults.PREF_THEME_DAY_NIGHT)
+    val dayNightModeEnabled by rememberBooleanPreferenceState(Settings.PREF_THEME_DAY_NIGHT, Defaults.PREF_THEME_DAY_NIGHT)
+    val splitKeyboardEnabled by rememberBooleanPreferenceState(Settings.PREF_ENABLE_SPLIT_KEYBOARD, Defaults.PREF_ENABLE_SPLIT_KEYBOARD)
+    val splitKeyboardLandscapeEnabled by rememberBooleanPreferenceState(
+        Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE,
+        Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE
+    )
+    val keyBordersEnabled by rememberBooleanPreferenceState(Settings.PREF_THEME_KEY_BORDERS, Defaults.PREF_THEME_KEY_BORDERS)
+    val emojiFontScale by rememberFloatPreferenceState(Settings.PREF_EMOJI_FONT_SCALE, Defaults.PREF_EMOJI_FONT_SCALE)
+    val emojiMaxSdk by rememberIntPreferenceState(Settings.PREF_EMOJI_MAX_SDK, 0)
+    val dayNightMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && dayNightModeEnabled
     val items = listOf(
         R.string.settings_screen_theme,
         Settings.PREF_THEME_STYLE,
@@ -68,10 +72,9 @@ fun AppearanceScreen(
         R.string.settings_category_miscellaneous,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD,
         Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE,
-        if (prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE, Defaults.PREF_ENABLE_SPLIT_KEYBOARD_LANDSCAPE)
-            || prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, Defaults.PREF_ENABLE_SPLIT_KEYBOARD))
+        if (splitKeyboardLandscapeEnabled || splitKeyboardEnabled)
             Settings.PREF_SPLIT_SPACER_SCALE_PREFIX else null,
-        if (prefs.getBoolean(Settings.PREF_THEME_KEY_BORDERS, Defaults.PREF_THEME_KEY_BORDERS))
+        if (keyBordersEnabled)
             Settings.PREF_NARROW_KEY_GAPS else null,
         Settings.PREF_KEYBOARD_HEIGHT_SCALE_PREFIX,
         Settings.PREF_BOTTOM_ROW_SCALE_PREFIX,
@@ -82,9 +85,9 @@ fun AppearanceScreen(
         Settings.PREF_FONT_SCALE,
         SettingsWithoutKey.CUSTOM_EMOJI_FONT,
         Settings.PREF_EMOJI_FONT_SCALE,
-        if (prefs.getFloat(Settings.PREF_EMOJI_FONT_SCALE, Defaults.PREF_EMOJI_FONT_SCALE) != 1f)
+        if (emojiFontScale != 1f)
             Settings.PREF_EMOJI_KEY_FIT else null,
-        if (prefs.getInt(Settings.PREF_EMOJI_MAX_SDK, 0) >= 24)
+        if (emojiMaxSdk >= 24)
             Settings.PREF_EMOJI_SKIN_TONE else null,
     )
     SearchSettingsScreen(
@@ -142,13 +145,11 @@ fun createAppearanceSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_THEME_COLORS, R.string.theme_colors) { setting ->
         val ctx = LocalContext.current
         val prefs = ctx.prefs()
-        val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
-        if ((b?.value ?: 0) < 0)
-            Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
+        val selectedTheme by rememberStringPreferenceState(setting.key, Defaults.PREF_THEME_COLORS)
         var showDialog by rememberSaveable { mutableStateOf(false) }
         Preference(
             name = setting.title,
-            description = prefs.getString(setting.key, Defaults.PREF_THEME_COLORS)!!.getStringResourceOrName("theme_name_", ctx),
+            description = selectedTheme.getStringResourceOrName("theme_name_", ctx),
             onClick = { showDialog = true }
         )
         if (showDialog)
@@ -161,14 +162,12 @@ fun createAppearanceSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_THEME_COLORS_NIGHT, R.string.theme_colors_night) { setting ->
         val ctx = LocalContext.current
-        val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
         val prefs = ctx.prefs()
-        if ((b?.value ?: 0) < 0)
-            Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
+        val selectedTheme by rememberStringPreferenceState(setting.key, Defaults.PREF_THEME_COLORS_NIGHT)
         var showDialog by rememberSaveable { mutableStateOf(false) }
         Preference(
             name = setting.title,
-            description = prefs.getString(setting.key, Defaults.PREF_THEME_COLORS_NIGHT)!!.getStringResourceOrName("theme_name_", ctx),
+            description = selectedTheme.getStringResourceOrName("theme_name_", ctx),
             onClick = { showDialog = true }
         )
         if (showDialog)

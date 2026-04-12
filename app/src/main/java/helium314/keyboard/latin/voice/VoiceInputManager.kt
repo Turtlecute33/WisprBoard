@@ -25,6 +25,7 @@ class VoiceInputManager(
 ) {
     companion object {
         private const val TAG = "VoiceInputManager"
+        private const val WAV_HEADER_SIZE = 44
     }
 
     enum class State { IDLE, RECORDING, TRANSCRIBING }
@@ -90,17 +91,34 @@ class VoiceInputManager(
         if (state != State.RECORDING) return
 
         val wavData = audioRecorder.stop()
+        if (wavData.size <= WAV_HEADER_SIZE) {
+            state = State.IDLE
+            callbacks.onFinished()
+            callbacks.onError(context.getString(R.string.voice_error_no_audio))
+            return
+        }
+
         state = State.TRANSCRIBING
         callbacks.onTranscribing()
 
         val prefs = context.prefs()
         val apiKey = prefs.getString(Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY) ?: ""
-        var model = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL) ?: Defaults.PREF_VOICE_MODEL
-        if (model == "custom") {
-            model = prefs.getString(Settings.PREF_VOICE_MODEL_CUSTOM, Defaults.PREF_VOICE_MODEL_CUSTOM) ?: ""
+        val selectedModel = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL) ?: Defaults.PREF_VOICE_MODEL
+        val customModel = prefs.getString(Settings.PREF_VOICE_MODEL_CUSTOM, Defaults.PREF_VOICE_MODEL_CUSTOM) ?: ""
+        val savedPrompt = prefs.getString(
+            Settings.PREF_VOICE_TRANSCRIPTION_PROMPT,
+            Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
+        ) ?: Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
+        val model = resolveVoiceModel(selectedModel, customModel)
+        val prompt = resolveTranscriptionPrompt(savedPrompt)
+        if (model == null) {
+            state = State.IDLE
+            callbacks.onFinished()
+            callbacks.onError(context.getString(R.string.voice_error_no_model))
+            return
         }
 
-        val client = OpenRouterClient(apiKey, model)
+        val client = OpenRouterClient(apiKey, model, prompt)
 
         Thread {
             try {
