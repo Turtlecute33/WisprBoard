@@ -5,55 +5,92 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.animation.LinearInterpolator
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import helium314.keyboard.latin.R
 
 /**
- * Minimal recording indicator with pulsing dots animation.
+ * Minimal recording indicator with pulsing dots animation and stop button.
  * Shows in the suggestion strip area during voice recording/transcription.
  */
 class RecordingOverlayView(context: Context) : LinearLayout(context) {
 
     private val dotView: PulsingDotsView
     private val statusText: TextView
+    private val stopButton: ImageView
+    var onStopClick: (() -> Unit)? = null
 
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER
+        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
 
-        dotView = PulsingDotsView(context)
-        dotView.layoutParams = LayoutParams(dp(48), dp(24)).apply {
-            marginEnd = dp(8)
+        dotView = PulsingDotsView(context).apply {
+            layoutParams = LayoutParams(dp(40), dp(20)).apply {
+                marginEnd = dp(6)
+            }
         }
 
         statusText = TextView(context).apply {
-            textSize = 14f
-            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
+            textSize = 13f
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+                marginEnd = dp(12)
+            }
+        }
+
+        stopButton = ImageView(context).apply {
+            val size = dp(32)
+            layoutParams = LayoutParams(size, size)
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+            }
+            background = bg
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            val innerSize = dp(12)
+            val stopIcon = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(2).toFloat()
+                setSize(innerSize, innerSize)
+            }
+            setImageDrawable(stopIcon)
+            setPadding(dp(2), dp(2), dp(2), dp(2))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onStopClick?.invoke() }
         }
 
         addView(dotView)
         addView(statusText)
+        addView(stopButton)
     }
 
     fun setColors(textColor: Int) {
         statusText.setTextColor(textColor)
         dotView.dotColor = textColor
+        // Stop button: semi-transparent background with solid icon
+        val bg = stopButton.background as? GradientDrawable
+        bg?.setColor((textColor and 0x00FFFFFF) or 0x22000000) // very subtle bg
+        val icon = stopButton.drawable as? GradientDrawable
+        icon?.setColor(textColor)
     }
 
     fun showRecording() {
         statusText.text = context.getString(R.string.voice_recording)
         dotView.visibility = View.VISIBLE
         dotView.startAnimation()
+        stopButton.visibility = View.VISIBLE
     }
 
     fun showTranscribing() {
         statusText.text = context.getString(R.string.voice_transcribing)
         dotView.stopAnimation()
         dotView.visibility = View.GONE
+        stopButton.visibility = View.GONE
     }
 
     fun stopAnimation() {

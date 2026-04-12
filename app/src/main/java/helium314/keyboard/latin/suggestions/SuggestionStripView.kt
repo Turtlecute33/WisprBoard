@@ -281,10 +281,16 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     private var recordingOverlay: RecordingOverlayView? = null
+    private var onStopRecording: Runnable? = null
+
+    fun setOnStopRecording(callback: Runnable?) {
+        onStopRecording = callback
+    }
 
     fun showRecordingOverlay() {
         val overlay = RecordingOverlayView(context)
         overlay.setColors(Settings.getValues().mColors.get(ColorType.KEY_TEXT))
+        overlay.onStopClick = { onStopRecording?.run() }
         overlay.showRecording()
         setExternalSuggestionView(overlay, false)
         recordingOverlay = overlay
