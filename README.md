@@ -16,7 +16,8 @@ TurtleBoard adds the following features on top of HeliBoard:
 
 1. Install from [Releases](https://github.com/Turtlecute33/TurtleBoard/releases/latest)
 2. Enable TurtleBoard in **Settings > System > Keyboard**
-3. For voice input: go to **TurtleBoard Settings > Voice Input** and enter your OpenRouter API key
+3. For voice input: open **TurtleBoard Settings > Voice Input**, enter your OpenRouter API key, and enable **Voice Input**
+4. In the keyboard, long-press the **Return** key and tap the voice button to start recording
 
 ## Building from source
 

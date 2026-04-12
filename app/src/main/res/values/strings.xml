@@ -1095,9 +1095,9 @@ New dictionary:
     <!-- Voice Input -->
     <string name="voice_input_title">Voice Input</string>
     <string name="voice_input_enabled">Enable Voice Input</string>
-    <string name="voice_input_enabled_summary">Send recorded audio to OpenRouter for transcription</string>
+    <string name="voice_input_enabled_summary">After adding your OpenRouter API key, enable this and long-press Return to record and transcribe</string>
     <string name="openrouter_api_key">OpenRouter API Key</string>
-    <string name="openrouter_api_key_summary">Required to use voice input with your OpenRouter account</string>
+    <string name="openrouter_api_key_summary">Required before long-pressing Return to use voice input with your OpenRouter account</string>
     <string name="voice_model">Voice Model</string>
     <string name="voice_model_custom">Custom Model ID</string>
     <string name="voice_model_custom_summary">Only used when Voice Model is set to Custom</string>

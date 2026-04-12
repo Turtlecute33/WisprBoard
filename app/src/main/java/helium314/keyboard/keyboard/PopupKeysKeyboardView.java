@@ -109,11 +109,6 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         } else {
             mAccessibilityDelegate = null;
         }
-        final Key shortcutKey = keyboard.getKey(KeyCode.VOICE_INPUT);
-        if (shortcutKey != null) {
-            shortcutKey.setEnabled(RichInputMethodManager.getInstance().isShortcutImeReady());
-            invalidateKey(shortcutKey);
-        }
     }
 
     /**

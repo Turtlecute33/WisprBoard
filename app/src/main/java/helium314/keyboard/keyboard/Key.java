@@ -936,7 +936,8 @@ public class Key implements Comparable<Key> {
     }
 
     @Nullable private static String getDisabledIconName(@NonNull final String iconName) {
-        if (iconName.equals(ToolbarUtilsKt.getToolbarKeyStrings().get(ToolbarKey.VOICE)))
+        if (iconName.equals(ToolbarUtilsKt.getToolbarKeyStrings().get(ToolbarKey.VOICE))
+                || iconName.equals("shortcut_key"))
             return KeyboardIconsSet.NAME_SHORTCUT_KEY_DISABLED;
         return null;
     }
