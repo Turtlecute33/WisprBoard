@@ -100,10 +100,14 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     }
 
     override fun onCodeInput(primaryCode: Int, x: Int, y: Int, isKeyRepeat: Boolean) {
-        // Any key press during recording stops and transcribes (except VOICE_INPUT itself,
-        // which is handled via onEvent() toggle logic)
+        // Voice recording: any key stops recording, VOICE_INPUT toggles via onEvent()
         if (primaryCode != KeyCode.VOICE_INPUT && latinIME.isVoiceRecording()) {
             latinIME.stopVoiceRecording()
+            return
+        }
+        // VOICE_INPUT must be handled before mainKeyboardView access (it can be null in emoji view)
+        if (primaryCode == KeyCode.VOICE_INPUT) {
+            latinIME.onEvent(Event.createSoftwareKeypressEvent(primaryCode, metaState, 0, 0, isKeyRepeat))
             return
         }
         when (primaryCode) {

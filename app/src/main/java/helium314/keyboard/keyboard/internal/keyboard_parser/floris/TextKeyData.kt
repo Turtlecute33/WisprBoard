@@ -243,13 +243,13 @@ sealed interface KeyData : AbstractKeyData {
                     && params.mId.mMode in setOf(KeyboardId.MODE_URL, KeyboardId.MODE_EMAIL))
 
         // could make arrays right away, but they need to be copied anyway as popupKeys arrays are modified when creating KeyParams
-        private const val POPUP_KEYS_NAVIGATE_PREVIOUS = "!icon/previous_key|!code/key_action_previous,!icon/clipboard_action_key|!code/key_clipboard"
-        private const val POPUP_KEYS_NAVIGATE_NEXT = "!icon/clipboard_action_key|!code/key_clipboard,!icon/next_key|!code/key_action_next"
-        private const val POPUP_KEYS_NAVIGATE_PREVIOUS_NEXT = "!fixedColumnOrder!3,!needsDividers!,!icon/previous_key|!code/key_action_previous,!icon/clipboard_action_key|!code/key_clipboard,!icon/next_key|!code/key_action_next"
-        private const val POPUP_KEYS_NAVIGATE_EMOJI_PREVIOUS = "!fixedColumnOrder!3,!needsDividers!,!icon/previous_key|!code/key_action_previous,!icon/clipboard_action_key|!code/key_clipboard,!icon/emoji_action_key|!code/key_emoji"
-        private const val POPUP_KEYS_NAVIGATE_EMOJI = "!icon/clipboard_action_key|!code/key_clipboard,!icon/emoji_action_key|!code/key_emoji"
-        private const val POPUP_KEYS_NAVIGATE_EMOJI_NEXT = "!fixedColumnOrder!3,!needsDividers!,!icon/clipboard_action_key|!code/key_clipboard,!icon/emoji_action_key|!code/key_emoji,!icon/next_key|!code/key_action_next"
-        private const val POPUP_KEYS_NAVIGATE_EMOJI_PREVIOUS_NEXT = "!fixedColumnOrder!4,!needsDividers!,!icon/previous_key|!code/key_action_previous,!icon/clipboard_action_key|!code/key_clipboard,!icon/emoji_action_key|!code/key_emoji,!icon/next_key|!code/key_action_next"
+        private const val POPUP_KEYS_NAVIGATE_PREVIOUS = "!fixedColumnOrder!3,!needsDividers!,!icon/previous_key|!code/key_action_previous,!icon/clipboard_action_key|!code/key_clipboard,!icon/shortcut_key|!code/key_voice_input"
+        private const val POPUP_KEYS_NAVIGATE_NEXT = "!fixedColumnOrder!3,!needsDividers!,!icon/clipboard_action_key|!code/key_clipboard,!icon/shortcut_key|!code/key_voice_input,!icon/next_key|!code/key_action_next"
+        private const val POPUP_KEYS_NAVIGATE_PREVIOUS_NEXT = "!fixedColumnOrder!4,!needsDividers!,!icon/previous_key|!code/key_action_previous,!icon/clipboard_action_key|!code/key_clipboard,!icon/shortcut_key|!code/key_voice_input,!icon/next_key|!code/key_action_next"
+        private const val POPUP_KEYS_NAVIGATE_EMOJI_PREVIOUS = "!fixedColumnOrder!4,!needsDividers!,!icon/previous_key|!code/key_action_previous,!icon/clipboard_action_key|!code/key_clipboard,!icon/emoji_action_key|!code/key_emoji,!icon/shortcut_key|!code/key_voice_input"
+        private const val POPUP_KEYS_NAVIGATE_EMOJI = "!fixedColumnOrder!3,!needsDividers!,!icon/clipboard_action_key|!code/key_clipboard,!icon/emoji_action_key|!code/key_emoji,!icon/shortcut_key|!code/key_voice_input"
+        private const val POPUP_KEYS_NAVIGATE_EMOJI_NEXT = "!fixedColumnOrder!4,!needsDividers!,!icon/clipboard_action_key|!code/key_clipboard,!icon/emoji_action_key|!code/key_emoji,!icon/shortcut_key|!code/key_voice_input,!icon/next_key|!code/key_action_next"
+        private const val POPUP_KEYS_NAVIGATE_EMOJI_PREVIOUS_NEXT = "!fixedColumnOrder!5,!needsDividers!,!icon/previous_key|!code/key_action_previous,!icon/clipboard_action_key|!code/key_clipboard,!icon/emoji_action_key|!code/key_emoji,!icon/shortcut_key|!code/key_voice_input,!icon/next_key|!code/key_action_next"
     }
 
     /** get the label, but also considers code, which can't be set separately for popup keys and thus goes into the label */
