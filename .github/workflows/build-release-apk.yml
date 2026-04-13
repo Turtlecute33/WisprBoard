@@ -44,6 +44,20 @@ jobs:
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/keystore.jks
 
+      - name: Validate keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [ ! -s app/keystore.jks ]; then
+            echo "::error::Keystore file is empty — check KEYSTORE_BASE64 secret"
+            exit 1
+          fi
+          keytool -list -keystore app/keystore.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" || {
+            echo "::error::Keystore validation failed — check KEYSTORE_PASSWORD and KEY_ALIAS secrets"
+            exit 1
+          }
+
       - name: Build signed release APK
         shell: bash
         env:
