@@ -29,16 +29,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
       - name: Install Android SDK components
-        shell: bash
         run: |
-          set -euo pipefail
-          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="$(command -v sdkmanager)"
-          fi
-          yes | "$SDKMANAGER" --licenses > /dev/null
-          "$SDKMANAGER" \
+          sdkmanager \
             "platforms;android-35" \
             "build-tools;35.0.0" \
             "ndk;28.0.13004108"
