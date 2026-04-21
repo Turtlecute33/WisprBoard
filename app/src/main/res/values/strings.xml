@@ -40,6 +40,8 @@
     <string name="toolbar_swipe_down_to_hide_summary">Swipe down on the toolbar to close the keyboard</string>
     <!-- Settings screen title for preferences-->
     <string name="settings_screen_preferences">Preferences</string>
+    <!-- Settings screen title for voice input settings -->
+    <string name="settings_screen_voice">Voice</string>
     <!-- Settings screen title for gesture typing preferences -->
     <string name="settings_screen_gesture">Gesture Typing</string>
     <!-- Settings screen title for text correction options -->
