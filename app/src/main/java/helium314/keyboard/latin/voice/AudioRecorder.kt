@@ -28,6 +28,14 @@ class AudioRecorder {
     private var pcmOutput = ByteArrayOutputStream()
     @Volatile private var isRecording = false
 
+    /** Duration of the last completed recording, in milliseconds. Updated by [stop]. */
+    @Volatile var lastDurationMs: Long = 0L
+        private set
+
+    /** Mean absolute sample amplitude of the last completed recording (0..32767). Updated by [stop]. */
+    @Volatile var lastMeanAmplitude: Double = 0.0
+        private set
+
     fun start(): Boolean {
         val bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
         if (bufferSize == AudioRecord.ERROR_BAD_VALUE || bufferSize == AudioRecord.ERROR) {
@@ -63,9 +71,14 @@ class AudioRecorder {
                         onMaxDurationReached?.invoke()
                         break
                     }
-                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: -1
-                    if (read > 0) {
-                        pcmOutput.write(buffer, 0, read)
+                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: AudioRecord.ERROR_INVALID_OPERATION
+                    when {
+                        read > 0 -> pcmOutput.write(buffer, 0, read)
+                        read == 0 -> Unit
+                        else -> {
+                            Log.e(TAG, "AudioRecord read error: $read")
+                            isRecording = false
+                        }
                     }
                 }
             }
@@ -78,26 +91,50 @@ class AudioRecorder {
     }
 
     fun stop(): ByteArray {
-        isRecording = false
-        recordingThread?.join(1000)
-        recordingThread = null
-        audioRecord?.stop()
-        audioRecord?.release()
-        audioRecord = null
+        teardownRecorder()
 
         val pcmData = pcmOutput.toByteArray()
         pcmOutput.reset()
+        lastDurationMs = if (pcmData.size >= 2) {
+            (pcmData.size.toLong() * 1000L) / (SAMPLE_RATE.toLong() * 2L)
+        } else 0L
+        lastMeanAmplitude = computeMeanAmplitude(pcmData)
         return createWav(pcmData)
     }
 
     fun cancel() {
+        teardownRecorder()
+        pcmOutput.reset()
+        lastDurationMs = 0L
+        lastMeanAmplitude = 0.0
+    }
+
+    private fun teardownRecorder() {
         isRecording = false
-        recordingThread?.join(1000)
+        recordingThread?.let { t ->
+            t.interrupt()
+            try { t.join(2000) } catch (e: InterruptedException) { Thread.currentThread().interrupt() }
+        }
         recordingThread = null
-        audioRecord?.stop()
+        try { audioRecord?.stop() } catch (e: IllegalStateException) { Log.w(TAG, "AudioRecord.stop() failed", e) }
         audioRecord?.release()
         audioRecord = null
-        pcmOutput.reset()
+    }
+
+    private fun computeMeanAmplitude(pcm: ByteArray): Double {
+        if (pcm.size < 2) return 0.0
+        var sum = 0L
+        var count = 0
+        var i = 0
+        while (i + 1 < pcm.size) {
+            val lo = pcm[i].toInt() and 0xff
+            val hi = pcm[i + 1].toInt()
+            val signed = ((hi shl 8) or lo).toShort().toInt()
+            sum += if (signed < 0) -signed else signed
+            count++
+            i += 2
+        }
+        return if (count > 0) sum.toDouble() / count else 0.0
     }
 
     var onMaxDurationReached: (() -> Unit)? = null

@@ -26,6 +26,10 @@ class VoiceInputManager(
     companion object {
         private const val TAG = "VoiceInputManager"
         private const val WAV_HEADER_SIZE = 44
+        private const val MIN_RECORDING_DURATION_MS = 400L
+        // Mean absolute amplitude threshold for 16-bit PCM. Typical silence ~0-80; quiet speech ~300+.
+        private const val SILENCE_AMPLITUDE_THRESHOLD = 180.0
+        private const val MAX_TRANSCRIPTION_LENGTH = 10_000
     }
 
     enum class State { IDLE, RECORDING, TRANSCRIBING }
@@ -97,6 +101,19 @@ class VoiceInputManager(
             callbacks.onError(context.getString(R.string.voice_error_no_audio))
             return
         }
+        if (audioRecorder.lastDurationMs < MIN_RECORDING_DURATION_MS) {
+            state = State.IDLE
+            callbacks.onFinished()
+            callbacks.onError(context.getString(R.string.voice_error_too_short))
+            return
+        }
+        if (audioRecorder.lastMeanAmplitude < SILENCE_AMPLITUDE_THRESHOLD) {
+            Log.i(TAG, "Rejecting silent recording (amp=${audioRecorder.lastMeanAmplitude})")
+            state = State.IDLE
+            callbacks.onFinished()
+            callbacks.onError(context.getString(R.string.voice_error_silent))
+            return
+        }
 
         state = State.TRANSCRIBING
         callbacks.onTranscribing()
@@ -120,13 +137,21 @@ class VoiceInputManager(
 
         val client = OpenRouterClient(apiKey, model, prompt)
 
+        val crashHandler = Thread.UncaughtExceptionHandler { _, e ->
+            Log.e(TAG, "Transcription thread crashed", e)
+            mainHandler.post {
+                state = State.IDLE
+                callbacks.onFinished()
+                callbacks.onError(context.getString(R.string.voice_error_transcription_failed))
+            }
+        }
         Thread {
             try {
-                val transcription = client.transcribe(wavData)
+                val transcription = sanitizeTranscription(client.transcribe(wavData))
                 mainHandler.post {
                     state = State.IDLE
                     callbacks.onFinished()
-                    if (transcription.isNotBlank()) {
+                    if (transcription.isNotEmpty()) {
                         callbacks.onTranscriptionResult(transcription)
                     }
                 }
@@ -138,7 +163,17 @@ class VoiceInputManager(
                     callbacks.onError(e.message ?: context.getString(R.string.voice_error_transcription_failed))
                 }
             }
+        }.apply {
+            name = "VoiceTranscription"
+            uncaughtExceptionHandler = crashHandler
         }.start()
+    }
+
+    private fun sanitizeTranscription(raw: String): String {
+        // Strip control characters (category Cc) and bidi/format marks; the API occasionally
+        // returns stray characters that corrupt the host editor when committed.
+        val cleaned = raw.replace(Regex("\\p{Cc}"), "").trim()
+        return if (cleaned.length > MAX_TRANSCRIPTION_LENGTH) cleaned.substring(0, MAX_TRANSCRIPTION_LENGTH) else cleaned
     }
 
     fun cancelRecording() {

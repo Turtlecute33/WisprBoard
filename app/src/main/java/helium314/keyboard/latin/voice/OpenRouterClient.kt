@@ -4,6 +4,7 @@ package helium314.keyboard.latin.voice
 import android.util.Base64
 import helium314.keyboard.latin.utils.Log
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -74,23 +75,43 @@ class OpenRouterClient(
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                Log.e(TAG, "API error $responseCode: $errorBody")
+                Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
                 throw OpenRouterException("API error: $responseCode", responseCode)
             }
 
             val responseBody = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
-            val json = JSONObject(responseBody)
-            val content = json
-                .getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content")
-                .trim()
-
-            return content
+            return parseContent(responseBody)
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun parseContent(responseBody: String): String {
+        val json = try {
+            JSONObject(responseBody)
+        } catch (e: JSONException) {
+            throw OpenRouterException("Malformed API response")
+        }
+        val choices = json.optJSONArray("choices")
+        if (choices == null || choices.length() == 0) {
+            throw OpenRouterException("API response missing choices")
+        }
+        val content = choices.optJSONObject(0)
+            ?.optJSONObject("message")
+            ?.optString("content")
+            ?.trim()
+            .orEmpty()
+        if (content.isEmpty()) {
+            throw OpenRouterException("API response missing content")
+        }
+        return content
+    }
+
+    private fun sanitizeForLog(body: String): String {
+        // Guard against the remote echoing our Authorization header or any api key field back to us.
+        return body
+            .replace(Regex("(?i)Bearer\\s+\\S+"), "Bearer ***")
+            .replace(Regex("(?i)(\"?api[_-]?key\"?\\s*[:=]\\s*\"?)[^\"\\s,}]+"), "$1***")
     }
 }
 

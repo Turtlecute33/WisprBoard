@@ -1108,6 +1108,8 @@ New dictionary:
     <string name="voice_error_no_api_key">Set OpenRouter API key in settings</string>
     <string name="voice_error_no_model">Choose a voice model in settings</string>
     <string name="voice_error_no_audio">No audio captured</string>
+    <string name="voice_error_too_short">Recording too short</string>
+    <string name="voice_error_silent">No speech detected</string>
     <string name="voice_error_not_enabled">Enable Voice Input in settings</string>
     <string name="voice_error_no_permission">Grant microphone permission in settings</string>
     <string name="voice_error_no_network">No internet connection</string>
