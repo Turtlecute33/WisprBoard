@@ -72,6 +72,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_VOICE_MODEL = "voice_model";
     public static final String PREF_VOICE_MODEL_CUSTOM = "voice_model_custom";
     public static final String PREF_VOICE_TRANSCRIPTION_PROMPT = "voice_transcription_prompt";
+    public static final String PREF_VOICE_TRANSCRIPTION_DICTIONARY = "voice_transcription_dictionary";
+    public static final String PREF_VOICE_TRANSLATION_LANGUAGES = "voice_translation_languages";
     public static final String PREF_VOICE_MAX_DURATION_SECONDS = "voice_max_duration_seconds";
     public static final String PREF_VOICE_AUTO_STOP_SILENCE = "voice_auto_stop_silence";
     public static final String PREF_VOICE_AUTO_STOP_SILENCE_SECONDS = "voice_auto_stop_silence_seconds";

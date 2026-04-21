@@ -26,6 +26,8 @@ import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.latin.voice.OpenRouterClient
+import helium314.keyboard.latin.voice.parseVoiceDictionaryTerms
+import helium314.keyboard.latin.voice.parseTranslationTargets
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
@@ -80,6 +82,8 @@ internal fun buildVoiceScreenItems(
     if (voiceInputEnabled && voiceModel == "custom") Settings.PREF_VOICE_MODEL_CUSTOM else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_PROMPT_PRESET else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_TRANSCRIPTION_PROMPT else null,
+    if (voiceInputEnabled) Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY else null,
+    if (voiceInputEnabled) Settings.PREF_VOICE_TRANSLATION_LANGUAGES else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_LANGUAGE_HINT else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_SPACE_HEURISTIC else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_HAPTIC_FEEDBACK else null,
@@ -130,6 +134,22 @@ fun createVoiceSettings(context: Context) = listOf(
             onNeutral = { prefs.edit { remove(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT) } },
             checkTextValid = { text -> text.isNotBlank() }
         )
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY,
+        R.string.voice_transcription_dictionary,
+        R.string.voice_transcription_dictionary_summary
+    ) {
+        VoiceDictionaryPreference(it)
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_TRANSLATION_LANGUAGES,
+        R.string.voice_translation_languages,
+        R.string.voice_translation_languages_summary
+    ) {
+        VoiceTranslationLanguagesPreference(it)
     },
     Setting(context, Settings.PREF_VOICE_ACTION_PROMPT_PRESET, R.string.voice_prompt_preset) {
         VoicePromptPresetPreference(it)
@@ -191,6 +211,41 @@ private fun VoiceApiKeyPreference(setting: Setting) {
 }
 
 @Composable
+private fun VoiceDictionaryPreference(setting: Setting) {
+    val ctx = LocalContext.current
+    val prefs = ctx.prefs()
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    val rawValue by rememberStringPreferenceState(
+        Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY,
+        Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY
+    )
+    val displayValue = parseVoiceDictionaryTerms(rawValue).joinToString(", ")
+    Preference(
+        name = setting.title,
+        description = displayValue.ifEmpty { setting.description },
+        onClick = { showDialog = true },
+    )
+    if (showDialog) {
+        TextInputDialog(
+            onDismissRequest = { showDialog = false },
+            onConfirmed = { value ->
+                prefs.edit {
+                    putString(
+                        Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY,
+                        parseVoiceDictionaryTerms(value).joinToString(", ")
+                    )
+                }
+            },
+            initialText = rawValue,
+            title = { Text(setting.title) },
+            description = { Text(setting.description ?: "") },
+            singleLine = false,
+            checkTextValid = { true },
+        )
+    }
+}
+
+@Composable
 private fun VoicePromptPresetPreference(setting: Setting) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
@@ -215,6 +270,41 @@ private fun VoicePromptPresetPreference(setting: Setting) {
             },
             title = { Text(ctx.getString(R.string.voice_prompt_preset)) },
             getItemName = { ctx.getString(it.labelRes) },
+        )
+    }
+}
+
+@Composable
+private fun VoiceTranslationLanguagesPreference(setting: Setting) {
+    val ctx = LocalContext.current
+    val prefs = ctx.prefs()
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    val rawValue by rememberStringPreferenceState(
+        Settings.PREF_VOICE_TRANSLATION_LANGUAGES,
+        Defaults.PREF_VOICE_TRANSLATION_LANGUAGES
+    )
+    val displayValue = parseTranslationTargets(rawValue).joinToString(", ")
+    Preference(
+        name = setting.title,
+        description = displayValue.ifEmpty { setting.description },
+        onClick = { showDialog = true },
+    )
+    if (showDialog) {
+        TextInputDialog(
+            onDismissRequest = { showDialog = false },
+            onConfirmed = { value ->
+                prefs.edit {
+                    putString(
+                        Settings.PREF_VOICE_TRANSLATION_LANGUAGES,
+                        parseTranslationTargets(value).joinToString(", ")
+                    )
+                }
+            },
+            initialText = rawValue,
+            title = { Text(setting.title) },
+            description = { Text(setting.description ?: "") },
+            singleLine = false,
+            checkTextValid = { true },
         )
     }
 }

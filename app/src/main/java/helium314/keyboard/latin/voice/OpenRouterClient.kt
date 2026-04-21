@@ -22,13 +22,15 @@ import java.net.URL
 class OpenRouterClient(
     private val apiKey: String,
     private val model: String,
-    private val prompt: String,
+    private val systemPrompt: String,
+    private val runtimeInstruction: String?,
     private val connectTimeoutMs: Int = DEFAULT_CONNECT_TIMEOUT_MS,
     private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
 ) {
     companion object {
         private const val TAG = "OpenRouterClient"
         private const val ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+        private const val STABLE_AUDIO_INSTRUCTION = "Process the attached audio input according to the system instructions. Return only the final answer."
         const val DEFAULT_CONNECT_TIMEOUT_MS = 15_000
         const val DEFAULT_READ_TIMEOUT_MS = 90_000
         private const val MAX_ATTEMPTS = 3
@@ -71,6 +73,44 @@ class OpenRouterClient(
     private fun buildRequestBody(wavData: ByteArray): String {
         val base64Audio = Base64.encodeToString(wavData, Base64.NO_WRAP)
 
+        val messages = JSONArray().apply {
+            put(buildSystemMessage())
+            put(buildTextMessage(STABLE_AUDIO_INSTRUCTION))
+            runtimeInstruction?.takeIf { it.isNotBlank() }?.let { put(buildTextMessage(it)) }
+            put(buildAudioMessage(base64Audio))
+        }
+        return JSONObject().apply {
+            put("model", model)
+            put("messages", messages)
+        }.toString()
+    }
+
+    private fun buildSystemMessage(): JSONObject {
+        val textContent = JSONObject().apply {
+            put("type", "text")
+            put("text", systemPrompt)
+            if (shouldAttachPromptCacheHint(model)) {
+                put("cache_control", JSONObject().apply { put("type", "ephemeral") })
+            }
+        }
+        return JSONObject().apply {
+            put("role", "system")
+            put("content", JSONArray().apply { put(textContent) })
+        }
+    }
+
+    private fun buildTextMessage(text: String): JSONObject {
+        val textContent = JSONObject().apply {
+            put("type", "text")
+            put("text", text)
+        }
+        return JSONObject().apply {
+            put("role", "user")
+            put("content", JSONArray().apply { put(textContent) })
+        }
+    }
+
+    private fun buildAudioMessage(base64Audio: String): JSONObject {
         val audioContent = JSONObject().apply {
             put("type", "input_audio")
             put("input_audio", JSONObject().apply {
@@ -78,21 +118,10 @@ class OpenRouterClient(
                 put("format", "wav")
             })
         }
-        val textContent = JSONObject().apply {
-            put("type", "text")
-            put("text", prompt)
-        }
-        val message = JSONObject().apply {
-            put("role", "user")
-            put("content", JSONArray().apply {
-                put(audioContent)
-                put(textContent)
-            })
-        }
         return JSONObject().apply {
-            put("model", model)
-            put("messages", JSONArray().apply { put(message) })
-        }.toString()
+            put("role", "user")
+            put("content", JSONArray().apply { put(audioContent) })
+        }
     }
 
     private fun performRequest(requestBody: String): String {
@@ -130,6 +159,7 @@ class OpenRouterClient(
         } catch (e: JSONException) {
             throw OpenRouterException("Malformed API response")
         }
+        logCacheUsage(json)
         val choices = json.optJSONArray("choices")
         if (choices == null || choices.length() == 0) {
             throw OpenRouterException("API response missing choices")
@@ -143,6 +173,20 @@ class OpenRouterClient(
             throw OpenRouterException("API response missing content")
         }
         return content
+    }
+
+    private fun logCacheUsage(json: JSONObject) {
+        if (!BuildConfig.DEBUG) return
+        val details = json.optJSONObject("usage")
+            ?.optJSONObject("prompt_tokens_details")
+            ?: return
+        val cachedTokens = details.optInt("cached_tokens", 0)
+        val cacheWriteTokens = details.optInt("cache_write_tokens", 0)
+        if (cachedTokens <= 0 && cacheWriteTokens <= 0) return
+        Log.i(
+            TAG,
+            "Prompt cache stats for $model: cached_tokens=$cachedTokens, cache_write_tokens=$cacheWriteTokens"
+        )
     }
 
     private fun sanitizeForLog(body: String): String {

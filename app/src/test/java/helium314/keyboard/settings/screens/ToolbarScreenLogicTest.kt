@@ -4,7 +4,7 @@ package helium314.keyboard.settings.screens
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
-import helium314.keyboard.latin.voice.resolveTranscriptionPrompt
+import helium314.keyboard.latin.voice.resolveVoicePrompt
 import helium314.keyboard.latin.voice.resolveVoiceModel
 import helium314.keyboard.latin.utils.ToolbarMode
 import kotlin.test.Test
@@ -42,18 +42,18 @@ class ToolbarScreenLogicTest {
     }
 
     @Test
-    fun resolveTranscriptionPromptFallsBackToDefaultForBlankValue() {
+    fun resolveVoicePromptFallsBackToDefaultForBlankValue() {
         assertEquals(
             Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT,
-            resolveTranscriptionPrompt("   ")
+            resolveVoicePrompt("   ").systemPrompt
         )
     }
 
     @Test
-    fun resolveTranscriptionPromptTrimsCustomPrompt() {
+    fun resolveVoicePromptTrimsCustomPrompt() {
         assertEquals(
             "Return clean bullet points.",
-            resolveTranscriptionPrompt("  Return clean bullet points.  ")
+            resolveVoicePrompt("  Return clean bullet points.  ").systemPrompt
         )
     }
 }

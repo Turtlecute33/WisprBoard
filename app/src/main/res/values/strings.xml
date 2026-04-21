@@ -1105,6 +1105,10 @@ New dictionary:
     <string name="voice_model_custom_summary">Only used when Voice Model is set to Custom</string>
     <string name="voice_transcription_prompt">Transcription Prompt</string>
     <string name="voice_transcription_prompt_summary">Full instruction sent to the AI for shaping the transcript output</string>
+    <string name="voice_transcription_dictionary">Transcription dictionary</string>
+    <string name="voice_transcription_dictionary_summary">Optional names, brands, acronyms, or technical words to prefer during transcription. One per line or comma-separated.</string>
+    <string name="voice_translation_languages">Translation languages</string>
+    <string name="voice_translation_languages_summary">Optional output languages, separated by commas or new lines. Example: English or English, Italian</string>
     <string name="voice_recording">Recording…</string>
     <string name="voice_transcribing">Transcribing…</string>
     <string name="voice_error_no_api_key">Set OpenRouter API key in settings</string>

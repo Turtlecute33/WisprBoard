@@ -155,6 +155,14 @@ class VoiceInputManager(
             Settings.PREF_VOICE_TRANSCRIPTION_PROMPT,
             Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
         ) ?: Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
+        val transcriptionDictionary = prefs.getString(
+            Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY,
+            Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY
+        ) ?: Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY
+        val translationTargets = prefs.getString(
+            Settings.PREF_VOICE_TRANSLATION_LANGUAGES,
+            Defaults.PREF_VOICE_TRANSLATION_LANGUAGES
+        ) ?: Defaults.PREF_VOICE_TRANSLATION_LANGUAGES
         val languageHintEnabled = prefs.getBoolean(Settings.PREF_VOICE_LANGUAGE_HINT, Defaults.PREF_VOICE_LANGUAGE_HINT)
         val spaceHeuristicEnabled = prefs.getBoolean(Settings.PREF_VOICE_SPACE_HEURISTIC, Defaults.PREF_VOICE_SPACE_HEURISTIC)
 
@@ -166,10 +174,15 @@ class VoiceInputManager(
             return
         }
         val localeHint = if (languageHintEnabled) callbacks.getLocaleHint() else null
-        val prompt = resolveTranscriptionPrompt(savedPrompt, localeHint)
+        val prompt = resolveVoicePrompt(savedPrompt, localeHint, transcriptionDictionary, translationTargets)
         val spacingContext = if (spaceHeuristicEnabled) callbacks.getSpacingContext() else null
 
-        val client = OpenRouterClient(apiKey, model, prompt)
+        val client = OpenRouterClient(
+            apiKey = apiKey,
+            model = model,
+            systemPrompt = prompt.systemPrompt,
+            runtimeInstruction = prompt.runtimeInstruction,
+        )
 
         val crashHandler = Thread.UncaughtExceptionHandler { _, e ->
             Log.e(TAG, "Transcription thread crashed", e)

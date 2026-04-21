@@ -183,6 +183,8 @@ object Defaults {
     const val PREF_VOICE_MODEL = "google/gemini-3-flash-preview"
     const val PREF_VOICE_MODEL_CUSTOM = ""
     const val PREF_VOICE_TRANSCRIPTION_PROMPT = "Transcribe this audio exactly as spoken. Output only the transcription, nothing else."
+    const val PREF_VOICE_TRANSCRIPTION_DICTIONARY = ""
+    const val PREF_VOICE_TRANSLATION_LANGUAGES = ""
     const val PREF_VOICE_MAX_DURATION_SECONDS = 90
     const val PREF_VOICE_AUTO_STOP_SILENCE = false
     const val PREF_VOICE_AUTO_STOP_SILENCE_SECONDS = 2
