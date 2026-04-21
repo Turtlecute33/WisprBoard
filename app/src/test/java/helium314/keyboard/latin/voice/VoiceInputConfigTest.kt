@@ -18,21 +18,22 @@ class VoiceInputConfigTest {
     }
 
     @Test
-    fun parseTranslationTargetsSplitsAndDeduplicates() {
+    fun parseExpectedLanguagesSplitsAndDeduplicates() {
         assertEquals(
             listOf("English", "Italian", "Deutsch"),
-            parseTranslationTargets("English, Italian\nenglish; Deutsch"),
+            parseExpectedLanguages("English, Italian\nenglish; Deutsch"),
         )
     }
 
     @Test
-    fun resolveVoicePromptAppendsSingleTranslationLanguage() {
+    fun resolveVoicePromptAppendsSingleExpectedLanguage() {
         val prompt = resolveVoicePrompt(
             savedPrompt = "Transcribe this audio exactly as spoken.",
-            translationTargetsRaw = "English",
+            expectedLanguagesRaw = "English",
         )
 
-        assertTrue(prompt.systemPrompt.contains("Translate the final result into natural English"))
+        assertTrue(prompt.systemPrompt.contains("The speaker is expected to speak English"))
+        assertTrue(prompt.systemPrompt.contains("do not translate", ignoreCase = true))
         assertNull(prompt.runtimeInstruction)
     }
 
@@ -54,11 +55,12 @@ class VoiceInputConfigTest {
             savedPrompt = "Transcribe this audio exactly as spoken.",
             localeHint = Locale.forLanguageTag("it-IT"),
             transcriptionDictionaryRaw = "OpenRouter",
-            translationTargetsRaw = "English, Italian",
+            expectedLanguagesRaw = "English, Italian",
         )
 
         assertTrue(prompt.systemPrompt.contains("OpenRouter"))
         assertTrue(prompt.systemPrompt.contains("English, Italian"))
+        assertTrue(prompt.systemPrompt.contains("translate", ignoreCase = true))
         assertFalse(prompt.systemPrompt.contains("it-IT", ignoreCase = true))
         assertEquals("Expected spoken language: Italian (Italy) [it-IT].", prompt.runtimeInstruction)
     }

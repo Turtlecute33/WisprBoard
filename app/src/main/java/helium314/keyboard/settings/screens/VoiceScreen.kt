@@ -27,7 +27,7 @@ import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.latin.voice.OpenRouterClient
 import helium314.keyboard.latin.voice.parseVoiceDictionaryTerms
-import helium314.keyboard.latin.voice.parseTranslationTargets
+import helium314.keyboard.latin.voice.parseExpectedLanguages
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
@@ -83,7 +83,7 @@ internal fun buildVoiceScreenItems(
     if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_PROMPT_PRESET else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_TRANSCRIPTION_PROMPT else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY else null,
-    if (voiceInputEnabled) Settings.PREF_VOICE_TRANSLATION_LANGUAGES else null,
+    if (voiceInputEnabled) Settings.PREF_VOICE_EXPECTED_LANGUAGES else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_LANGUAGE_HINT else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_SPACE_HEURISTIC else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_HAPTIC_FEEDBACK else null,
@@ -145,11 +145,11 @@ fun createVoiceSettings(context: Context) = listOf(
     },
     Setting(
         context,
-        Settings.PREF_VOICE_TRANSLATION_LANGUAGES,
-        R.string.voice_translation_languages,
-        R.string.voice_translation_languages_summary
+        Settings.PREF_VOICE_EXPECTED_LANGUAGES,
+        R.string.voice_expected_languages,
+        R.string.voice_expected_languages_summary
     ) {
-        VoiceTranslationLanguagesPreference(it)
+        VoiceExpectedLanguagesPreference(it)
     },
     Setting(context, Settings.PREF_VOICE_ACTION_PROMPT_PRESET, R.string.voice_prompt_preset) {
         VoicePromptPresetPreference(it)
@@ -275,15 +275,15 @@ private fun VoicePromptPresetPreference(setting: Setting) {
 }
 
 @Composable
-private fun VoiceTranslationLanguagesPreference(setting: Setting) {
+private fun VoiceExpectedLanguagesPreference(setting: Setting) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val rawValue by rememberStringPreferenceState(
-        Settings.PREF_VOICE_TRANSLATION_LANGUAGES,
-        Defaults.PREF_VOICE_TRANSLATION_LANGUAGES
+        Settings.PREF_VOICE_EXPECTED_LANGUAGES,
+        Defaults.PREF_VOICE_EXPECTED_LANGUAGES
     )
-    val displayValue = parseTranslationTargets(rawValue).joinToString(", ")
+    val displayValue = parseExpectedLanguages(rawValue).joinToString(", ")
     Preference(
         name = setting.title,
         description = displayValue.ifEmpty { setting.description },
@@ -295,8 +295,8 @@ private fun VoiceTranslationLanguagesPreference(setting: Setting) {
             onConfirmed = { value ->
                 prefs.edit {
                     putString(
-                        Settings.PREF_VOICE_TRANSLATION_LANGUAGES,
-                        parseTranslationTargets(value).joinToString(", ")
+                        Settings.PREF_VOICE_EXPECTED_LANGUAGES,
+                        parseExpectedLanguages(value).joinToString(", ")
                     )
                 }
             },

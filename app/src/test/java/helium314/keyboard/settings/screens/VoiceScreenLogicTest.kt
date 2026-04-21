@@ -19,7 +19,7 @@ class VoiceScreenLogicTest {
         assertFalse(Settings.PREF_VOICE_MODEL in items)
         assertFalse(Settings.PREF_VOICE_MODEL_CUSTOM in items)
         assertFalse(Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY in items)
-        assertFalse(Settings.PREF_VOICE_TRANSLATION_LANGUAGES in items)
+        assertFalse(Settings.PREF_VOICE_EXPECTED_LANGUAGES in items)
     }
 
     @Test
@@ -37,7 +37,7 @@ class VoiceScreenLogicTest {
         assertTrue(Settings.PREF_VOICE_MODEL in regularModelItems)
         assertTrue(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT in regularModelItems)
         assertTrue(Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY in regularModelItems)
-        assertTrue(Settings.PREF_VOICE_TRANSLATION_LANGUAGES in regularModelItems)
+        assertTrue(Settings.PREF_VOICE_EXPECTED_LANGUAGES in regularModelItems)
         assertFalse(Settings.PREF_VOICE_MODEL_CUSTOM in regularModelItems)
         assertTrue(Settings.PREF_VOICE_MODEL_CUSTOM in customModelItems)
     }

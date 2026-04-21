@@ -20,15 +20,15 @@ internal fun resolveVoicePrompt(
     savedPrompt: String,
     localeHint: Locale? = null,
     transcriptionDictionaryRaw: String = "",
-    translationTargetsRaw: String = "",
+    expectedLanguagesRaw: String = "",
 ): ResolvedVoicePrompt {
     val base = savedPrompt.trim().takeIf { it.isNotEmpty() } ?: Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
     val dictionaryTerms = parseVoiceDictionaryTerms(transcriptionDictionaryRaw)
-    val translationTargets = parseTranslationTargets(translationTargetsRaw)
+    val expectedLanguages = parseExpectedLanguages(expectedLanguagesRaw)
     val systemPrompt = listOfNotNull(
         base,
         dictionaryInstruction(dictionaryTerms),
-        translationInstruction(translationTargets),
+        expectedLanguagesInstruction(expectedLanguages),
     )
         .joinToString("\n")
         .trim()
@@ -38,7 +38,7 @@ internal fun resolveVoicePrompt(
     )
 }
 
-internal fun parseTranslationTargets(raw: String): List<String> =
+internal fun parseExpectedLanguages(raw: String): List<String> =
     raw.split(',', '\n', ';')
         .map { it.trim() }
         .filter { it.isNotEmpty() }
@@ -55,12 +55,13 @@ internal fun shouldAttachPromptCacheHint(model: String): Boolean {
     return normalized.startsWith("google/gemini") || normalized.startsWith("anthropic/")
 }
 
-private fun translationInstruction(targets: List<String>): String? {
-    if (targets.isEmpty()) return null
-    return if (targets.size == 1) {
-        "Override any earlier output-format instruction. Translate the final result into natural ${targets.first()} and output only the ${targets.first()} translation."
+private fun expectedLanguagesInstruction(languages: List<String>): String? {
+    if (languages.isEmpty()) return null
+    val joined = languages.joinToString(", ")
+    return if (languages.size == 1) {
+        "The speaker is expected to speak $joined. Transcribe in the spoken language only; do not translate and do not output multiple versions."
     } else {
-        "Override any earlier output-format instruction. Translate the final result into each of the following languages: ${targets.joinToString(", ")}. Output one block per language in the same order, prefix each block with the language name, and do not add extra commentary."
+        "The speaker may use any of these languages: $joined. Detect which one is actually spoken and transcribe in that language only. Do not translate and do not output the transcript in more than one language."
     }
 }
 
