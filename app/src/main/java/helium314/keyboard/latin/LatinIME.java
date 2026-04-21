@@ -63,7 +63,9 @@ import helium314.keyboard.latin.common.ViewOutlineProviderUtilsKt;
 import helium314.keyboard.latin.define.DebugFlags;
 import helium314.keyboard.latin.inputlogic.InputLogic;
 import helium314.keyboard.latin.personalization.PersonalizationHelper;
+import helium314.keyboard.latin.settings.Defaults;
 import helium314.keyboard.latin.settings.Settings;
+import helium314.keyboard.latin.utils.DeviceProtectedUtils;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
@@ -578,17 +580,27 @@ public class LatinIME extends InputMethodService implements
         mVoiceInputManager = new VoiceInputManager(this, new VoiceInputManager.Callbacks() {
             @Override
             public void onRecordingStarted() {
-                if (mSuggestionStripView != null) mSuggestionStripView.showRecordingOverlay();
+                if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(25L);
+                if (mSuggestionStripView != null) {
+                    mSuggestionStripView.setVoiceTelemetryProvider(() ->
+                        new kotlin.Pair<>(mVoiceInputManager.getCurrentAmplitude(),
+                            mVoiceInputManager.getCurrentDurationMs()));
+                    mSuggestionStripView.showRecordingOverlay();
+                }
             }
 
             @Override
             public void onTranscribing() {
+                if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(15L);
                 if (mSuggestionStripView != null) mSuggestionStripView.showTranscribingOverlay();
             }
 
             @Override
             public void onFinished() {
-                if (mSuggestionStripView != null) mSuggestionStripView.hideRecordingOverlay();
+                if (mSuggestionStripView != null) {
+                    mSuggestionStripView.setVoiceTelemetryProvider(null);
+                    mSuggestionStripView.hideRecordingOverlay();
+                }
             }
 
             @Override
@@ -605,7 +617,40 @@ public class LatinIME extends InputMethodService implements
             public void onMaxDurationReached() {
                 AudioAndHapticFeedbackManager.getInstance().vibrate(50L);
             }
+
+            @Nullable
+            @Override
+            public Locale getLocaleHint() {
+                try {
+                    return mRichImm.getCurrentSubtypeLocale();
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+
+            @Nullable
+            @Override
+            public VoiceInputManager.SpacingContext getSpacingContext() {
+                try {
+                    final int cp = mInputLogic.mConnection.getCodePointBeforeCursor();
+                    final Character before = cp <= 0 ? null : (Character) (char) cp;
+                    final CharSequence after = mInputLogic.mConnection.getTextAfterCursor(1, 0);
+                    final Character afterCh = (after != null && after.length() > 0) ? after.charAt(0) : null;
+                    return new VoiceInputManager.SpacingContext(before, afterCh);
+                } catch (Exception e) {
+                    return null;
+                }
+            }
         });
+    }
+
+    private boolean isVoiceHapticEnabled() {
+        try {
+            return DeviceProtectedUtils.getSharedPreferences(this)
+                .getBoolean(Settings.PREF_VOICE_HAPTIC_FEEDBACK, Defaults.PREF_VOICE_HAPTIC_FEEDBACK);
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     private void loadSettings() {
@@ -795,6 +840,9 @@ public class LatinIME extends InputMethodService implements
             mSuggestionStripView.setListener(this, view);
             mSuggestionStripView.setOnStopRecording(() -> {
                 if (mVoiceInputManager != null) mVoiceInputManager.stopRecording();
+            });
+            mSuggestionStripView.setOnCancelRecording(() -> {
+                if (mVoiceInputManager != null) mVoiceInputManager.cancelRecording();
             });
         }
     }

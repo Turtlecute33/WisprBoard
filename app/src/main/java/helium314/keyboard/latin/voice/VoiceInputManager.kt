@@ -8,12 +8,14 @@ import android.net.NetworkCapabilities
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
+import java.util.Locale
 
 /**
  * Orchestrates voice recording, transcription via OpenRouter, and text insertion.
@@ -34,6 +36,9 @@ class VoiceInputManager(
 
     enum class State { IDLE, RECORDING, TRANSCRIBING }
 
+    /** Snapshot of text immediately adjacent to the cursor, used for spacing heuristics. */
+    data class SpacingContext(val charBefore: Char?, val charAfter: Char?)
+
     interface Callbacks {
         fun onRecordingStarted()
         fun onTranscribing()
@@ -41,13 +46,24 @@ class VoiceInputManager(
         fun onTranscriptionResult(text: String)
         fun onError(message: String)
         fun onMaxDurationReached()
+        /** Optional IME subtype locale; used as a hint to the transcription model. */
+        fun getLocaleHint(): Locale? = null
+        /** Optional surrounding-text snapshot; used to decide whether to insert spaces. */
+        fun getSpacingContext(): SpacingContext? = null
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val audioRecorder = AudioRecorder()
+    private var audioRecorder: AudioRecorder = AudioRecorder()
     private var state = State.IDLE
+    @Volatile private var transcriptionThread: Thread? = null
 
     fun getState() = state
+
+    /** Exposed so UI can render a live amplitude meter. */
+    fun getCurrentAmplitude(): Double = audioRecorder.currentAmplitude
+
+    /** Exposed so UI can render an elapsed-time counter. */
+    fun getCurrentDurationMs(): Long = audioRecorder.currentDurationMs
 
     fun startRecording() {
         if (state != State.IDLE) return
@@ -59,7 +75,7 @@ class VoiceInputManager(
             return
         }
 
-        val apiKey = prefs.getString(Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY) ?: ""
+        val apiKey = SecretStore.getApiKey(context, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
         if (apiKey.isBlank()) {
             Toast.makeText(context, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
             return
@@ -75,11 +91,24 @@ class VoiceInputManager(
             return
         }
 
+        val maxDurationSec = prefs.getInt(Settings.PREF_VOICE_MAX_DURATION_SECONDS, Defaults.PREF_VOICE_MAX_DURATION_SECONDS)
+            .coerceIn(15, 300)
+        val autoStopEnabled = prefs.getBoolean(Settings.PREF_VOICE_AUTO_STOP_SILENCE, Defaults.PREF_VOICE_AUTO_STOP_SILENCE)
+        val autoStopSec = prefs.getInt(Settings.PREF_VOICE_AUTO_STOP_SILENCE_SECONDS, Defaults.PREF_VOICE_AUTO_STOP_SILENCE_SECONDS)
+            .coerceIn(1, 10)
+
+        audioRecorder = AudioRecorder(
+            maxDurationMs = maxDurationSec * 1000L,
+            autoStopSilenceMs = if (autoStopEnabled) autoStopSec * 1000L else 0L,
+        )
         audioRecorder.onMaxDurationReached = {
             mainHandler.post {
                 callbacks.onMaxDurationReached()
                 stopRecording()
             }
+        }
+        audioRecorder.onAutoStopSilence = {
+            mainHandler.post { stopRecording() }
         }
 
         if (!audioRecorder.start()) {
@@ -108,7 +137,7 @@ class VoiceInputManager(
             return
         }
         if (audioRecorder.lastMeanAmplitude < SILENCE_AMPLITUDE_THRESHOLD) {
-            Log.i(TAG, "Rejecting silent recording (amp=${audioRecorder.lastMeanAmplitude})")
+            if (BuildConfig.DEBUG) Log.i(TAG, "Rejecting silent recording (amp=${audioRecorder.lastMeanAmplitude})")
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_silent))
@@ -119,45 +148,61 @@ class VoiceInputManager(
         callbacks.onTranscribing()
 
         val prefs = context.prefs()
-        val apiKey = prefs.getString(Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY) ?: ""
+        val apiKey = SecretStore.getApiKey(context, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
         val selectedModel = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL) ?: Defaults.PREF_VOICE_MODEL
         val customModel = prefs.getString(Settings.PREF_VOICE_MODEL_CUSTOM, Defaults.PREF_VOICE_MODEL_CUSTOM) ?: ""
         val savedPrompt = prefs.getString(
             Settings.PREF_VOICE_TRANSCRIPTION_PROMPT,
             Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
         ) ?: Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
+        val languageHintEnabled = prefs.getBoolean(Settings.PREF_VOICE_LANGUAGE_HINT, Defaults.PREF_VOICE_LANGUAGE_HINT)
+        val spaceHeuristicEnabled = prefs.getBoolean(Settings.PREF_VOICE_SPACE_HEURISTIC, Defaults.PREF_VOICE_SPACE_HEURISTIC)
+
         val model = resolveVoiceModel(selectedModel, customModel)
-        val prompt = resolveTranscriptionPrompt(savedPrompt)
         if (model == null) {
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_no_model))
             return
         }
+        val localeHint = if (languageHintEnabled) callbacks.getLocaleHint() else null
+        val prompt = resolveTranscriptionPrompt(savedPrompt, localeHint)
+        val spacingContext = if (spaceHeuristicEnabled) callbacks.getSpacingContext() else null
 
         val client = OpenRouterClient(apiKey, model, prompt)
 
         val crashHandler = Thread.UncaughtExceptionHandler { _, e ->
             Log.e(TAG, "Transcription thread crashed", e)
             mainHandler.post {
+                transcriptionThread = null
                 state = State.IDLE
                 callbacks.onFinished()
                 callbacks.onError(context.getString(R.string.voice_error_transcription_failed))
             }
         }
-        Thread {
+        val thread = Thread {
             try {
                 val transcription = sanitizeTranscription(client.transcribe(wavData))
+                val finalText = applySpacing(transcription, spacingContext)
                 mainHandler.post {
+                    transcriptionThread = null
                     state = State.IDLE
                     callbacks.onFinished()
-                    if (transcription.isNotEmpty()) {
-                        callbacks.onTranscriptionResult(transcription)
+                    if (finalText.isNotEmpty()) {
+                        callbacks.onTranscriptionResult(finalText)
                     }
+                }
+            } catch (e: InterruptedException) {
+                if (BuildConfig.DEBUG) Log.i(TAG, "Transcription cancelled")
+                mainHandler.post {
+                    transcriptionThread = null
+                    state = State.IDLE
+                    callbacks.onFinished()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Transcription failed", e)
                 mainHandler.post {
+                    transcriptionThread = null
                     state = State.IDLE
                     callbacks.onFinished()
                     callbacks.onError(e.message ?: context.getString(R.string.voice_error_transcription_failed))
@@ -166,7 +211,26 @@ class VoiceInputManager(
         }.apply {
             name = "VoiceTranscription"
             uncaughtExceptionHandler = crashHandler
-        }.start()
+        }
+        transcriptionThread = thread
+        thread.start()
+    }
+
+    /** Cancel either a live recording or an in-flight upload. */
+    fun cancelRecording() {
+        when (state) {
+            State.RECORDING -> {
+                audioRecorder.cancel()
+                state = State.IDLE
+                callbacks.onFinished()
+            }
+            State.TRANSCRIBING -> {
+                transcriptionThread?.interrupt()
+                // State transition is handled by the thread's InterruptedException branch,
+                // which posts back to the main thread.
+            }
+            State.IDLE -> Unit
+        }
     }
 
     private fun sanitizeTranscription(raw: String): String {
@@ -176,13 +240,20 @@ class VoiceInputManager(
         return if (cleaned.length > MAX_TRANSCRIPTION_LENGTH) cleaned.substring(0, MAX_TRANSCRIPTION_LENGTH) else cleaned
     }
 
-    fun cancelRecording() {
-        if (state == State.RECORDING) {
-            audioRecorder.cancel()
-            state = State.IDLE
-            callbacks.onFinished()
-        }
+    /**
+     * Prepends a space when the cursor sits immediately after a letter/digit, and appends one
+     * when the next char is a letter/digit. Keeps `"hello".world` from becoming `"hello"world`.
+     */
+    private fun applySpacing(text: String, ctx: SpacingContext?): String {
+        if (text.isEmpty() || ctx == null) return text
+        val needsLeading = ctx.charBefore?.let { isWordChar(it) && !text.first().isWhitespace() } == true
+        val needsTrailing = ctx.charAfter?.let { isWordChar(it) && !text.last().isWhitespace() } == true
+        val prefix = if (needsLeading) " " else ""
+        val suffix = if (needsTrailing) " " else ""
+        return prefix + text + suffix
     }
+
+    private fun isWordChar(c: Char): Boolean = c.isLetterOrDigit()
 
     private fun isNetworkAvailable(): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false

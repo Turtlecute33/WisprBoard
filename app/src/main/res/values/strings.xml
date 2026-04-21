@@ -1115,4 +1115,33 @@ New dictionary:
     <string name="voice_error_no_network">No internet connection</string>
     <string name="voice_error_transcription_failed">Transcription failed</string>
     <string name="voice_custom_model">Custom</string>
+    <string name="voice_max_duration">Maximum recording length</string>
+    <string name="voice_max_duration_summary">Stop recording automatically after this many seconds</string>
+    <string name="voice_max_duration_seconds"><xliff:g id="seconds">%1$d</xliff:g> seconds</string>
+    <string name="voice_auto_stop_silence">Auto-stop on silence</string>
+    <string name="voice_auto_stop_silence_summary">Stop recording after a short silence once you\'ve started speaking</string>
+    <string name="voice_auto_stop_silence_seconds">Silence duration before auto-stop</string>
+    <string name="voice_language_hint">Send keyboard language as a hint</string>
+    <string name="voice_language_hint_summary">Appends the active language to the transcription prompt for better accuracy</string>
+    <string name="voice_space_heuristic">Smart spacing</string>
+    <string name="voice_space_heuristic_summary">Insert spaces around transcribed text when it would stick to adjacent words</string>
+    <string name="voice_haptic_feedback">Haptic feedback</string>
+    <string name="voice_haptic_feedback_summary">Vibrate when recording starts and stops</string>
+    <string name="voice_cancel">Cancel voice input</string>
+    <string name="voice_stop_recording">Stop recording</string>
+    <string name="voice_test_key">Test API key</string>
+    <string name="voice_test_key_success">API key works</string>
+    <string name="voice_test_key_invalid">API key rejected</string>
+    <string name="voice_test_key_network_error">Network error while testing key</string>
+    <string name="voice_test_key_testing">Testing…</string>
+    <string name="voice_prompt_preset">Prompt preset</string>
+    <string name="voice_prompt_preset_custom">Custom</string>
+    <string name="voice_prompt_preset_verbatim">Verbatim</string>
+    <string name="voice_prompt_preset_clean">Clean up filler words</string>
+    <string name="voice_prompt_preset_punctuated">Add punctuation</string>
+    <string name="voice_prompt_preset_translate_en">Translate to English</string>
+    <string name="voice_prompt_preset_verbatim_text">Transcribe this audio exactly as spoken. Output only the transcription, nothing else.</string>
+    <string name="voice_prompt_preset_clean_text">Transcribe this audio. Remove filler words (um, uh, like, you know), false starts, and repetitions. Output only the clean transcription, nothing else.</string>
+    <string name="voice_prompt_preset_punctuated_text">Transcribe this audio with correct punctuation and sentence casing. Output only the transcription, nothing else.</string>
+    <string name="voice_prompt_preset_translate_en_text">Transcribe this audio and translate it into natural English. Output only the English translation, nothing else.</string>
 </resources>

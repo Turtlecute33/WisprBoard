@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Unit-test manifest mirrors the main manifest's overrideLibrary so the
+  Android-23-minimum security-crypto library can be pulled in. The library
+  code is never executed under JVM unit tests (SecretStore guards on
+  Build.VERSION.SDK_INT).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-sdk tools:overrideLibrary="androidx.security" />
+</manifest>

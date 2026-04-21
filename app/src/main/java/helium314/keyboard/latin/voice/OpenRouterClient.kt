@@ -2,14 +2,17 @@
 package helium314.keyboard.latin.voice
 
 import android.util.Base64
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.utils.Log
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.io.InterruptedIOException
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 
 /**
@@ -19,16 +22,53 @@ import java.net.URL
 class OpenRouterClient(
     private val apiKey: String,
     private val model: String,
-    private val prompt: String
+    private val prompt: String,
+    private val connectTimeoutMs: Int = DEFAULT_CONNECT_TIMEOUT_MS,
+    private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
 ) {
     companion object {
         private const val TAG = "OpenRouterClient"
         private const val ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
-        private const val CONNECT_TIMEOUT_MS = 15_000
-        private const val READ_TIMEOUT_MS = 60_000
+        const val DEFAULT_CONNECT_TIMEOUT_MS = 15_000
+        const val DEFAULT_READ_TIMEOUT_MS = 90_000
+        private const val MAX_ATTEMPTS = 3
+        private val RETRYABLE_STATUSES = setOf(408, 425, 429, 500, 502, 503, 504)
     }
 
+    /**
+     * Performs one transcription request, retrying transient failures with exponential backoff.
+     * Throws [OpenRouterException] on non-retryable failures or after retries are exhausted.
+     */
     fun transcribe(wavData: ByteArray): String {
+        val body = buildRequestBody(wavData)
+        var lastError: Exception? = null
+        for (attempt in 0 until MAX_ATTEMPTS) {
+            if (Thread.currentThread().isInterrupted) throw InterruptedException()
+            try {
+                return performRequest(body)
+            } catch (e: OpenRouterException) {
+                if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
+                lastError = e
+            } catch (e: SocketTimeoutException) {
+                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Request timed out")
+                lastError = e
+            } catch (e: InterruptedIOException) {
+                throw InterruptedException()
+            } catch (e: java.io.IOException) {
+                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException(e.message ?: "Network error")
+                lastError = e
+            }
+            val delayMs = (500L shl attempt).coerceAtMost(4_000L)
+            if (BuildConfig.DEBUG) Log.i(TAG, "Retrying after ${delayMs}ms (attempt ${attempt + 1})")
+            try { Thread.sleep(delayMs) } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw e
+            }
+        }
+        throw OpenRouterException(lastError?.message ?: "Transcription failed")
+    }
+
+    private fun buildRequestBody(wavData: ByteArray): String {
         val base64Audio = Base64.encodeToString(wavData, Base64.NO_WRAP)
 
         val audioContent = JSONObject().apply {
@@ -38,12 +78,10 @@ class OpenRouterClient(
                 put("format", "wav")
             })
         }
-
         val textContent = JSONObject().apply {
             put("type", "text")
             put("text", prompt)
         }
-
         val message = JSONObject().apply {
             put("role", "user")
             put("content", JSONArray().apply {
@@ -51,31 +89,31 @@ class OpenRouterClient(
                 put(textContent)
             })
         }
-
-        val requestBody = JSONObject().apply {
+        return JSONObject().apply {
             put("model", model)
             put("messages", JSONArray().apply { put(message) })
-        }
+        }.toString()
+    }
 
+    private fun performRequest(requestBody: String): String {
         val connection = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
             setRequestProperty("Content-Type", "application/json")
-            connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
             doOutput = true
         }
-
         try {
             OutputStreamWriter(connection.outputStream).use { writer ->
-                writer.write(requestBody.toString())
+                writer.write(requestBody)
                 writer.flush()
             }
 
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
+                if (BuildConfig.DEBUG) Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
                 throw OpenRouterException("API error: $responseCode", responseCode)
             }
 
