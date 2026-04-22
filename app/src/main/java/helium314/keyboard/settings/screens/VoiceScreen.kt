@@ -392,7 +392,7 @@ private fun VoiceTestKeyPreference(setting: Setting) {
 private enum class TestResult { OK, INVALID, INVALID_MODEL, NETWORK }
 
 private fun probeApiKey(apiKey: String, model: String): TestResult {
-    val keyConn = (java.net.URL("https://openrouter.ai/api/v1/key").openConnection() as HttpURLConnection).apply {
+    val keyConn = (java.net.URL(OpenRouterClient.KEY_ENDPOINT).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
@@ -418,7 +418,7 @@ private fun probeModel(apiKey: String, model: String): TestResult {
     }
     val author = URLEncoder.encode(parts[0], StandardCharsets.UTF_8.name())
     val slug = URLEncoder.encode(parts[1], StandardCharsets.UTF_8.name())
-    val conn = (java.net.URL("https://openrouter.ai/api/v1/models/$author/$slug/endpoints").openConnection() as HttpURLConnection).apply {
+    val conn = (java.net.URL(OpenRouterClient.modelEndpointUrl(author, slug)).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS

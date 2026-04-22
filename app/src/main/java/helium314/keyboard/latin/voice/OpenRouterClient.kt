@@ -31,7 +31,11 @@ class OpenRouterClient(
 
     companion object {
         private const val TAG = "OpenRouterClient"
-        private const val ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+        const val API_BASE = "https://openrouter.ai/api/v1"
+        private const val ENDPOINT = "$API_BASE/chat/completions"
+        const val KEY_ENDPOINT = "$API_BASE/key"
+        /** Template: call [modelEndpointUrl] to fill in the model id safely. */
+        fun modelEndpointUrl(author: String, slug: String): String = "$API_BASE/models/$author/$slug/endpoints"
         private const val STABLE_AUDIO_INSTRUCTION = "Process the attached audio input according to the system instructions. Return only the final answer."
         const val DEFAULT_CONNECT_TIMEOUT_MS = 15_000
         const val DEFAULT_READ_TIMEOUT_MS = 90_000
