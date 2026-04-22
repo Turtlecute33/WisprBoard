@@ -246,6 +246,13 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun setSuggestions(suggestions: SuggestedWords, isRtlLanguage: Boolean) {
+        if (recordingOverlay != null) {
+            helium314.keyboard.latin.voice.VoiceDiagnosticLog.log(
+                context,
+                "Strip",
+                "setSuggestions called while recordingOverlay non-null - overlay will be detached"
+            )
+        }
         clear()
         setRtl(isRtlLanguage)
         suggestedWords = suggestions
@@ -257,6 +264,13 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun setExternalSuggestionView(view: View?, addCloseButton: Boolean) {
+        if (recordingOverlay != null) {
+            helium314.keyboard.latin.voice.VoiceDiagnosticLog.log(
+                context,
+                "Strip",
+                "setExternalSuggestionView called while recordingOverlay non-null - overlay will be detached"
+            )
+        }
         clear()
         isExternalSuggestionVisible = true
 

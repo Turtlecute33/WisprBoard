@@ -1145,6 +1145,12 @@ New dictionary:
     <string name="voice_test_key_invalid_model">Selected model is unavailable</string>
     <string name="voice_test_key_network_error">Network error while testing key</string>
     <string name="voice_test_key_testing">Testing…</string>
+    <string name="voice_share_diagnostic_log">Share voice diagnostic log</string>
+    <string name="voice_share_diagnostic_log_summary">Share the recent voice pipeline log to help diagnose failures</string>
+    <string name="voice_diagnostic_log_empty">No voice diagnostic log yet — try recording first</string>
+    <string name="voice_diagnostic_log_share_title">TurtleBoard voice diagnostic</string>
+    <string name="voice_diagnostic_log_clear">Clear voice diagnostic log</string>
+    <string name="voice_diagnostic_log_cleared">Voice diagnostic log cleared</string>
     <string name="voice_prompt_preset">Prompt preset</string>
     <string name="voice_prompt_preset_custom">Custom</string>
     <string name="voice_prompt_preset_verbatim">Verbatim</string>

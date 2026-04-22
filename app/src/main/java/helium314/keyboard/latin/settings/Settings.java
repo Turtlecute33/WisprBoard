@@ -83,6 +83,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // Virtual (non-stored) keys for action rows in settings UI.
     public static final String PREF_VOICE_ACTION_TEST_KEY = "voice_action_test_key";
     public static final String PREF_VOICE_ACTION_PROMPT_PRESET = "voice_action_prompt_preset";
+    public static final String PREF_VOICE_ACTION_SHARE_DIAG = "voice_action_share_diag";
 
     public static final String PREF_AUTO_CAP = "auto_cap";
     public static final String PREF_VIBRATE_ON = "vibrate_on";
