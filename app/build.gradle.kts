@@ -1,4 +1,5 @@
 import com.android.build.api.variant.ApplicationVariant
+import java.io.File
 
 plugins {
     id("com.android.application")
@@ -12,7 +13,13 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(System.getenv("KEYSTORE_FILE") ?: "keystore.jks")
+            val configuredKeystore = System.getenv("KEYSTORE_FILE")?.takeIf { it.isNotBlank() }?.let {
+                val candidate = File(it)
+                if (candidate.isAbsolute) candidate else project.file(it)
+            }
+            val repoKeystore = rootProject.file("release-signing/heliboard-release.jks").takeIf { it.exists() }
+            val appKeystore = project.file("keystore.jks").takeIf { it.exists() }
+            storeFile = configuredKeystore ?: repoKeystore ?: appKeystore ?: project.file("keystore.jks")
             storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
             keyAlias = System.getenv("KEY_ALIAS") ?: ""
             keyPassword = System.getenv("KEY_PASSWORD") ?: ""
