@@ -1121,6 +1121,9 @@ New dictionary:
     <string name="voice_error_no_network">No internet connection</string>
     <string name="voice_error_transcription_failed">Transcription failed</string>
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
+    <string name="voice_mic_rationale_title">Microphone access</string>
+    <string name="voice_mic_rationale_message">TurtleBoard records audio only while you hold the voice button. The recording is sent over HTTPS to OpenRouter for transcription using the API key you supply; it is not proxied by any TurtleBoard server. You can revoke microphone access at any time from Android\'s app settings.</string>
+    <string name="voice_mic_rationale_confirm">Allow microphone</string>
     <string name="voice_custom_model">Custom</string>
     <string name="voice_max_duration">Maximum recording length</string>
     <string name="voice_max_duration_summary">Stop recording automatically after this many seconds</string>

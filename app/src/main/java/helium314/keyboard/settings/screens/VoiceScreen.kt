@@ -35,6 +35,7 @@ import helium314.keyboard.latin.voice.parseExpectedLanguages
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.ListPickerDialog
 import helium314.keyboard.settings.dialogs.TextInputDialog
 import helium314.keyboard.settings.initPreview
@@ -105,9 +106,24 @@ fun createVoiceSettings(context: Context) = listOf(
         val pendingPermissionResult = remember {
             mutableStateOf<((Boolean) -> Unit)?>(null)
         }
+        var showRationale by remember { mutableStateOf(false) }
         val permissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted -> pendingPermissionResult.value?.invoke(granted) }
+
+        if (showRationale) {
+            ConfirmationDialog(
+                onDismissRequest = { showRationale = false; pendingPermissionResult.value = null },
+                onConfirmed = {
+                    showRationale = false
+                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                },
+                title = { Text(stringResource(R.string.voice_mic_rationale_title)) },
+                content = { Text(stringResource(R.string.voice_mic_rationale_message)) },
+                confirmButtonText = stringResource(R.string.voice_mic_rationale_confirm),
+            )
+        }
+
         SwitchPreference(
             setting,
             Defaults.PREF_VOICE_INPUT_ENABLED,
@@ -130,7 +146,9 @@ fun createVoiceSettings(context: Context) = listOf(
                         Toast.makeText(ctx, permissionDeniedMessage, Toast.LENGTH_SHORT).show()
                     }
                 }
-                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                // Show a rationale BEFORE the system prompt so the user knows what the
+                // microphone will be used for and where the audio travels.
+                showRationale = true
                 false
             }
         )
