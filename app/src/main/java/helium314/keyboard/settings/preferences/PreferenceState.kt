@@ -12,28 +12,39 @@ import helium314.keyboard.latin.utils.prefs
 
 @Composable
 fun rememberBooleanPreferenceState(key: String, default: Boolean): MutableState<Boolean> {
-    return rememberPreferenceState(key) { prefs -> prefs.getBoolean(key, default) }
+    return rememberPreferenceState(key) { prefs -> prefs.safeGet(key, default) { getBoolean(key, default) } }
 }
 
 @Composable
 fun rememberStringPreferenceState(key: String, default: String): MutableState<String> {
-    return rememberPreferenceState(key) { prefs -> prefs.getString(key, default) ?: default }
+    return rememberPreferenceState(key) { prefs -> prefs.safeGet(key, default) { getString(key, default) ?: default } }
 }
 
 @Composable
 fun rememberIntPreferenceState(key: String, default: Int): MutableState<Int> {
-    return rememberPreferenceState(key) { prefs -> prefs.getInt(key, default) }
+    return rememberPreferenceState(key) { prefs -> prefs.safeGet(key, default) { getInt(key, default) } }
 }
 
 @Composable
 fun rememberLongPreferenceState(key: String, default: Long): MutableState<Long> {
-    return rememberPreferenceState(key) { prefs -> prefs.getLong(key, default) }
+    return rememberPreferenceState(key) { prefs -> prefs.safeGet(key, default) { getLong(key, default) } }
 }
 
 @Composable
 fun rememberFloatPreferenceState(key: String, default: Float): MutableState<Float> {
-    return rememberPreferenceState(key) { prefs -> prefs.getFloat(key, default) }
+    return rememberPreferenceState(key) { prefs -> prefs.safeGet(key, default) { getFloat(key, default) } }
 }
+
+/**
+ * SharedPreferences throws ClassCastException when the stored type differs from the requested
+ * one (e.g. after a schema change). Returning the default keeps the UI alive; the next write
+ * from the user corrects the on-disk type.
+ */
+private inline fun <T> SharedPreferences.safeGet(key: String, default: T, block: SharedPreferences.() -> T): T =
+    try { block() } catch (_: ClassCastException) {
+        edit().remove(key).apply()
+        default
+    }
 
 @Composable
 private fun <T> rememberPreferenceState(

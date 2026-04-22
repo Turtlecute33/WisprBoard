@@ -196,7 +196,10 @@ fun <T: Any?> SearchScreen(
                         content()
                     }
                 } else {
-                    val items = filteredItems(searchText.text)
+                    // Cache the filter result by search text so scrolling / unrelated recompositions
+                    // don't re-scan settingsContainer on every frame.
+                    val query = searchText.text
+                    val items = remember(query) { filteredItems(query) }
                     Scaffold(
                         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
                     ) { innerPadding ->
