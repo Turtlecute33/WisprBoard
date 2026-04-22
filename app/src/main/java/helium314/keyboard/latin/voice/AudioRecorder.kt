@@ -8,13 +8,18 @@ import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.utils.Log
-import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * Records audio from the microphone into an in-memory WAV byte array.
- * Uses AudioRecord for low-level control without writing to disk.
+ * Records audio from the microphone directly to a WAV file on disk.
+ *
+ * Bytes are appended to the output file chunk-by-chunk while recording, so peak
+ * heap usage stays bounded regardless of the recording length. A placeholder
+ * WAV header is written up-front and rewritten in [stop] once the sample count
+ * is known.
  *
  * Additionally exposes live telemetry during recording:
  *  - [currentAmplitude]: rolling mean absolute sample amplitude (0..32767)
@@ -22,6 +27,7 @@ import java.nio.ByteOrder
  * and, post-stop: [lastDurationMs], [lastMeanAmplitude].
  */
 class AudioRecorder(
+    private val outputFile: File,
     private val maxDurationMs: Long = 90_000L,
     /** If >0, stop after this many contiguous ms of silence once the user has spoken at least once. */
     private val autoStopSilenceMs: Long = 0L,
@@ -38,7 +44,10 @@ class AudioRecorder(
 
     private var audioRecord: AudioRecord? = null
     private var recordingThread: Thread? = null
-    private var pcmOutput = ByteArrayOutputStream()
+    private var pcmOutputFile: RandomAccessFile? = null
+    @Volatile private var pcmBytesWritten: Long = 0L
+    @Volatile private var amplitudeSum: Long = 0L
+    @Volatile private var amplitudeCount: Long = 0L
     private var noiseSuppressor: NoiseSuppressor? = null
     private var agc: AutomaticGainControl? = null
     @Volatile private var isRecording = false
@@ -87,7 +96,15 @@ class AudioRecorder(
 
             attachAudioEffects(audioRecord!!.audioSessionId)
 
-            pcmOutput.reset()
+            outputFile.parentFile?.mkdirs()
+            val raf = RandomAccessFile(outputFile, "rw")
+            raf.setLength(0L)
+            // Write a 44-byte placeholder; stop() rewrites with accurate sizes.
+            raf.write(ByteArray(WAV_HEADER_SIZE))
+            pcmOutputFile = raf
+            pcmBytesWritten = 0L
+            amplitudeSum = 0L
+            amplitudeCount = 0L
             currentAmplitude = 0.0
             isRecording = true
             recordingStartMs = System.currentTimeMillis()
@@ -100,9 +117,15 @@ class AudioRecorder(
             true
         } catch (e: SecurityException) {
             Log.e(TAG, "Microphone permission not granted", e)
+            closeOutputSafely()
             false
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "AudioRecord construction failed", e)
+            closeOutputSafely()
+            false
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "Failed to open recording output file", e)
+            closeOutputSafely()
             false
         }
     }
@@ -120,9 +143,20 @@ class AudioRecorder(
             val read = audioRecord?.read(buffer, 0, buffer.size) ?: AudioRecord.ERROR_INVALID_OPERATION
             when {
                 read > 0 -> {
-                    pcmOutput.write(buffer, 0, read)
+                    try {
+                        pcmOutputFile?.write(buffer, 0, read)
+                        pcmBytesWritten += read
+                    } catch (e: java.io.IOException) {
+                        Log.e(TAG, "Failed to write PCM chunk", e)
+                        isRecording = false
+                        break
+                    }
                     val amp = chunkMeanAmplitude(buffer, read)
                     currentAmplitude = amp
+                    // Running mean for post-stop gate — avoids re-reading the whole file.
+                    val samples = read / 2
+                    amplitudeSum += (amp * samples).toLong()
+                    amplitudeCount += samples
                     if (autoStopSilenceMs > 0L) {
                         val now = System.currentTimeMillis()
                         if (amp >= SPEECH_AMPLITUDE_THRESHOLD) {
@@ -147,22 +181,45 @@ class AudioRecorder(
         }
     }
 
-    fun stop(): ByteArray {
+    /**
+     * Finalizes the WAV header and returns the output file.
+     * Callers are responsible for deleting the file after consuming it.
+     * Returns null if no usable audio was captured.
+     */
+    fun stop(): File? {
         teardownRecorder()
 
-        val pcmData = pcmOutput.toByteArray()
-        pcmOutput.reset()
-        lastDurationMs = if (pcmData.size >= 2) {
-            (pcmData.size.toLong() * 1000L) / (SAMPLE_RATE.toLong() * 2L)
-        } else 0L
-        lastMeanAmplitude = computeMeanAmplitude(pcmData)
+        val pcmBytes = pcmBytesWritten
+        lastDurationMs = if (pcmBytes >= 2) (pcmBytes * 1000L) / (SAMPLE_RATE.toLong() * 2L) else 0L
+        lastMeanAmplitude = if (amplitudeCount > 0) amplitudeSum.toDouble() / amplitudeCount else 0.0
         currentAmplitude = 0.0
-        return createWav(pcmData)
+
+        val raf = pcmOutputFile
+        pcmOutputFile = null
+        if (raf == null || pcmBytes < 2) {
+            try { raf?.close() } catch (_: Throwable) {}
+            if (outputFile.exists()) outputFile.delete()
+            return null
+        }
+        return try {
+            writeWavHeader(raf, pcmBytes.toInt())
+            raf.close()
+            outputFile
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "Failed to finalize WAV header", e)
+            try { raf.close() } catch (_: Throwable) {}
+            if (outputFile.exists()) outputFile.delete()
+            null
+        }
     }
 
     fun cancel() {
         teardownRecorder()
-        pcmOutput.reset()
+        closeOutputSafely()
+        if (outputFile.exists()) outputFile.delete()
+        pcmBytesWritten = 0L
+        amplitudeSum = 0L
+        amplitudeCount = 0L
         lastDurationMs = 0L
         lastMeanAmplitude = 0.0
         currentAmplitude = 0.0
@@ -180,6 +237,11 @@ class AudioRecorder(
         audioRecord?.release()
         audioRecord = null
         recordingStartMs = 0L
+    }
+
+    private fun closeOutputSafely() {
+        try { pcmOutputFile?.close() } catch (_: Throwable) {}
+        pcmOutputFile = null
     }
 
     private fun attachAudioEffects(sessionId: Int) {
@@ -224,13 +286,10 @@ class AudioRecorder(
         return if (count > 0) sum.toDouble() / count else 0.0
     }
 
-    private fun computeMeanAmplitude(pcm: ByteArray): Double = chunkMeanAmplitude(pcm, pcm.size)
-
-    private fun createWav(pcmData: ByteArray): ByteArray {
-        val totalDataLen = pcmData.size + 36
+    private fun writeWavHeader(raf: RandomAccessFile, pcmSize: Int) {
+        val totalDataLen = pcmSize + 36
         val byteRate = SAMPLE_RATE * 1 * 16 / 8
-
-        val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
+        val header = ByteBuffer.allocate(WAV_HEADER_SIZE).order(ByteOrder.LITTLE_ENDIAN).apply {
             put("RIFF".toByteArray())
             putInt(totalDataLen)
             put("WAVE".toByteArray())
@@ -243,9 +302,11 @@ class AudioRecorder(
             putShort(2)
             putShort(16)
             put("data".toByteArray())
-            putInt(pcmData.size)
+            putInt(pcmSize)
         }
-
-        return header.array() + pcmData
+        raf.seek(0L)
+        raf.write(header.array())
     }
 }
+
+private const val WAV_HEADER_SIZE = 44

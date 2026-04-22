@@ -16,6 +16,7 @@ import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
+import java.io.File
 import java.util.Locale
 
 /**
@@ -28,11 +29,11 @@ class VoiceInputManager(
 ) {
     companion object {
         private const val TAG = "VoiceInputManager"
-        private const val WAV_HEADER_SIZE = 44
         private const val MIN_RECORDING_DURATION_MS = 400L
         // Mean absolute amplitude threshold for 16-bit PCM. Typical silence ~0-80; quiet speech ~300+.
         private const val SILENCE_AMPLITUDE_THRESHOLD = 180.0
         private const val MAX_TRANSCRIPTION_LENGTH = 10_000
+        private const val AUDIO_CACHE_SUBDIR = "voice_audio"
     }
 
     enum class State { IDLE, RECORDING, TRANSCRIBING }
@@ -54,8 +55,9 @@ class VoiceInputManager(
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var audioRecorder: AudioRecorder = AudioRecorder()
+    private var audioRecorder: AudioRecorder = newRecorder()
     private var state = State.IDLE
+    private var currentAudioFile: File? = null
     @Volatile private var transcriptionThread: Thread? = null
     @Volatile private var transcriptionClient: OpenRouterClient? = null
     @Volatile private var activeTranscriptionToken = 0L
@@ -106,7 +108,11 @@ class VoiceInputManager(
         val autoStopSec = prefs.getInt(Settings.PREF_VOICE_AUTO_STOP_SILENCE_SECONDS, Defaults.PREF_VOICE_AUTO_STOP_SILENCE_SECONDS)
             .coerceIn(1, 10)
 
+        // Fresh cache file per recording; older ones are swept away in newRecorder().
+        val audioFile = File(cacheAudioDir(), "rec_${System.currentTimeMillis()}.wav")
+        currentAudioFile = audioFile
         audioRecorder = AudioRecorder(
+            outputFile = audioFile,
             maxDurationMs = maxDurationSec * 1000L,
             autoStopSilenceMs = if (autoStopEnabled) autoStopSec * 1000L else 0L,
         )
@@ -133,14 +139,18 @@ class VoiceInputManager(
     fun stopRecording() {
         if (state != State.RECORDING) return
 
-        val wavData = audioRecorder.stop()
-        if (wavData.size <= WAV_HEADER_SIZE) {
+        val wavFile = audioRecorder.stop()
+        if (wavFile == null || !wavFile.exists() || wavFile.length() <= 44L) {
+            wavFile?.delete()
+            currentAudioFile = null
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_no_audio))
             return
         }
         if (audioRecorder.lastDurationMs < MIN_RECORDING_DURATION_MS) {
+            wavFile.delete()
+            currentAudioFile = null
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_too_short))
@@ -148,6 +158,8 @@ class VoiceInputManager(
         }
         if (audioRecorder.lastMeanAmplitude < SILENCE_AMPLITUDE_THRESHOLD) {
             if (BuildConfig.DEBUG) Log.i(TAG, "Rejecting silent recording (amp=${audioRecorder.lastMeanAmplitude})")
+            wavFile.delete()
+            currentAudioFile = null
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_silent))
@@ -206,7 +218,7 @@ class VoiceInputManager(
         }
         val thread = Thread {
             try {
-                val transcription = sanitizeTranscription(client.transcribe(wavData))
+                val transcription = sanitizeTranscription(client.transcribe(wavFile))
                 val finalText = applySpacing(transcription, spacingContext)
                 finishTranscription(requestToken = requestToken, result = finalText)
             } catch (e: InterruptedException) {
@@ -218,6 +230,9 @@ class VoiceInputManager(
                     requestToken = requestToken,
                     error = safeUserFacingError(e),
                 )
+            } finally {
+                // Best-effort: delete the audio after the request, whether it succeeded or not.
+                if (wavFile.exists()) wavFile.delete()
             }
         }.apply {
             name = "VoiceTranscription"
@@ -233,6 +248,8 @@ class VoiceInputManager(
         when (state) {
             State.RECORDING -> {
                 audioRecorder.cancel()
+                currentAudioFile?.delete()
+                currentAudioFile = null
                 state = State.IDLE
                 callbacks.onFinished()
             }
@@ -242,11 +259,31 @@ class VoiceInputManager(
                 transcriptionThread?.interrupt()
                 transcriptionThread = null
                 transcriptionClient = null
+                // The transcription thread's finally block will handle file deletion; only
+                // reach in here if it couldn't start.
+                currentAudioFile?.takeIf { it.exists() }?.delete()
+                currentAudioFile = null
                 state = State.IDLE
                 callbacks.onFinished()
             }
             State.IDLE -> Unit
         }
+    }
+
+    private fun cacheAudioDir(): File {
+        val dir = File(context.cacheDir, AUDIO_CACHE_SUBDIR)
+        dir.mkdirs()
+        return dir
+    }
+
+    private fun newRecorder(): AudioRecorder {
+        // Sweep any stale files left over from a previous process being killed mid-recording.
+        runCatching {
+            val dir = cacheAudioDir()
+            val cutoff = System.currentTimeMillis() - 60 * 60 * 1000L
+            dir.listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
+        }
+        return AudioRecorder(outputFile = File(cacheAudioDir(), "rec_placeholder.wav"))
     }
 
     /**

@@ -7,8 +7,10 @@ import helium314.keyboard.latin.utils.Log
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.File
+import java.io.FileInputStream
 import java.io.InterruptedIOException
-import java.io.OutputStreamWriter
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
@@ -38,19 +40,23 @@ class OpenRouterClient(
         // Sanity cap to prevent pathological responses from consuming unbounded memory.
         // Real transcription responses are kilobytes; 1 MB is ~3 orders of magnitude of headroom.
         private const val MAX_RESPONSE_BYTES = 1_000_000L
+        private const val AUDIO_PLACEHOLDER = "\u0000__AUDIO_B64__\u0000"
+        // Must be a multiple of 3 so chunked base64 encoding is padding-free until the final chunk.
+        private const val AUDIO_READ_CHUNK = 48 * 1024
     }
 
     /**
      * Performs one transcription request, retrying transient failures with exponential backoff.
-     * Throws [OpenRouterException] on non-retryable failures or after retries are exhausted.
+     * Streams [audioFile] to the server via chunked transfer encoding so peak heap is bounded
+     * regardless of recording length. Throws [OpenRouterException] on non-retryable failures
+     * or after retries are exhausted. The caller owns the file and must delete it.
      */
-    fun transcribe(wavData: ByteArray): String {
-        val body = buildRequestBody(wavData)
+    fun transcribe(audioFile: File): String {
         var lastError: Exception? = null
         for (attempt in 0 until MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
             try {
-                return performRequest(body)
+                return performRequest(audioFile)
             } catch (e: OpenRouterException) {
                 if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
                 lastError = e
@@ -77,19 +83,25 @@ class OpenRouterClient(
         activeConnection?.disconnect()
     }
 
-    private fun buildRequestBody(wavData: ByteArray): String {
-        val base64Audio = Base64.encodeToString(wavData, Base64.NO_WRAP)
-
+    /**
+     * Builds the full JSON request body except for the base64 audio payload, which is
+     * streamed separately. The placeholder sentinel is split in half so both halves can be
+     * emitted verbatim around the live base64 stream.
+     */
+    private fun buildRequestEnvelope(): Pair<String, String> {
         val messages = JSONArray().apply {
             put(buildSystemMessage())
             put(buildTextMessage(STABLE_AUDIO_INSTRUCTION))
             runtimeInstruction?.takeIf { it.isNotBlank() }?.let { put(buildTextMessage(it)) }
-            put(buildAudioMessage(base64Audio))
+            put(buildAudioMessage(AUDIO_PLACEHOLDER))
         }
-        return JSONObject().apply {
+        val body = JSONObject().apply {
             put("model", model)
             put("messages", messages)
         }.toString()
+        val placeholderIndex = body.indexOf(AUDIO_PLACEHOLDER)
+        check(placeholderIndex >= 0) { "Audio placeholder not found in request body" }
+        return body.substring(0, placeholderIndex) to body.substring(placeholderIndex + AUDIO_PLACEHOLDER.length)
     }
 
     private fun buildSystemMessage(): JSONObject {
@@ -131,7 +143,8 @@ class OpenRouterClient(
         }
     }
 
-    private fun performRequest(requestBody: String): String {
+    private fun performRequest(audioFile: File): String {
+        val (prefix, suffix) = buildRequestEnvelope()
         val connection = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
@@ -139,12 +152,19 @@ class OpenRouterClient(
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
             doOutput = true
+            // Chunked streaming keeps the upload out of HttpURLConnection's internal buffer;
+            // without it the entire body (including audio) would be buffered in memory before
+            // the request is sent.
+            setChunkedStreamingMode(0)
         }
         activeConnection = connection
         try {
-            OutputStreamWriter(connection.outputStream).use { writer ->
-                writer.write(requestBody)
-                writer.flush()
+            connection.outputStream.use { out ->
+                val prefixBytes = prefix.toByteArray(Charsets.UTF_8)
+                out.write(prefixBytes)
+                streamBase64Audio(audioFile, out)
+                out.write(suffix.toByteArray(Charsets.UTF_8))
+                out.flush()
             }
 
             val responseCode = connection.responseCode
@@ -196,6 +216,24 @@ class OpenRouterClient(
             TAG,
             "Prompt cache stats for $model: cached_tokens=$cachedTokens, cache_write_tokens=$cacheWriteTokens"
         )
+    }
+
+    /**
+     * Reads [audioFile] in 48 KiB chunks (multiple of 3 for padding-free base64) and
+     * writes the encoded bytes straight to [out], avoiding any full-body buffer.
+     */
+    private fun streamBase64Audio(audioFile: File, out: OutputStream) {
+        val buf = ByteArray(AUDIO_READ_CHUNK)
+        FileInputStream(audioFile).use { fis ->
+            while (true) {
+                if (Thread.currentThread().isInterrupted) throw InterruptedException()
+                val n = fis.read(buf)
+                if (n == -1) break
+                // AUDIO_READ_CHUNK is a multiple of 3, so intermediate reads produce padding-free
+                // base64. The final (short) read may include padding, which is valid at the end.
+                out.write(Base64.encode(buf, 0, n, Base64.NO_WRAP))
+            }
+        }
     }
 
     private fun readCappedString(input: java.io.InputStream, maxBytes: Long): String {

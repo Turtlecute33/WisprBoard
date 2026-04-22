@@ -352,7 +352,10 @@ private fun VoiceTestKeyPreference(setting: Setting) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
     val scope = rememberCoroutineScope()
-    var busy by rememberSaveable { mutableStateOf(false) }
+    // Deliberately not rememberSaveable: the probe can't survive process death, so restoring
+    // busy=true would leave the UI stuck. rememberCoroutineScope() cancels on dispose, which
+    // is enough to abandon the in-flight request on navigation.
+    var busy by remember { mutableStateOf(false) }
     Preference(
         name = setting.title,
         description = if (busy) stringResource(R.string.voice_test_key_testing) else null,
