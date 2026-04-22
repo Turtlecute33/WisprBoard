@@ -60,6 +60,7 @@ import helium314.keyboard.latin.utils.removeFirst
 import helium314.keyboard.latin.utils.removePinnedKey
 import helium314.keyboard.latin.utils.setToolbarButtonsActivatedStateOnPrefChange
 import helium314.keyboard.latin.voice.RecordingOverlayView
+import helium314.keyboard.latin.voice.TextFixOverlayView
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.min
@@ -315,6 +316,43 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     fun hideRecordingOverlay() {
         recordingOverlay?.stopAnimation()
         recordingOverlay = null
+        clear()
+        isExternalSuggestionVisible = false
+    }
+
+    // --- Text fix overlay ---
+
+    private var textFixOverlay: TextFixOverlayView? = null
+    private var onReplaceTextFix: Runnable? = null
+    private var onDiscardTextFix: Runnable? = null
+
+    fun setOnReplaceTextFix(callback: Runnable?) {
+        onReplaceTextFix = callback
+    }
+
+    fun setOnDiscardTextFix(callback: Runnable?) {
+        onDiscardTextFix = callback
+    }
+
+    fun showTextFixWorking() {
+        val overlay = textFixOverlay ?: TextFixOverlayView(context).also {
+            it.setColors(Settings.getValues().mColors.get(ColorType.KEY_TEXT))
+            it.onReplaceClick = { onReplaceTextFix?.run() }
+            it.onDiscardClick = { onDiscardTextFix?.run() }
+        }
+        overlay.showWorking()
+        if (textFixOverlay == null) {
+            setExternalSuggestionView(overlay, false)
+            textFixOverlay = overlay
+        }
+    }
+
+    fun showTextFixResult(proposed: String) {
+        textFixOverlay?.showResult(proposed)
+    }
+
+    fun hideTextFixOverlay() {
+        textFixOverlay = null
         clear()
         isExternalSuggestionVisible = false
     }

@@ -86,6 +86,7 @@ import helium314.keyboard.latin.utils.SubtypeLocaleUtils;
 import helium314.keyboard.latin.utils.SubtypeSettings;
 import helium314.keyboard.latin.utils.SubtypeState;
 import helium314.keyboard.latin.utils.ToolbarMode;
+import helium314.keyboard.latin.voice.TextFixManager;
 import helium314.keyboard.latin.voice.VoiceInputManager;
 import helium314.keyboard.settings.SettingsActivity2;
 import kotlin.Unit;
@@ -140,6 +141,9 @@ public class LatinIME extends InputMethodService implements
     private InsetsOutlineProvider mInsetsUpdater;
     private SuggestionStripView mSuggestionStripView;
     private VoiceInputManager mVoiceInputManager;
+    private TextFixManager mTextFixManager;
+    private String mPendingTextFixOriginal;
+    private String mPendingTextFixProposed;
 
     private RichInputMethodManager mRichImm;
     final KeyboardSwitcher mKeyboardSwitcher;
@@ -643,6 +647,63 @@ public class LatinIME extends InputMethodService implements
                 }
             }
         });
+
+        mTextFixManager = new TextFixManager(this, new TextFixManager.Callbacks() {
+            @Nullable
+            @Override
+            public CharSequence getSelectedText() {
+                try {
+                    return mInputLogic.mConnection.getSelectedText(0);
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+
+            @Override
+            public void onWorking() {
+                if (mSuggestionStripView != null) {
+                    mSuggestionStripView.setOnReplaceTextFix(LatinIME.this::commitTextFixReplacement);
+                    mSuggestionStripView.setOnDiscardTextFix(LatinIME.this::discardTextFix);
+                    mSuggestionStripView.showTextFixWorking();
+                }
+            }
+
+            @Override
+            public void onFinished() {
+                // Keep overlay visible until the user replaces or discards — only hide on error/cancel.
+            }
+
+            @Override
+            public void onResult(@NonNull final String originalText, @NonNull final String proposedText) {
+                mPendingTextFixOriginal = originalText;
+                mPendingTextFixProposed = proposedText;
+                if (mSuggestionStripView != null) mSuggestionStripView.showTextFixResult(proposedText);
+            }
+
+            @Override
+            public void onError(@NonNull final String message) {
+                Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
+                if (mSuggestionStripView != null) mSuggestionStripView.hideTextFixOverlay();
+            }
+        });
+    }
+
+    private void commitTextFixReplacement() {
+        final String proposed = mPendingTextFixProposed;
+        mPendingTextFixOriginal = null;
+        mPendingTextFixProposed = null;
+        if (mSuggestionStripView != null) mSuggestionStripView.hideTextFixOverlay();
+        if (proposed != null) {
+            // Selection is still live at this point — commitText replaces it.
+            mInputLogic.mConnection.commitText(proposed, 1);
+        }
+    }
+
+    private void discardTextFix() {
+        mPendingTextFixOriginal = null;
+        mPendingTextFixProposed = null;
+        if (mTextFixManager != null) mTextFixManager.cancel();
+        if (mSuggestionStripView != null) mSuggestionStripView.hideTextFixOverlay();
     }
 
     private boolean isVoiceHapticEnabled() {
@@ -1493,6 +1554,12 @@ public class LatinIME extends InputMethodService implements
                 } else {
                     mVoiceInputManager.startRecording();
                 }
+            }
+            return;
+        }
+        if (KeyCode.TEXT_FIX == event.getKeyCode()) {
+            if (mTextFixManager != null && mTextFixManager.getState() == TextFixManager.State.IDLE) {
+                mTextFixManager.startTextFix();
             }
             return;
         }

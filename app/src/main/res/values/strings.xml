@@ -1155,4 +1155,21 @@ New dictionary:
     <string name="voice_prompt_preset_clean_text">Transcribe this audio. Remove filler words (um, uh, like, you know), false starts, and repetitions. Output only the clean transcription, nothing else.</string>
     <string name="voice_prompt_preset_punctuated_text">Transcribe this audio with correct punctuation and sentence casing. Output only the transcription, nothing else.</string>
     <string name="voice_prompt_preset_translate_en_text">Transcribe this audio and translate it into natural English. Output only the English translation, nothing else.</string>
+
+    <!-- Text Fix -->
+    <string name="settings_screen_text_fix">Text Fix</string>
+    <string name="text_fix_enabled">Enable Text Fix</string>
+    <string name="text_fix_enabled_summary">After adding your OpenRouter API key, enable this. Select text and long-press Return to fix it.</string>
+    <string name="text_fix_model">Text Fix Model</string>
+    <string name="text_fix_model_custom">Custom Model ID</string>
+    <string name="text_fix_model_custom_summary">Only used when Text Fix Model is set to Custom</string>
+    <string name="text_fix_prompt">Fix Prompt</string>
+    <string name="text_fix_prompt_summary">Instruction sent to the AI when improving your selected text</string>
+    <string name="text_fix_working">Fixing…</string>
+    <string name="text_fix_replace">Replace</string>
+    <string name="text_fix_discard">Discard</string>
+    <string name="text_fix_error_no_selection">Select text first, then long-press Return to fix</string>
+    <string name="text_fix_error_not_enabled">Enable Text Fix in settings</string>
+    <string name="text_fix_error_empty">The model returned no text</string>
+    <string name="text_fix_error_failed">Text fix failed</string>
 </resources>

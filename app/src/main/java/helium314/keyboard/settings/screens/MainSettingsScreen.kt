@@ -36,6 +36,7 @@ fun MainSettingsScreen(
     onClickPreferences: () -> Unit,
     onClickToolbar: () -> Unit,
     onClickVoice: () -> Unit,
+    onClickTextFix: () -> Unit,
     onClickGestureTyping: () -> Unit,
     onClickDataGathering: () -> Unit,
     onClickAdvanced: () -> Unit,
@@ -80,6 +81,11 @@ fun MainSettingsScreen(
                     name = stringResource(R.string.settings_screen_voice),
                     onClick = onClickVoice,
                     icon = R.drawable.sym_keyboard_voice_rounded
+                ) { NextScreenIcon() }
+                Preference(
+                    name = stringResource(R.string.settings_screen_text_fix),
+                    onClick = onClickTextFix,
+                    icon = R.drawable.ic_text_fix
                 ) { NextScreenIcon() }
                 if (JniUtils.sHaveGestureLib)
                     Preference(
@@ -130,7 +136,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

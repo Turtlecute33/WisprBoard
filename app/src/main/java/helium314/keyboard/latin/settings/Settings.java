@@ -84,6 +84,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_VOICE_ACTION_TEST_KEY = "voice_action_test_key";
     public static final String PREF_VOICE_ACTION_PROMPT_PRESET = "voice_action_prompt_preset";
 
+    public static final String PREF_TEXT_FIX_ENABLED = "text_fix_enabled";
+    public static final String PREF_TEXT_FIX_MODEL = "text_fix_model";
+    public static final String PREF_TEXT_FIX_MODEL_CUSTOM = "text_fix_model_custom";
+    public static final String PREF_TEXT_FIX_PROMPT = "text_fix_prompt";
+
     public static final String PREF_AUTO_CAP = "auto_cap";
     public static final String PREF_VIBRATE_ON = "vibrate_on";
     public static final String PREF_VIBRATE_IN_DND_MODE = "vibrate_in_dnd_mode";

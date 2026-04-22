@@ -33,6 +33,7 @@ import helium314.keyboard.settings.screens.SecondaryLayoutScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
+import helium314.keyboard.settings.screens.TextFixScreen
 import helium314.keyboard.settings.screens.VoiceScreen
 import helium314.keyboard.settings.screens.gesturedata.GestureDataScreen
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,6 +71,7 @@ fun SettingsNavHost(
                 onClickPreferences = { navController.navigate(SettingsDestination.Preferences) },
                 onClickToolbar = { navController.navigate(SettingsDestination.Toolbar) },
                 onClickVoice = { navController.navigate(SettingsDestination.Voice) },
+                onClickTextFix = { navController.navigate(SettingsDestination.TextFix) },
                 onClickGestureTyping = { navController.navigate(SettingsDestination.GestureTyping) },
                 onClickDataGathering = { navController.navigate(SettingsDestination.DataGathering) },
                 onClickAdvanced = { navController.navigate(SettingsDestination.Advanced) },
@@ -94,6 +96,9 @@ fun SettingsNavHost(
         }
         composable(SettingsDestination.Voice) {
             VoiceScreen(onClickBack = ::goBack)
+        }
+        composable(SettingsDestination.TextFix) {
+            TextFixScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.GestureTyping) {
             GestureTypingScreen(onClickBack = ::goBack)
@@ -173,6 +178,7 @@ object SettingsDestination {
     const val Preferences = "preferences"
     const val Toolbar = "toolbar"
     const val Voice = "voice"
+    const val TextFix = "text_fix"
     const val GestureTyping = "gesture_typing"
     const val DataGathering = "data_gathering" // remove when data gathering phase is done (end of 2026 latest)
     const val DataReview = "data_review" // remove when data gathering phase is done (end of 2026 latest)

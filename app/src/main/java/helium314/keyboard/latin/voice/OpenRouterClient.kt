@@ -91,6 +91,74 @@ class OpenRouterClient(
     }
 
     /**
+     * Sends [userText] as a chat completion request (no audio) and returns the assistant's
+     * reply. Uses [systemPrompt] as the system message. Retries transient failures with the
+     * same policy as [transcribe].
+     */
+    fun fixText(userText: String): String {
+        var lastError: Exception? = null
+        for (attempt in 0 until MAX_ATTEMPTS) {
+            if (Thread.currentThread().isInterrupted) throw InterruptedException()
+            try {
+                return performTextRequest(userText)
+            } catch (e: OpenRouterException) {
+                if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
+                lastError = e
+            } catch (e: SocketTimeoutException) {
+                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Request timed out")
+                lastError = e
+            } catch (e: InterruptedIOException) {
+                throw InterruptedException()
+            } catch (e: java.io.IOException) {
+                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException(sanitizeForLog(e.message ?: "Network error"))
+                lastError = e
+            }
+            val delayMs = (500L shl attempt).coerceAtMost(4_000L)
+            try { Thread.sleep(delayMs) } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw e
+            }
+        }
+        throw OpenRouterException(sanitizeForLog(lastError?.message ?: "Request failed"))
+    }
+
+    private fun performTextRequest(userText: String): String {
+        val messages = JSONArray().apply {
+            put(buildSystemMessage())
+            put(buildTextMessage(userText))
+        }
+        val body = JSONObject().apply {
+            put("model", model)
+            put("messages", messages)
+        }.toString().toByteArray(Charsets.UTF_8)
+
+        val connection = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            setRequestProperty("Authorization", "Bearer $apiKey")
+            setRequestProperty("Content-Type", "application/json")
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
+            doOutput = true
+            setFixedLengthStreamingMode(body.size)
+        }
+        activeConnection = connection
+        try {
+            connection.outputStream.use { it.write(body) }
+            val responseCode = connection.responseCode
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                if (BuildConfig.DEBUG) Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
+                throw OpenRouterException("API error: $responseCode", responseCode)
+            }
+            val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
+            return parseContent(responseBody)
+        } finally {
+            activeConnection = null
+            connection.disconnect()
+        }
+    }
+
+    /**
      * Builds the full JSON request body except for the base64 audio payload, which is
      * streamed separately. The placeholder sentinel is split in half so both halves can be
      * emitted verbatim around the live base64 stream.
