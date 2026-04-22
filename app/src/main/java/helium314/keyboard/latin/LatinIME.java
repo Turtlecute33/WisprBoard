@@ -1095,7 +1095,7 @@ public class LatinIME extends InputMethodService implements
     public void onWindowHidden() {
         super.onWindowHidden();
         Log.i(TAG, "onWindowHidden");
-        mVoiceInputManager.cancelRecording();
+        cancelVoiceRecordingIfCapturing();
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
             mainKeyboardView.closing();
@@ -1117,7 +1117,7 @@ public class LatinIME extends InputMethodService implements
     void onFinishInputViewInternal(final boolean finishingInput) {
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
-        mVoiceInputManager.cancelRecording();
+        cancelVoiceRecordingIfCapturing();
         cleanupInternalStateForFinishInput();
     }
 
@@ -1945,6 +1945,13 @@ public class LatinIME extends InputMethodService implements
     public boolean isVoiceRecording() {
         return mVoiceInputManager != null
             && mVoiceInputManager.getState() == VoiceInputManager.State.RECORDING;
+    }
+
+    private void cancelVoiceRecordingIfCapturing() {
+        if (mVoiceInputManager != null
+                && mVoiceInputManager.getState() == VoiceInputManager.State.RECORDING) {
+            mVoiceInputManager.cancelRecording();
+        }
     }
 
     public void stopVoiceRecording() {

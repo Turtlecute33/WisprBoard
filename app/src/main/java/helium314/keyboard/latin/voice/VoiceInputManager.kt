@@ -29,9 +29,6 @@ class VoiceInputManager(
 ) {
     companion object {
         private const val TAG = "VoiceInputManager"
-        private const val MIN_RECORDING_DURATION_MS = 400L
-        // Mean absolute amplitude threshold for 16-bit PCM. Typical silence ~0-80; quiet speech ~300+.
-        private const val SILENCE_AMPLITUDE_THRESHOLD = 180.0
         private const val MAX_TRANSCRIPTION_LENGTH = 10_000
         private const val AUDIO_CACHE_SUBDIR = "voice_audio"
     }
@@ -148,22 +145,11 @@ class VoiceInputManager(
             callbacks.onError(context.getString(R.string.voice_error_no_audio))
             return
         }
-        if (audioRecorder.lastDurationMs < MIN_RECORDING_DURATION_MS) {
-            wavFile.delete()
-            currentAudioFile = null
-            state = State.IDLE
-            callbacks.onFinished()
-            callbacks.onError(context.getString(R.string.voice_error_too_short))
-            return
-        }
-        if (audioRecorder.lastMeanAmplitude < SILENCE_AMPLITUDE_THRESHOLD) {
-            if (BuildConfig.DEBUG) Log.i(TAG, "Rejecting silent recording (amp=${audioRecorder.lastMeanAmplitude})")
-            wavFile.delete()
-            currentAudioFile = null
-            state = State.IDLE
-            callbacks.onFinished()
-            callbacks.onError(context.getString(R.string.voice_error_silent))
-            return
+        if (BuildConfig.DEBUG) {
+            Log.i(
+                TAG,
+                "Uploading voice clip: durationMs=${audioRecorder.lastDurationMs}, meanAmplitude=${audioRecorder.lastMeanAmplitude}, bytes=${wavFile.length()}"
+            )
         }
 
         state = State.TRANSCRIBING
