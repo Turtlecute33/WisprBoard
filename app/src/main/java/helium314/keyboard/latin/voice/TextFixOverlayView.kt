@@ -32,12 +32,12 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-        setPadding(dp(8), 0, dp(8), 0)
+        setPadding(dp(12), dp(4), dp(12), dp(4))
 
         statusText = TextView(context).apply {
             textSize = 13f
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                marginEnd = dp(8)
+                marginEnd = dp(12)
             }
             visibility = View.GONE
         }
@@ -46,11 +46,11 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
             layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginEnd = dp(8)
+                marginEnd = dp(12)
             }
         }
-        discardButton = makePillButton(R.string.text_fix_discard) { onDiscardClick?.invoke() }
-        replaceButton = makePillButton(R.string.text_fix_replace) { onReplaceClick?.invoke() }
+        discardButton = makePillButton(R.string.text_fix_discard, isPrimary = false) { onDiscardClick?.invoke() }
+        replaceButton = makePillButton(R.string.text_fix_replace, isPrimary = true) { onReplaceClick?.invoke() }
 
         addView(statusText)
         addView(resultText)
@@ -58,24 +58,27 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
         addView(replaceButton)
     }
 
-    private fun makePillButton(labelRes: Int, onClick: () -> Unit): TextView {
+    private fun makePillButton(labelRes: Int, isPrimary: Boolean, onClick: () -> Unit): TextView {
         return TextView(context).apply {
             text = context.getString(labelRes)
             textSize = 12f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setPadding(dp(12), dp(6), dp(12), dp(6))
+            setPadding(dp(16), dp(8), dp(16), dp(8))
             gravity = Gravity.CENTER
             isClickable = true
             isFocusable = true
-            minHeight = dp(40)
-            minWidth = dp(56)
+            isAllCaps = false
+            minHeight = dp(36)
+            minWidth = dp(64)
             val bg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(16).toFloat()
+                cornerRadius = dp(20).toFloat()
             }
             background = bg
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(4)
+                // Space between siblings; the left-most button gets gap from the text via its own
+                // space, the primary button gets a small trailing margin from the strip edge.
+                marginStart = dp(8)
             }
             setOnClickListener { onClick() }
         }
@@ -84,12 +87,14 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     fun setColors(textColor: Int) {
         statusText.setTextColor(textColor)
         resultText.setTextColor(textColor)
+        // Primary (Replace): strong filled background with full-opacity text.
         replaceButton.setTextColor(textColor)
-        discardButton.setTextColor((textColor and 0x00FFFFFF) or 0xAA000000.toInt())
         (replaceButton.background as? GradientDrawable)
-            ?.setColor((textColor and 0x00FFFFFF) or 0x33000000)
+            ?.setColor((textColor and 0x00FFFFFF) or 0x55000000)
+        // Secondary (Discard): muted text, subtle fill to keep it clearly recessive.
+        discardButton.setTextColor((textColor and 0x00FFFFFF) or 0xB0000000.toInt())
         (discardButton.background as? GradientDrawable)
-            ?.setColor((textColor and 0x00FFFFFF) or 0x11000000)
+            ?.setColor((textColor and 0x00FFFFFF) or 0x18000000)
     }
 
     fun showWorking() {

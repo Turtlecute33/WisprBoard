@@ -41,15 +41,15 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-        setPadding(dp(8), 0, dp(8), 0)
+        setPadding(dp(12), dp(4), dp(12), dp(4))
 
         meterView = AmplitudeMeterView(context).apply {
-            layoutParams = LayoutParams(dp(44), dp(20)).apply { marginEnd = dp(8) }
+            layoutParams = LayoutParams(dp(44), dp(20)).apply { marginEnd = dp(12) }
         }
         timerText = TextView(context).apply {
             textSize = 12f
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                marginEnd = dp(8)
+                marginEnd = dp(12)
             }
         }
         statusText = TextView(context).apply {
@@ -70,25 +70,30 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
         addView(stopButton)
     }
 
+    /**
+     * 40dp circle (visually) with a real 40dp hit area. Previously the button was fixed at 36dp
+     * with `minimumWidth/Height = 48dp`, but LayoutParams set to 36dp overrode the minimums —
+     * so the effective tap area was actually 36dp. The suggestion strip is only ~44dp tall so
+     * we can't reach the 48dp Material recommendation without overflow; 40dp + 8dp sibling gap
+     * gets us close while keeping the buttons comfortably separated.
+     */
     private fun makeRoundButton(isCancel: Boolean, descRes: Int, onClick: () -> Unit): ImageView {
-        val size = dp(36) // >= 48dp target via padding/parent spacing; 36 is the visual circle
+        val size = dp(40)
         return ImageView(context).apply {
-            layoutParams = LayoutParams(size, size).apply { marginStart = dp(4) }
+            layoutParams = LayoutParams(size, size).apply { marginStart = dp(8) }
             val bg = GradientDrawable().apply { shape = GradientDrawable.OVAL }
             background = bg
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            val innerSize = dp(12)
+            val innerSize = dp(14)
             val icon = GradientDrawable().apply {
                 shape = if (isCancel) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
                 if (!isCancel) cornerRadius = dp(2).toFloat()
                 setSize(innerSize, innerSize)
             }
             setImageDrawable(icon)
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setPadding(dp(8), dp(8), dp(8), dp(8))
             isClickable = true
             isFocusable = true
-            minimumWidth = dp(48)
-            minimumHeight = dp(48)
             contentDescription = context.getString(descRes)
             setOnClickListener { onClick() }
         }
