@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Explicitly excludes sensitive data from cloud backup and device-to-device transfer.
+  allowBackup="false" already blocks most paths, but an explicit rules file also covers
+  Android 12+ D2D transfer and signals intent to tooling / Play Console reviewers.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="turtleboard_secrets.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="turtleboard_secrets.xml" />
+    </device-transfer>
+</data-extraction-rules>

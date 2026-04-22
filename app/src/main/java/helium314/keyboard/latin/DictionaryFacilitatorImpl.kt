@@ -62,6 +62,9 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     @Volatile
     private var mLatchForWaitingLoadingMainDictionaries = CountDownLatch(0)
 
+    @Volatile
+    private var mainDictionaryReloadGeneration = 0L
+
     // The library does not deal well with ngram history for auto-capitalized words, so we adjust
     // the ngram context to store next word suggestions for such cases.
     // todo: this is awful, find a better solution / workaround
@@ -155,8 +158,16 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         synchronized(this) {
             oldDictionaryGroups = dictionaryGroups
             dictionaryGroups = newDictionaryGroups
+            mainDictionaryReloadGeneration += 1
             if (hasAtLeastOneUninitializedMainDictionary()) {
-                asyncReloadUninitializedMainDictionaries(context, locales, listener)
+                asyncReloadUninitializedMainDictionaries(
+                    context = context,
+                    locales = locales,
+                    listener = listener,
+                    generation = mainDictionaryReloadGeneration,
+                )
+            } else {
+                mLatchForWaitingLoadingMainDictionaries = CountDownLatch(0)
             }
         }
 
@@ -231,14 +242,18 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     }
 
     private fun asyncReloadUninitializedMainDictionaries(
-        context: Context, locales: Collection<Locale>, listener: DictionaryInitializationListener?
+        context: Context,
+        locales: Collection<Locale>,
+        listener: DictionaryInitializationListener?,
+        generation: Long,
     ) {
         val latchForWaitingLoadingMainDictionary = CountDownLatch(1)
         mLatchForWaitingLoadingMainDictionaries = latchForWaitingLoadingMainDictionary
         scope.launch {
+            var loadedMainDicts: List<Pair<DictionaryGroup, Dictionary?>> = emptyList()
             try {
                 val useEmojiDict = Settings.getValues().mSuggestEmojis
-                val dictGroupsWithNewMainDict = locales.mapNotNull {
+                loadedMainDicts = locales.mapNotNull {
                     val dictionaryGroup = findDictionaryGroupWithLocale(dictionaryGroups, it)
                     if (dictionaryGroup == null) {
                         Log.w(TAG, "Expected a dictionary group for $it but none found")
@@ -247,16 +262,26 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                     if (dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.isInitialized == true) null
                     else dictionaryGroup to DictionaryFactory.createMainDictionaryCollection(context, it, useEmojiDict)
                 }
+                var applied = false
                 synchronized(this) {
-                    dictGroupsWithNewMainDict.forEach { (dictGroup, mainDict) ->
-                        dictGroup.setMainDict(mainDict)
+                    if (generation == mainDictionaryReloadGeneration) {
+                        loadedMainDicts.forEach { (dictGroup, mainDict) ->
+                            dictGroup.setMainDict(mainDict)
+                        }
+                        applied = true
                     }
                 }
 
-                listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
-                latchForWaitingLoadingMainDictionary.countDown()
+                if (applied) {
+                    listener?.onUpdateMainDictionaryAvailability(hasAtLeastOneInitializedMainDictionary())
+                } else {
+                    loadedMainDicts.forEach { (_, mainDict) -> mainDict?.close() }
+                }
             } catch (e: Throwable) {
                 Log.e(TAG, "could not initialize main dictionaries for $locales", e)
+                loadedMainDicts.forEach { (_, mainDict) -> mainDict?.close() }
+            } finally {
+                latchForWaitingLoadingMainDictionary.countDown()
             }
         }
     }

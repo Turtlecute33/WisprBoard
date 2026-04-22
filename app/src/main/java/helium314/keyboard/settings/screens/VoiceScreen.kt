@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -18,6 +19,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.edit
+import java.net.HttpURLConnection
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.settings.Defaults
@@ -95,14 +99,41 @@ internal fun buildVoiceScreenItems(
 fun createVoiceSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_VOICE_INPUT_ENABLED, R.string.voice_input_enabled, R.string.voice_input_enabled_summary) { setting ->
         val ctx = LocalContext.current
+        val prefs = ctx.prefs()
+        val permissionDeniedMessage = stringResource(R.string.voice_error_no_permission)
+        val secureStorageMessage = stringResource(R.string.voice_error_secure_storage_unavailable)
+        val pendingPermissionResult = remember {
+            mutableStateOf<((Boolean) -> Unit)?>(null)
+        }
         val permissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
-        ) { _ -> }
-        SwitchPreference(setting, Defaults.PREF_VOICE_INPUT_ENABLED) { enabled ->
-            if (enabled && !PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO)) {
+        ) { granted -> pendingPermissionResult.value?.invoke(granted) }
+        SwitchPreference(
+            setting,
+            Defaults.PREF_VOICE_INPUT_ENABLED,
+            allowCheckedChange = { enabled ->
+                if (!enabled) {
+                    pendingPermissionResult.value = null
+                    return@SwitchPreference true
+                }
+                if (!SecretStore.isSecureStorageAvailable(ctx)) {
+                    Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
+                    return@SwitchPreference false
+                }
+                if (PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO)) {
+                    return@SwitchPreference true
+                }
+                pendingPermissionResult.value = { granted ->
+                    if (granted) {
+                        prefs.edit { putBoolean(setting.key, true) }
+                    } else {
+                        Toast.makeText(ctx, permissionDeniedMessage, Toast.LENGTH_SHORT).show()
+                    }
+                }
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                false
             }
-        }
+        )
     },
     Setting(context, Settings.PREF_OPENROUTER_API_KEY, R.string.openrouter_api_key, R.string.openrouter_api_key_summary) {
         VoiceApiKeyPreference(it)
@@ -154,7 +185,7 @@ fun createVoiceSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_VOICE_ACTION_PROMPT_PRESET, R.string.voice_prompt_preset) {
         VoicePromptPresetPreference(it)
     },
-    Setting(context, Settings.PREF_VOICE_ACTION_TEST_KEY, R.string.voice_test_key) {
+    Setting(context, Settings.PREF_VOICE_ACTION_TEST_KEY, R.string.voice_validate_key) {
         VoiceTestKeyPreference(it)
     },
     Setting(context, Settings.PREF_VOICE_LANGUAGE_HINT, R.string.voice_language_hint, R.string.voice_language_hint_summary) {
@@ -196,7 +227,13 @@ private fun VoiceApiKeyPreference(setting: Setting) {
     val stored = SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
     Preference(
         name = setting.title,
-        onClick = { showDialog = true },
+        onClick = {
+            if (!SecretStore.isSecureStorageAvailable(ctx)) {
+                Toast.makeText(ctx, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
+                return@Preference
+            }
+            showDialog = true
+        },
         description = if (stored.isNotEmpty()) "••••••••" else setting.description,
     )
     if (showDialog) {
@@ -206,6 +243,7 @@ private fun VoiceApiKeyPreference(setting: Setting) {
             initialText = stored,
             title = { Text(setting.title) },
             singleLine = true,
+            isPassword = true,
         )
     }
 }
@@ -320,6 +358,10 @@ private fun VoiceTestKeyPreference(setting: Setting) {
         description = if (busy) stringResource(R.string.voice_test_key_testing) else null,
         onClick = {
             if (busy) return@Preference
+            if (!SecretStore.isSecureStorageAvailable(ctx)) {
+                Toast.makeText(ctx, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
+                return@Preference
+            }
             val apiKey = SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
             if (apiKey.isBlank()) {
                 Toast.makeText(ctx, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
@@ -334,6 +376,7 @@ private fun VoiceTestKeyPreference(setting: Setting) {
                 val msgRes = when (result) {
                     TestResult.OK -> R.string.voice_test_key_success
                     TestResult.INVALID -> R.string.voice_test_key_invalid
+                    TestResult.INVALID_MODEL -> R.string.voice_test_key_invalid_model
                     TestResult.NETWORK -> R.string.voice_test_key_network_error
                 }
                 Toast.makeText(ctx, msgRes, Toast.LENGTH_SHORT).show()
@@ -343,10 +386,36 @@ private fun VoiceTestKeyPreference(setting: Setting) {
     )
 }
 
-private enum class TestResult { OK, INVALID, NETWORK }
+private enum class TestResult { OK, INVALID, INVALID_MODEL, NETWORK }
 
 private fun probeApiKey(apiKey: String, model: String): TestResult {
-    val conn = (java.net.URL("https://openrouter.ai/api/v1/auth/key").openConnection() as java.net.HttpURLConnection).apply {
+    val keyConn = (java.net.URL("https://openrouter.ai/api/v1/key").openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        setRequestProperty("Authorization", "Bearer $apiKey")
+        connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
+        readTimeout = 10_000
+    }
+    return try {
+        when (keyConn.responseCode) {
+            200 -> probeModel(apiKey, model)
+            401, 403 -> TestResult.INVALID
+            else -> TestResult.NETWORK
+        }
+    } catch (_: Exception) {
+        TestResult.NETWORK
+    } finally {
+        keyConn.disconnect()
+    }
+}
+
+private fun probeModel(apiKey: String, model: String): TestResult {
+    val parts = model.trim().split("/", limit = 2)
+    if (parts.size != 2 || parts.any { it.isBlank() }) {
+        return TestResult.INVALID_MODEL
+    }
+    val author = URLEncoder.encode(parts[0], StandardCharsets.UTF_8.name())
+    val slug = URLEncoder.encode(parts[1], StandardCharsets.UTF_8.name())
+    val conn = (java.net.URL("https://openrouter.ai/api/v1/models/$author/$slug/endpoints").openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
@@ -356,6 +425,7 @@ private fun probeApiKey(apiKey: String, model: String): TestResult {
         when (conn.responseCode) {
             200 -> TestResult.OK
             401, 403 -> TestResult.INVALID
+            404 -> TestResult.INVALID_MODEL
             else -> TestResult.NETWORK
         }
     } catch (_: Exception) {

@@ -52,10 +52,6 @@ android {
             isMinifyEnabled = true
             isJniDebuggable = false
         }
-        create("runTests") { // build variant for running tests on CI that skips tests known to fail
-            isMinifyEnabled = false
-            isJniDebuggable = false
-        }
         create("debugNoMinify") { // for faster builds in IDE
             isDebuggable = true
             isMinifyEnabled = false
@@ -63,7 +59,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
         }
-        base.archivesBaseName = "HeliBoard_" + defaultConfig.versionName
+        base.archivesBaseName = "TurtleBoard_" + defaultConfig.versionName
         // got a little too big for GitHub after some dependency upgrades, so we remove the largest dictionary
         androidComponents.onVariants { variant: ApplicationVariant ->
             if (variant.buildType == "debug") {
@@ -120,6 +116,7 @@ android {
     namespace = "helium314.keyboard.latin"
     lint {
         abortOnError = true
+        baseline = file("lint-baseline.xml")
     }
 }
 

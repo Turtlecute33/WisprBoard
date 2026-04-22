@@ -67,7 +67,7 @@ fun SwitchPreference(
     ) {
         Switch(
             checked = value,
-            onCheckedChange = { switched(it) },
+            onCheckedChange = null,
         )
     }
 }

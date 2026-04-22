@@ -33,6 +33,7 @@ import android.view.inputmethod.InlineSuggestion;
 import android.view.inputmethod.InlineSuggestionsRequest;
 import android.view.inputmethod.InlineSuggestionsResponse;
 import android.view.inputmethod.InputMethodSubtype;
+import android.widget.Toast;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.compat.ConfigurationCompatKt;
@@ -610,7 +611,7 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onError(@NonNull final String message) {
-                // Toast is already shown by VoiceInputManager
+                Toast.makeText(LatinIME.this, message, Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -762,6 +763,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
+        mVoiceInputManager.cancelRecording();
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
         mSettings.onDestroy();
@@ -900,7 +902,10 @@ public class LatinIME extends InputMethodService implements
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setRtl(mRichImm.getCurrentSubtype().isRtlSubtype());
         }
-        mSettings.saveSubtypeForApp(mRichImm.getCurrentSubtype(), getCurrentInputEditorInfo().packageName);
+        final EditorInfo currentEditorInfo = getCurrentInputEditorInfo();
+        if (currentEditorInfo != null && currentEditorInfo.packageName != null) {
+            mSettings.saveSubtypeForApp(mRichImm.getCurrentSubtype(), currentEditorInfo.packageName);
+        }
     }
 
     /** alias to onCurrentInputMethodSubtypeChanged with a better name, as it's also used for internal switching */
@@ -1090,6 +1095,7 @@ public class LatinIME extends InputMethodService implements
     public void onWindowHidden() {
         super.onWindowHidden();
         Log.i(TAG, "onWindowHidden");
+        mVoiceInputManager.cancelRecording();
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
             mainKeyboardView.closing();
@@ -1111,6 +1117,7 @@ public class LatinIME extends InputMethodService implements
     void onFinishInputViewInternal(final boolean finishingInput) {
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
+        mVoiceInputManager.cancelRecording();
         cleanupInternalStateForFinishInput();
     }
 

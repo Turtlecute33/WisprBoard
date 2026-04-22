@@ -201,7 +201,7 @@ fun <T: Any?> SearchScreen(
                         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
                     ) { innerPadding ->
                         LazyColumn(contentPadding = innerPadding) {
-                            items(items) {
+                            items(items, key = { it ?: "__null_item__" }) {
                                 itemContent(it)
                             }
                         }

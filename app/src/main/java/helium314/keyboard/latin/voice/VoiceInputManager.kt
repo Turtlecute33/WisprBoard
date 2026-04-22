@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -56,6 +57,8 @@ class VoiceInputManager(
     private var audioRecorder: AudioRecorder = AudioRecorder()
     private var state = State.IDLE
     @Volatile private var transcriptionThread: Thread? = null
+    @Volatile private var transcriptionClient: OpenRouterClient? = null
+    @Volatile private var activeTranscriptionToken = 0L
 
     fun getState() = state
 
@@ -65,6 +68,7 @@ class VoiceInputManager(
     /** Exposed so UI can render an elapsed-time counter. */
     fun getCurrentDurationMs(): Long = audioRecorder.currentDurationMs
 
+    @Synchronized
     fun startRecording() {
         if (state != State.IDLE) return
 
@@ -72,6 +76,11 @@ class VoiceInputManager(
 
         if (!prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED)) {
             Toast.makeText(context, R.string.voice_error_not_enabled, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!SecretStore.isSecureStorageAvailable(context)) {
+            Toast.makeText(context, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -120,6 +129,7 @@ class VoiceInputManager(
         callbacks.onRecordingStarted()
     }
 
+    @Synchronized
     fun stopRecording() {
         if (state != State.RECORDING) return
 
@@ -183,43 +193,31 @@ class VoiceInputManager(
             systemPrompt = prompt.systemPrompt,
             runtimeInstruction = prompt.runtimeInstruction,
         )
+        val requestToken = activeTranscriptionToken + 1
+        activeTranscriptionToken = requestToken
+        transcriptionClient = client
 
         val crashHandler = Thread.UncaughtExceptionHandler { _, e ->
             Log.e(TAG, "Transcription thread crashed", e)
-            mainHandler.post {
-                transcriptionThread = null
-                state = State.IDLE
-                callbacks.onFinished()
-                callbacks.onError(context.getString(R.string.voice_error_transcription_failed))
-            }
+            finishTranscription(
+                requestToken = requestToken,
+                error = context.getString(R.string.voice_error_transcription_failed),
+            )
         }
         val thread = Thread {
             try {
                 val transcription = sanitizeTranscription(client.transcribe(wavData))
                 val finalText = applySpacing(transcription, spacingContext)
-                mainHandler.post {
-                    transcriptionThread = null
-                    state = State.IDLE
-                    callbacks.onFinished()
-                    if (finalText.isNotEmpty()) {
-                        callbacks.onTranscriptionResult(finalText)
-                    }
-                }
+                finishTranscription(requestToken = requestToken, result = finalText)
             } catch (e: InterruptedException) {
                 if (BuildConfig.DEBUG) Log.i(TAG, "Transcription cancelled")
-                mainHandler.post {
-                    transcriptionThread = null
-                    state = State.IDLE
-                    callbacks.onFinished()
-                }
+                finishTranscription(requestToken = requestToken)
             } catch (e: Exception) {
                 Log.e(TAG, "Transcription failed", e)
-                mainHandler.post {
-                    transcriptionThread = null
-                    state = State.IDLE
-                    callbacks.onFinished()
-                    callbacks.onError(e.message ?: context.getString(R.string.voice_error_transcription_failed))
-                }
+                finishTranscription(
+                    requestToken = requestToken,
+                    error = safeUserFacingError(e),
+                )
             }
         }.apply {
             name = "VoiceTranscription"
@@ -230,6 +228,7 @@ class VoiceInputManager(
     }
 
     /** Cancel either a live recording or an in-flight upload. */
+    @Synchronized
     fun cancelRecording() {
         when (state) {
             State.RECORDING -> {
@@ -238,19 +237,63 @@ class VoiceInputManager(
                 callbacks.onFinished()
             }
             State.TRANSCRIBING -> {
+                activeTranscriptionToken += 1
+                transcriptionClient?.cancel()
                 transcriptionThread?.interrupt()
-                // State transition is handled by the thread's InterruptedException branch,
-                // which posts back to the main thread.
+                transcriptionThread = null
+                transcriptionClient = null
+                state = State.IDLE
+                callbacks.onFinished()
             }
             State.IDLE -> Unit
         }
     }
 
+    /**
+     * Exception messages can occasionally echo request data (e.g. URLs, query strings).
+     * For UI surfaces we prefer our own curated strings and only expose the exception
+     * message when it comes from our own OpenRouterException, whose messages we control.
+     */
+    private fun safeUserFacingError(e: Throwable): String {
+        if (e is OpenRouterException) {
+            val raw = e.message
+            if (!raw.isNullOrBlank()) {
+                // Defense in depth: strip anything that looks like a bearer token or api key
+                // in case the remote echoed one back into an error message we surface.
+                return raw
+                    .replace(Regex("(?i)Bearer\\s+\\S+"), "Bearer ***")
+                    .replace(Regex("(?i)(\"?api[_-]?key\"?\\s*[:=]\\s*\"?)[^\"\\s,}]+"), "$1***")
+            }
+        }
+        return context.getString(R.string.voice_error_transcription_failed)
+    }
+
     private fun sanitizeTranscription(raw: String): String {
         // Strip control characters (category Cc) and bidi/format marks; the API occasionally
         // returns stray characters that corrupt the host editor when committed.
-        val cleaned = raw.replace(Regex("\\p{Cc}"), "").trim()
+        val cleaned = raw.replace(Regex("[\\p{Cc}\\p{Cf}]"), "").trim()
         return if (cleaned.length > MAX_TRANSCRIPTION_LENGTH) cleaned.substring(0, MAX_TRANSCRIPTION_LENGTH) else cleaned
+    }
+
+    private fun finishTranscription(
+        requestToken: Long,
+        result: String? = null,
+        error: String? = null,
+    ) {
+        mainHandler.post {
+            if (activeTranscriptionToken != requestToken) {
+                return@post
+            }
+            transcriptionThread = null
+            transcriptionClient = null
+            state = State.IDLE
+            callbacks.onFinished()
+            if (!result.isNullOrEmpty()) {
+                callbacks.onTranscriptionResult(result)
+            } else if (!error.isNullOrEmpty()) {
+                callbacks.onError(error)
+            }
+        }
     }
 
     /**
@@ -270,8 +313,14 @@ class VoiceInputManager(
 
     private fun isNetworkAvailable(): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
-        val network = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(network) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val network = cm.activeNetwork ?: return false
+            val caps = cm.getNetworkCapabilities(network) ?: return false
+            return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        }
+        @Suppress("DEPRECATION")
+        val activeNetwork = cm.activeNetworkInfo ?: return false
+        @Suppress("DEPRECATION")
+        return activeNetwork.isConnected
     }
 }

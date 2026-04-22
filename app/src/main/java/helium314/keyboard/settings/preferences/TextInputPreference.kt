@@ -50,6 +50,7 @@ fun TextInputPreference(
                 KeyboardSwitcher.getInstance().setThemeNeedsReload()
             },
             singleLine = singleLine,
+            isPassword = isPassword,
             checkTextValid = checkTextValid
         )
     }

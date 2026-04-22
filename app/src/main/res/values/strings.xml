@@ -1120,6 +1120,7 @@ New dictionary:
     <string name="voice_error_no_permission">Grant microphone permission in settings</string>
     <string name="voice_error_no_network">No internet connection</string>
     <string name="voice_error_transcription_failed">Transcription failed</string>
+    <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
     <string name="voice_custom_model">Custom</string>
     <string name="voice_max_duration">Maximum recording length</string>
     <string name="voice_max_duration_summary">Stop recording automatically after this many seconds</string>
@@ -1135,9 +1136,10 @@ New dictionary:
     <string name="voice_haptic_feedback_summary">Vibrate when recording starts and stops</string>
     <string name="voice_cancel">Cancel voice input</string>
     <string name="voice_stop_recording">Stop recording</string>
-    <string name="voice_test_key">Test API key</string>
+    <string name="voice_validate_key">Validate key and model</string>
     <string name="voice_test_key_success">API key works</string>
     <string name="voice_test_key_invalid">API key rejected</string>
+    <string name="voice_test_key_invalid_model">Selected model is unavailable</string>
     <string name="voice_test_key_network_error">Network error while testing key</string>
     <string name="voice_test_key_testing">Testing…</string>
     <string name="voice_prompt_preset">Prompt preset</string>

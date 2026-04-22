@@ -10,8 +10,7 @@ import helium314.keyboard.latin.utils.prefs
 
 /**
  * Stores sensitive values (currently: the OpenRouter API key) in an EncryptedSharedPreferences
- * bucket when the device supports it (API 23+). Falls back to the normal prefs file on older
- * devices so the app keeps working — this is a no-op on the minority of API 21-22 installs.
+ * bucket when the device supports it (API 23+).
  *
  * Migrates any plaintext value in the normal prefs file into the encrypted store on first use.
  */
@@ -19,6 +18,8 @@ object SecretStore {
 
     private const val TAG = "SecretStore"
     private const val ENCRYPTED_FILE = "turtleboard_secrets"
+
+    fun isSecureStorageAvailable(context: Context): Boolean = securePrefs(context) != null
 
     fun getApiKey(context: Context, prefKey: String, default: String): String {
         val secure = securePrefs(context)
@@ -35,7 +36,7 @@ object SecretStore {
             }
             return default
         }
-        return context.prefs().getString(prefKey, default) ?: default
+        return default
     }
 
     fun setApiKey(context: Context, prefKey: String, value: String) {
@@ -45,7 +46,7 @@ object SecretStore {
             // Ensure no stale plaintext copy remains.
             context.prefs().edit { remove(prefKey) }
         } else {
-            context.prefs().edit { putString(prefKey, value) }
+            throw IllegalStateException("Secure storage unavailable")
         }
     }
 
@@ -56,7 +57,7 @@ object SecretStore {
         return try {
             EncryptedPrefsFactory.create(context, ENCRYPTED_FILE)
         } catch (e: Throwable) {
-            Log.w(TAG, "Failed to open encrypted prefs, falling back", e)
+            Log.w(TAG, "Failed to open encrypted prefs", e)
             null
         }
     }

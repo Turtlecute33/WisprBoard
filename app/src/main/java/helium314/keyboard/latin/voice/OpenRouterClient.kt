@@ -7,8 +7,6 @@ import helium314.keyboard.latin.utils.Log
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.io.InterruptedIOException
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -27,6 +25,8 @@ class OpenRouterClient(
     private val connectTimeoutMs: Int = DEFAULT_CONNECT_TIMEOUT_MS,
     private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
 ) {
+    @Volatile private var activeConnection: HttpURLConnection? = null
+
     companion object {
         private const val TAG = "OpenRouterClient"
         private const val ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
@@ -35,6 +35,9 @@ class OpenRouterClient(
         const val DEFAULT_READ_TIMEOUT_MS = 90_000
         private const val MAX_ATTEMPTS = 3
         private val RETRYABLE_STATUSES = setOf(408, 425, 429, 500, 502, 503, 504)
+        // Sanity cap to prevent pathological responses from consuming unbounded memory.
+        // Real transcription responses are kilobytes; 1 MB is ~3 orders of magnitude of headroom.
+        private const val MAX_RESPONSE_BYTES = 1_000_000L
     }
 
     /**
@@ -57,7 +60,7 @@ class OpenRouterClient(
             } catch (e: InterruptedIOException) {
                 throw InterruptedException()
             } catch (e: java.io.IOException) {
-                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException(e.message ?: "Network error")
+                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException(sanitizeForLog(e.message ?: "Network error"))
                 lastError = e
             }
             val delayMs = (500L shl attempt).coerceAtMost(4_000L)
@@ -67,7 +70,11 @@ class OpenRouterClient(
                 throw e
             }
         }
-        throw OpenRouterException(lastError?.message ?: "Transcription failed")
+        throw OpenRouterException(sanitizeForLog(lastError?.message ?: "Transcription failed"))
+    }
+
+    fun cancel() {
+        activeConnection?.disconnect()
     }
 
     private fun buildRequestBody(wavData: ByteArray): String {
@@ -133,6 +140,7 @@ class OpenRouterClient(
             readTimeout = readTimeoutMs
             doOutput = true
         }
+        activeConnection = connection
         try {
             OutputStreamWriter(connection.outputStream).use { writer ->
                 writer.write(requestBody)
@@ -146,9 +154,10 @@ class OpenRouterClient(
                 throw OpenRouterException("API error: $responseCode", responseCode)
             }
 
-            val responseBody = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
+            val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
             return parseContent(responseBody)
         } finally {
+            activeConnection = null
             connection.disconnect()
         }
     }
@@ -187,6 +196,22 @@ class OpenRouterClient(
             TAG,
             "Prompt cache stats for $model: cached_tokens=$cachedTokens, cache_write_tokens=$cacheWriteTokens"
         )
+    }
+
+    private fun readCappedString(input: java.io.InputStream, maxBytes: Long): String {
+        val buf = java.io.ByteArrayOutputStream()
+        val chunk = ByteArray(8 * 1024)
+        var total = 0L
+        input.use { stream ->
+            while (true) {
+                val n = stream.read(chunk)
+                if (n == -1) break
+                total += n
+                if (total > maxBytes) throw OpenRouterException("Response too large")
+                buf.write(chunk, 0, n)
+            }
+        }
+        return buf.toString(Charsets.UTF_8.name())
     }
 
     private fun sanitizeForLog(body: String): String {

@@ -1,0 +1,1909 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.13.2" type="baseline" client="gradle" dependencies="false" name="AGP (8.13.2)" variant="all" version="8.13.2">
+
+    <issue
+        id="SuspiciousImport"
+        message="Don&apos;t include `android.R` here; use a fully qualified name for each usage instead"
+        errorLine1="import android.R"
+        errorLine2="~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/latin/utils/Ktx.kt"
+            line="3"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="WrongCommentType"
+        message="This block comment looks like it was intended to be a javadoc comment"
+        errorLine1=" * A utility class for {@link InputMethodManager}. Unlike {@link RichInputMethodManager}, this"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/latin/utils/UncachedInputMethodManagerUtils.java"
+            line="15"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="InconsistentArrays"
+        message="Array `touch_position_correction_data_holo` has an inconsistent number of items (9 in `values/touch-position-correction.xml`, 0 in `values-sw600dp/touch-position-correction.xml`)"
+        errorLine1="    &lt;string-array"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values/touch-position-correction.xml"
+            line="25"
+            column="5"
+            message="Declaration with array size (9)"/>
+        <location
+            file="src/main/res/values-sw600dp/touch-position-correction.xml"
+            line="25"
+            column="5"
+            message="Declaration with array size (0)"/>
+    </issue>
+
+    <issue
+        id="CustomViewStyleable"
+        message="By convention, the custom view (`EmojiPageKeyboardView`) and the declare-styleable (`MainKeyboardView`) should have the same name (various editor features rely on this convention)"
+        errorLine1="                R.styleable.MainKeyboardView, defStyle, R.style.MainKeyboardView);"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/keyboard/emoji/EmojiPageKeyboardView.java"
+            line="105"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="CustomViewStyleable"
+        message="By convention, the custom view (`EmojiPalettesView`) and the declare-styleable (`Keyboard`) should have the same name (various editor features rely on this convention)"
+        errorLine1="                null, R.styleable.Keyboard, R.attr.keyboardStyle, R.style.Keyboard);"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/keyboard/emoji/EmojiPalettesView.java"
+            line="374"
+            column="23"/>
+    </issue>
+
+    <issue
+        id="CustomViewStyleable"
+        message="By convention, the custom view (`KeyboardView`) and the declare-styleable (`Keyboard_Key`) should have the same name (various editor features rely on this convention)"
+        errorLine1="                R.styleable.Keyboard_Key, defStyle, R.style.KeyboardView);"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/keyboard/KeyboardView.java"
+            line="145"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="DuplicateIncludedIds"
+        message="Duplicate id @+id/bottom_row_keyboard, defined or included multiple times in layout/main_keyboard_frame.xml: [layout/main_keyboard_frame.xml => layout/emoji_palettes_view.xml defines @+id/bottom_row_keyboard, layout/main_keyboard_frame.xml => layout/clipboard_history_view.xml defines @+id/bottom_row_keyboard]"
+        errorLine1="        &lt;include"
+        errorLine2="        ^">
+        <location
+            file="src/main/res/layout/main_keyboard_frame.xml"
+            line="35"
+            column="9"
+            message="Duplicate id @+id/bottom_row_keyboard, defined or included multiple times in layout/main_keyboard_frame.xml: [layout/main_keyboard_frame.xml => layout/emoji_palettes_view.xml defines @+id/bottom_row_keyboard, layout/main_keyboard_frame.xml => layout/clipboard_history_view.xml defines @+id/bottom_row_keyboard]"/>
+        <location
+            file="src/main/res/layout/emoji_palettes_view.xml"
+            line="27"
+            column="9"
+            message="Defined here, included via layout/main_keyboard_frame.xml => layout/emoji_palettes_view.xml defines @+id/bottom_row_keyboard"/>
+        <location
+            file="src/main/res/layout/clipboard_history_view.xml"
+            line="38"
+            column="9"
+            message="Defined here, included via layout/main_keyboard_frame.xml => layout/clipboard_history_view.xml defines @+id/bottom_row_keyboard"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 34 (current min is 21): `android.view.HapticFeedbackConstants#NO_HAPTICS`"
+        errorLine1="    NO_HAPTICS(HapticFeedbackConstants.NO_HAPTICS, false),"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/event/HapticEvent.kt"
+            line="6"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="OldTargetApi"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+        errorLine1="        targetSdk = 35"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="25"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="TrimLambda"
+        message="The lambda argument (`{ it &lt;= &apos; &apos; }`) is unnecessary"
+        errorLine1="                return key.label!!.trim { it &lt;= &apos; &apos; }"
+        errorLine2="                                        ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/accessibility/KeyCodeDescriptionMapper.kt"
+            line="175"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `enableOnBackInvokedCallback` is only used in API level 33 and higher (current min is 28)"
+        errorLine1="            android:enableOnBackInvokedCallback=&quot;true&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="32"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `localeConfig` is only used in API level 33 and higher (current min is 28)"
+        errorLine1="            android:localeConfig=&quot;@xml/locales_config&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="33"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="        android:fillType=&quot;evenOdd&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_clipboard_pin_lxx.xml"
+            line="11"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="      android:width=&quot;24dp&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_activities_lxx.xml"
+            line="6"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="      android:height=&quot;24dp&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_activities_lxx.xml"
+            line="7"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_animals_nature_lxx.xml"
+            line="6"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_animals_nature_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_emoticons_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_emoticons_lxx.xml"
+            line="8"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_flags_lxx.xml"
+            line="6"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_flags_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_food_drink_lxx.xml"
+            line="6"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_food_drink_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_objects_lxx.xml"
+            line="6"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_objects_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_people_body_lxx.xml"
+            line="6"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_people_body_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_smileys_emotion_lxx.xml"
+            line="6"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_smileys_emotion_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_symbols_lxx.xml"
+            line="6"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_symbols_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `width` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:width=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_travel_places_lxx.xml"
+            line="6"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `height` is only used in API level 23 and higher (current min is 21)"
+        errorLine1="        android:height=&quot;24dp&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_emoji_travel_places_lxx.xml"
+            line="7"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="10"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="18"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="24"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="32"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="39"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="45"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="53"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="59"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `fillType` is only used in API level 24 and higher (current min is 21)"
+        errorLine1="      android:fillType=&quot;evenOdd&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.xml"
+            line="66"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="AppBundleLocaleChanges"
+        message="Found dynamic locale changes, but did not find corresponding Play Core library calls for downloading languages and splitting by language is not disabled in the `bundle` configuration"
+        errorLine1="    config.setLocale(locale)"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/latin/utils/RunInLocale.kt"
+            line="21"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of Gradle than 8.14 is available: 8.14.4"
+        errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-8.14-bin.zip"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/Documents/Github/Turtleboard/gradle/wrapper/gradle-wrapper.properties"
+            line="4"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of `compileSdkVersion` than 35 is available: 36"
+        errorLine1="    compileSdk = 35"
+        errorLine2="    ~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="11"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.core:core-ktx than 1.16.0 is available: 1.18.0"
+        errorLine1="    implementation(&quot;androidx.core:core-ktx:1.16.0&quot;) // 1.17 requires SDK 36"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="125"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.security:security-crypto than 1.0.0 is available: 1.1.0"
+        errorLine1="    implementation(&quot;androidx.security:security-crypto:1.0.0&quot;) // encrypted prefs for the API key"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="129"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose:compose-bom than 2025.11.01 is available: 2026.03.01"
+        errorLine1="    implementation(platform(&quot;androidx.compose:compose-bom:2025.11.01&quot;))"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="138"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-compose than 2.9.6 is available: 2.9.7"
+        errorLine1="    implementation(&quot;androidx.navigation:navigation-compose:2.9.6&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="142"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test:runner than 1.6.2 is available: 1.7.0"
+        errorLine1="    testImplementation(&quot;androidx.test:runner:1.6.2&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="151"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test:core than 1.6.1 is available: 1.7.0"
+        errorLine1="    testImplementation(&quot;androidx.test:core:1.6.1&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="152"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-serialization-json than 1.9.0 is available: 1.11.0"
+        errorLine1="    implementation(&quot;org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="132"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of sh.calvin.reorderable:reorderable than 2.4.3 is available: 3.1.0"
+        errorLine1="    implementation(&quot;sh.calvin.reorderable:reorderable:2.4.3&quot;) // for easier re-ordering, todo: check 3.0.0"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="143"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.mockito:mockito-core than 5.17.0 is available: 5.23.0"
+        errorLine1="    testImplementation(&quot;org.mockito:mockito-core:5.17.0&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="149"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.robolectric:robolectric than 4.14.1 is available: 4.16.1"
+        errorLine1="    testImplementation(&quot;org.robolectric:robolectric:4.14.1&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="150"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        message="Using Configuration.screenWidthDp instead of LocalWindowInfo.current.containerSize"
+        errorLine1="    val width = LocalConfiguration.current.screenWidthDp"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/settings/Misc.kt"
+            line="123"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        message="Using Configuration.screenHeightDp instead of LocalWindowInfo.current.containerSize"
+        errorLine1="    val height = LocalConfiguration.current.screenHeightDp"
+        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/settings/Misc.kt"
+            line="124"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources"
+        errorLine1="                    newIcons[iconName] = selectedIcon?.let { ctx.resources.getResourceEntryName(it) } ?: return@runCatching"
+        errorLine2="                                                             ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/settings/dialogs/CustomizeIconsDialog.kt"
+            line="120"
+            column="62"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources"
+        errorLine1="                                    val px = 40.dpToPx(ctx.resources)"
+        errorLine2="                                                       ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/settings/dialogs/CustomizeIconsDialog.kt"
+            line="158"
+            column="56"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources"
+        errorLine1="                            &amp;&amp; loc.localizedDisplayName(ctx.resources).replace(&quot;(&quot;, &quot;&quot;)"
+        errorLine2="                                                        ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/settings/screens/DictionaryScreen.kt"
+            line="71"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources"
+        errorLine1="                    ?.joinToString(&quot;, &quot;) { it.constructLocale().localizedDisplayName(ctx.resources) }"
+        errorLine2="                                                                                     ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/settings/screens/LanguageScreen.kt"
+            line="102"
+            column="86"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources"
+        errorLine1="                                it.localizedDisplayName(ctx.resources)"
+        errorLine2="                                                        ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/settings/screens/SubtypeScreen.kt"
+            line="162"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="LocalContextResourcesRead"
+        message="Reading Resources using LocalContext.current.resources"
+        errorLine1="                getItemName = { it.localizedDisplayName(ctx.resources) }"
+        errorLine2="                                                        ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/settings/screens/SubtypeScreen.kt"
+            line="306"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="PrivateResource"
+        message="The resource `@drawable/autofill_inline_suggestion_chip_background` is marked as private in androidx.autofill:autofill:1.3.0"
+        errorLine1="        final int chipBgDrawableId = androidx.autofill.R.drawable.autofill_inline_suggestion_chip_background;"
+        errorLine2="                                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/latin/utils/InlineAutofillUtils.java"
+            line="56"
+            column="67"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_use_headphones&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_use_headphones&quot;>Plug in a headset to hear password keys spoken aloud.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="9"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_current_text_is&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_current_text_is&quot;>Current text is &quot;%s&quot;&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="12"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_no_text_entered&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_no_text_entered&quot;>No text entered&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_auto_correct&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_auto_correct&quot;>&lt;xliff:g id=&quot;KEY_NAME&quot; example=&quot;Space&quot;>%1$s&lt;/xliff:g> corrects &lt;xliff:g id=&quot;ORIGINAL_WORD&quot;>%2$s&lt;/xliff:g> to &lt;xliff:g id=&quot;CORRECTED_WORD&quot;>%3$s&lt;/xliff:g>&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_auto_correct_obscured&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_auto_correct_obscured&quot;>&lt;xliff:g id=&quot;KEY_NAME&quot; example=&quot;Space&quot;>%1$s&lt;/xliff:g> performs auto-correction&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="19"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_empty_suggestion&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_empty_suggestion&quot;>No suggestion&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_clipboard_suggestion&quot; is not translated in &quot;hi&quot; (Hindi), &quot;de&quot; (German), &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;lo&quot; (Lao), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;lt&quot; (Lithuanian), &quot;hr&quot; (Croatian), &quot;lv&quot; (Latvian), &quot;bal&quot; (Baluchi), &quot;hu&quot; (Hungarian), &quot;hy&quot; (Armenian), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;uk&quot; (Ukrainian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;ur&quot; (Urdu), &quot;mk&quot; (Macedonian), &quot;ml&quot; (Malayalam), &quot;mn&quot; (Mongolian), &quot;af&quot; (Afrikaans), &quot;in&quot; (Indonesian), &quot;mr&quot; (Marathi), &quot;uz&quot; (Uzbek), &quot;ms&quot; (Malay), &quot;el&quot; (Greek), &quot;en&quot; (English), &quot;is&quot; (Icelandic), &quot;it&quot; (Italian), &quot;am&quot; (Amharic), &quot;my&quot; (Burmese), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;et&quot; (Estonian), &quot;eu&quot; (Basque), &quot;ar&quot; (Arabic), &quot;as&quot; (Assamese), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;ja&quot; (Japanese), &quot;ne&quot; (Nepali), &quot;az&quot; (Azerbaijani), &quot;fa&quot; (Persian), &quot;zu&quot; (Zulu), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;be&quot; (Belarusian), &quot;fi&quot; (Finnish), &quot;ru&quot; (Russian), &quot;bg&quot; (Bulgarian), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;bs&quot; (Bosnian), &quot;ka&quot; (Georgian), &quot;si&quot; (Sinhala), &quot;sk&quot; (Slovak), &quot;sl&quot; (Slovenian), &quot;gd&quot; (Scottish Gaelic), &quot;ca&quot; (Catalan), &quot;sq&quot; (Albanian), &quot;sr&quot; (Serbian), &quot;kk&quot; (Kazakh), &quot;km&quot; (Khmer), &quot;kn&quot; (Kannada), &quot;or&quot; (Odia), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;sw&quot; (Swahili), &quot;gl&quot; (Galician), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;ta&quot; (Tamil), &quot;gu&quot; (Gujarati), &quot;ky&quot; (Kyrgyz), &quot;cs&quot; (Czech), &quot;pa&quot; (Punjabi), &quot;te&quot; (Telugu), &quot;tg&quot; (Tajik), &quot;th&quot; (Thai), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish), &quot;tl&quot; (Tagalog), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;spoken_clipboard_suggestion&quot;>Clipboard suggestion&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="24"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_unknown&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;be&quot; (Belarusian), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_unknown&quot;>Unknown character&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_shift&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_shift&quot;>Shift&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="29"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_symbols_shift&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_symbols_shift&quot;>More symbols&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="31"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_shift_shifted&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_shift_shifted&quot;>Shift&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="33"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_symbols_shift_shifted&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_symbols_shift_shifted&quot;>Symbols&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_caps_lock&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_caps_lock&quot;>Shift&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_delete&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_delete&quot;>Delete&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="39"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_to_symbol&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_to_symbol&quot;>Symbols&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="41"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_to_alpha&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_to_alpha&quot;>Letters&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="43"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_to_numeric&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_to_numeric&quot;>Numbers&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="45"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_settings&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_settings&quot;>Settings&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_tab&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_tab&quot;>Tab&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="49"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_space&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_space&quot;>Space&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="51"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_mic&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_mic&quot;>Voice input&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji&quot;>Emoji&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="55"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_return&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_return&quot;>Return&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="57"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_search&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_search&quot;>Search&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="59"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_dot&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_dot&quot;>Dot&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="61"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_language_switch&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_language_switch&quot;>Switch language&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_action_next&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_action_next&quot;>Next&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="65"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_action_previous&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_action_previous&quot;>Previous&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="67"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_shiftmode_on&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_shiftmode_on&quot;>Shift enabled&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_shiftmode_locked&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_shiftmode_locked&quot;>Caps lock enabled&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="72"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_mode_symbol&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_mode_symbol&quot;>Symbols mode&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="74"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_mode_symbol_shift&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_mode_symbol_shift&quot;>More symbols mode&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="76"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_mode_alpha&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_mode_alpha&quot;>Letters mode&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="78"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_mode_phone&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_mode_phone&quot;>Phone mode&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="80"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_mode_phone_shift&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_mode_phone_shift&quot;>Phone symbols mode&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="82"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;announce_keyboard_hidden&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;announce_keyboard_hidden&quot;>Keyboard hidden&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="85"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;announce_keyboard_mode&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;announce_keyboard_mode&quot;>Showing &lt;xliff:g id=&quot;KEYBOARD_MODE&quot; example=&quot;email&quot;>%s&lt;/xliff:g> keyboard&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="87"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_date&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_date&quot;>date&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="89"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_date_time&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_date_time&quot;>date and time&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_email&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_email&quot;>email&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="93"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_im&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_im&quot;>messaging&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="95"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_number&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_number&quot;>number&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="97"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_phone&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_phone&quot;>phone&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="99"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_text&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_text&quot;>text&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="101"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_time&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_time&quot;>time&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="103"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;keyboard_mode_url&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;keyboard_mode_url&quot;>URL&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="105"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_recents&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_recents&quot;>Recents&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="108"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_objects&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_objects&quot;>Objects&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="110"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_symbols&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_symbols&quot;>Symbols&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="112"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_flags&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_flags&quot;>Flags&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="114"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_eight_smiley&quot; is not translated in &quot;hi&quot; (Hindi), &quot;de&quot; (German), &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;lo&quot; (Lao), &quot;pt&quot; (Portuguese), &quot;fil&quot; (Filipino; Pilipino), &quot;lt&quot; (Lithuanian), &quot;hr&quot; (Croatian), &quot;lv&quot; (Latvian), &quot;bal&quot; (Baluchi), &quot;hu&quot; (Hungarian), &quot;hy&quot; (Armenian), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;uk&quot; (Ukrainian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;ur&quot; (Urdu), &quot;mk&quot; (Macedonian), &quot;ml&quot; (Malayalam), &quot;mn&quot; (Mongolian), &quot;af&quot; (Afrikaans), &quot;in&quot; (Indonesian), &quot;mr&quot; (Marathi), &quot;uz&quot; (Uzbek), &quot;ms&quot; (Malay), &quot;el&quot; (Greek), &quot;en&quot; (English), &quot;is&quot; (Icelandic), &quot;it&quot; (Italian), &quot;am&quot; (Amharic), &quot;my&quot; (Burmese), &quot;es&quot; (Spanish), &quot;iw&quot; (Hebrew), &quot;zh&quot; (Chinese), &quot;et&quot; (Estonian), &quot;eu&quot; (Basque), &quot;ar&quot; (Arabic), &quot;as&quot; (Assamese), &quot;vi&quot; (Vietnamese), &quot;nb&quot; (Norwegian Bokmål), &quot;ja&quot; (Japanese), &quot;ne&quot; (Nepali), &quot;az&quot; (Azerbaijani), &quot;fa&quot; (Persian), &quot;zu&quot; (Zulu), &quot;ro&quot; (Romanian), &quot;nl&quot; (Dutch), &quot;be&quot; (Belarusian), &quot;fi&quot; (Finnish), &quot;ru&quot; (Russian), &quot;bg&quot; (Bulgarian), &quot;bn&quot; (Bangla), &quot;fr&quot; (French), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;bs&quot; (Bosnian), &quot;ka&quot; (Georgian), &quot;si&quot; (Sinhala), &quot;sk&quot; (Slovak), &quot;sl&quot; (Slovenian), &quot;gd&quot; (Scottish Gaelic), &quot;ca&quot; (Catalan), &quot;sq&quot; (Albanian), &quot;sr&quot; (Serbian), &quot;kk&quot; (Kazakh), &quot;km&quot; (Khmer), &quot;kn&quot; (Kannada), &quot;or&quot; (Odia), &quot;sv&quot; (Swedish), &quot;ko&quot; (Korean), &quot;sw&quot; (Swahili), &quot;gl&quot; (Galician), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;ta&quot; (Tamil), &quot;gu&quot; (Gujarati), &quot;ky&quot; (Kyrgyz), &quot;cs&quot; (Czech), &quot;pa&quot; (Punjabi), &quot;te&quot; (Telugu), &quot;tg&quot; (Tajik), &quot;th&quot; (Thai), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish), &quot;tl&quot; (Tagalog), &quot;pl&quot; (Polish), &quot;da&quot; (Danish), &quot;tr&quot; (Turkish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_eight_smiley&quot;>Smiley&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="116"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_eight_smiley_people&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_eight_smiley_people&quot;>Smiley and People&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="118"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_eight_animals_nature&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_eight_animals_nature&quot;>Animals &amp;amp; Nature&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="120"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_eight_food_drink&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_eight_food_drink&quot;>Food &amp;amp; Drink&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="122"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_eight_travel_places&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_eight_travel_places&quot;>Travel &amp;amp; Places&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="124"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_eight_activity&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_eight_activity&quot;>Activity&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="126"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_emoji_category_emoticons&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_emoji_category_emoticons&quot;>Emoticons&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="128"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_description_upper_case&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;be&quot; (Belarusian), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_description_upper_case&quot;>Capital &lt;xliff:g id=&quot;LOWER_LETTER&quot; example=&quot;A, E, ligature&quot;>%s&lt;/xliff:g>&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="131"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_letter_0049&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;be&quot; (Belarusian), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_letter_0049&quot;>Capital I&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="134"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_letter_0130&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;be&quot; (Belarusian), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_letter_0130&quot;>Capital I, dot above&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="137"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_open_popup_keys_keyboard&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;be&quot; (Belarusian), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_open_popup_keys_keyboard&quot;>Alternative characters are available&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="140"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_close_popup_keys_keyboard&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;be&quot; (Belarusian), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_close_popup_keys_keyboard&quot;>Alternative characters are dismissed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="142"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_open_more_suggestions&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;be&quot; (Belarusian), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_open_more_suggestions&quot;>Alternative suggestions are available&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="145"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;spoken_close_more_suggestions&quot; is not translated in &quot;ast&quot; (Asturian; Bable; Leonese; Asturleonese), &quot;fil&quot; (Filipino; Pilipino), &quot;bal&quot; (Baluchi), &quot;dv&quot; (Divehi; Dhivehi; Maldivian), &quot;ota&quot; (Turkish, Ottoman (1500-1928)), &quot;as&quot; (Assamese), &quot;be&quot; (Belarusian), &quot;kab&quot; (Kabyle), &quot;sc&quot; (Sardinian), &quot;gd&quot; (Scottish Gaelic), &quot;or&quot; (Odia), &quot;kw&quot; (Cornish), &quot;jpr&quot; (Judeo-Persian), &quot;tg&quot; (Tajik), &quot;cy&quot; (Welsh), &quot;lb&quot; (Luxembourgish)"
+        errorLine1="    &lt;string name=&quot;spoken_close_more_suggestions&quot;>Alternative suggestions are dismissed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="147"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;Pagina&quot; is a common misspelling; did you mean &quot;Página&quot;?"
+        errorLine1="    &lt;string name=&quot;page_up&quot; tools:keep=&quot;@string/page_up&quot;>Pagina de arriba&lt;/string>"
+        errorLine2="                                                        ~~~~~~">
+        <location
+            file="src/main/res/values-es-rUS/strings.xml"
+            line="331"
+            column="57"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;yada&quot; is a common misspelling; did you mean &quot;ya da&quot;?"
+        errorLine1="    &lt;string name=&quot;backup_restore_message&quot;>Kaydet yada dosyadan yükle. Uyarı: geri yükleme mevcut verilerin üzerine yazacaktır&lt;/string>"
+        errorLine2="                                                 ~~~~">
+        <location
+            file="src/main/res/values-tr/strings.xml"
+            line="348"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Repeated word &quot;dados&quot; in message: possible typo"
+        errorLine1="    &lt;string name=&quot;gesture_data_reminder_message&quot;>Olá boas!\n­·Usou a recolha de dados dados de gestos anteriormente, mas não adicionou dados desde então. Quer contribuir novamente?&lt;/string>"
+        errorLine2="                                                                                ~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rPT/strings.xml"
+            line="485"
+            column="81"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;cut&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;eu&quot; (Basque) here"
+        errorLine1="    &lt;string name=&quot;cut&quot; tools:keep=&quot;@string/cut&quot;>Moztu&lt;/string>"
+        errorLine2="            ~~~~~~~~~~">
+        <location
+            file="src/main/res/values-eu/strings.xml"
+            line="217"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;popup_keys_language&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;nb&quot; (Norwegian Bokmål) here"
+        errorLine1="    &lt;string name=&quot;popup_keys_language&quot; tools:keep=&quot;@string/popup_keys_language&quot;>Språk&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-nb/strings.xml"
+            line="217"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;cut&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;uk&quot; (Ukrainian) here"
+        errorLine1="    &lt;string name=&quot;cut&quot; tools:keep=&quot;@string/cut&quot;>Вирізати&lt;/string>"
+        errorLine2="            ~~~~~~~~~~">
+        <location
+            file="src/main/res/values-uk/strings.xml"
+            line="229"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;cut&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;bn&quot; (Bangla) here"
+        errorLine1="    &lt;string name=&quot;cut&quot; tools:keep=&quot;@string/cut&quot;>কর্তন&lt;/string>"
+        errorLine2="            ~~~~~~~~~~">
+        <location
+            file="src/main/res/values-bn/strings.xml"
+            line="290"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;cut&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;pt&quot; (Portuguese) here"
+        errorLine1="    &lt;string name=&quot;cut&quot; tools:keep=&quot;@string/cut&quot;>Cortar&lt;/string>"
+        errorLine2="            ~~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="298"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;cut&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;ar&quot; (Arabic) here"
+        errorLine1="    &lt;string name=&quot;cut&quot; tools:keep=&quot;@string/cut&quot;>قصّ&lt;/string>"
+        errorLine2="            ~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ar/strings.xml"
+            line="300"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;label_language_switch_key&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;zh&quot; (Chinese) here"
+        errorLine1="    &lt;string name=&quot;label_language_switch_key&quot; tools:keep=&quot;@string/label_language_switch_key&quot;>语言切换&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="357"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;seconds&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;voice_max_duration_seconds&quot;>&lt;xliff:g id=&quot;seconds&quot;>%1$d&lt;/xliff:g> seconds&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1127"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UnusedTranslation"
+        message="The language `in (Indonesian)` is present in this project, but not declared in the `localeConfig` resource"
+        errorLine1="            android:localeConfig=&quot;@xml/locales_config&quot;"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="33"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="UnusedTranslation"
+        message="The language `iw (Hebrew)` is present in this project, but not declared in the `localeConfig` resource"
+        errorLine1="            android:localeConfig=&quot;@xml/locales_config&quot;"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="33"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="UnsafeDynamicallyLoadedCode"
+        message="Dynamically loading code using `load` is risky, please use `loadLibrary` instead when possible"
+        errorLine1="                    System.load(userSuppliedLibrary.getAbsolutePath());"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/latin/utils/JniUtils.java"
+            line="78"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="DataExtractionRules"
+        message="The attribute `android:allowBackup` is deprecated from Android 12 and higher and may be removed in future versions. Consider adding the attribute `android:dataExtractionRules` specifying an `@xml` resource which configures cloud backups and device transfers on Android 12 and higher."
+        errorLine1="            android:allowBackup=&quot;false&quot;"
+        errorLine2="                                 ~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="29"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="NotifyDataSetChanged"
+        message="It will always be more efficient to use more specific change events if you can. Rely on `notifyDataSetChanged` as a last resort."
+        errorLine1="            clipboardAdapter.notifyDataSetChanged()"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/keyboard/clipboard/ClipboardHistoryView.kt"
+            line="264"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="NotifyDataSetChanged"
+        message="It will always be more efficient to use more specific change events if you can. Rely on `notifyDataSetChanged` as a last resort."
+        errorLine1="                getRecyclerView(holder.itemView).getAdapter().notifyDataSetChanged();"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/keyboard/emoji/EmojiPalettesView.java"
+            line="154"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="NotifyDataSetChanged"
+        message="It will always be more efficient to use more specific change events if you can. Rely on `notifyDataSetChanged` as a last resort."
+        errorLine1="        mPager.getAdapter().notifyDataSetChanged();"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/keyboard/emoji/EmojiPalettesView.java"
+            line="451"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields (static reference to `AccessibilityUtils` which has field `mContext` pointing to `Context`); this is a memory leak"
+        errorLine1="        val instance = AccessibilityUtils()"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/accessibility/AccessibilityUtils.kt"
+            line="199"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields (static reference to `RichInputMethodManager` which has field `context` pointing to `Context`); this is a memory leak"
+        errorLine1="        private val instance = RichInputMethodManager()"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/helium314/keyboard/latin/RichInputMethodManager.kt"
+            line="226"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseCompoundDrawables"
+        message="This tag and its children can be replaced by one `&lt;TextView/>` and a compound drawable"
+        errorLine1="&lt;LinearLayout"
+        errorLine2=" ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/clipboard_entry_key.xml"
+            line="5"
+            column="2"/>
+    </issue>
+
+    <issue
+        id="MergeRootFrame"
+        message="This `&lt;FrameLayout>` can be replaced with a `&lt;merge>` tag"
+        errorLine1="&lt;FrameLayout"
+        errorLine2="^">
+        <location
+            file="src/main/res/layout/strip_container.xml"
+            line="8"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.integer.config_double_space_period_timeout` appears to be unused"
+        errorLine1="    &lt;integer name=&quot;config_double_space_period_timeout&quot;>1100&lt;/integer>"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/config-common.xml"
+            line="11"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.integer.config_gesture_fast_typing_cooldown_step` appears to be unused"
+        errorLine1="    &lt;integer name=&quot;config_gesture_fast_typing_cooldown_step&quot;>10&lt;/integer>"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/config-common.xml"
+            line="39"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.config_accessibility_edge_slop` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;config_accessibility_edge_slop&quot;>8dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/config-common.xml"
+            line="105"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.integer.config_user_dictionary_max_word_length` appears to be unused"
+        errorLine1="    &lt;integer name=&quot;config_user_dictionary_max_word_length&quot;>48&lt;/integer>"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/config-common.xml"
+            line="107"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.bool.config_default_key_preview_popup` appears to be unused"
+        errorLine1="    &lt;bool name=&quot;config_default_key_preview_popup&quot;>true&lt;/bool>"
+        errorLine2="          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/config-per-form-factor.xml"
+            line="11"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.settings_screen_icon_inset` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;settings_screen_icon_inset&quot;>16dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="6"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_sort_alphabetically` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/ic_sort_alphabetically.xml"
+            line="6"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_sort_chronologically` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/ic_sort_chronologically.xml"
+            line="6"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.keyboard_key_feedback_more_background_lxx_light` appears to be unused">
+        <location
+            file="src/main/res/drawable-hdpi/keyboard_key_feedback_more_background_lxx_light.9.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.spoken_current_text_is` appears to be unused"
+        errorLine1="    &lt;string name=&quot;spoken_current_text_is&quot;>Current text is &quot;%s&quot;&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="12"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.spoken_no_text_entered` appears to be unused"
+        errorLine1="    &lt;string name=&quot;spoken_no_text_entered&quot;>No text entered&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.spoken_description_upper_case` appears to be unused"
+        errorLine1="    &lt;string name=&quot;spoken_description_upper_case&quot;>Capital &lt;xliff:g id=&quot;LOWER_LETTER&quot; example=&quot;A, E, ligature&quot;>%s&lt;/xliff:g>&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings-talkback-descriptions.xml"
+            line="131"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.auto_correction_threshold_mode_off` appears to be unused"
+        errorLine1="    &lt;string name=&quot;auto_correction_threshold_mode_off&quot;>Off&lt;/string> &lt;!-- todo: use it or remove it -->"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="156"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.layout_functional_keys_khipro` appears to be unused"
+        errorLine1="    &lt;string name=&quot;layout_functional_keys_khipro&quot; tools:keep=&quot;@string/layout_functional_keys&quot;>Functional keys (Khipro)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="505"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.user_dict_settings_more_languages` appears to be unused"
+        errorLine1="    &lt;string name=&quot;user_dict_settings_more_languages&quot;>More languages…&lt;/string> &lt;!-- todo: use it or remove it -->"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="671"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.gesture_data_delete_data` appears to be unused"
+        errorLine1="    &lt;string name=&quot;gesture_data_delete_data&quot;>Clear gesture data&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="983"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.gesture_data_review_screen_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;gesture_data_review_screen_title&quot;>Review &amp;amp; share gesture data&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1010"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.gesture_data_words_selected` appears to be unused"
+        errorLine1="    &lt;string name=&quot;gesture_data_words_selected&quot;>%s words&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1013"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.gesture_data_date_range` appears to be unused"
+        errorLine1="    &lt;string name=&quot;gesture_data_date_range&quot;>Date range&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1016"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.gesture_data_delete_dialog_confirm` appears to be unused"
+        errorLine1="    &lt;string name=&quot;gesture_data_delete_dialog_confirm&quot;>Are you sure? This will delete %s words. Make sure your shared date is submitted!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1058"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.voice_input_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;voice_input_title&quot;>Voice Input&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1098"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.voice_prompt_preset_custom` appears to be unused"
+        errorLine1="    &lt;string name=&quot;voice_prompt_preset_custom&quot;>Custom&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1146"
+            column="13"/>
+    </issue>
+
+</issues>

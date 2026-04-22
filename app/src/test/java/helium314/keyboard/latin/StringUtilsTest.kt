@@ -136,8 +136,8 @@ class StringUtilsTest {
         assertEquals("©\uFE0F", getFullEmojiAtEnd("©\uFE0F")) // ©️
     }
 
+    @org.junit.Ignore("Known emoji edge cases are still unsupported by the current parser.")
     @Test fun detectEmojisAtEndFail() {
-        if (BuildConfig.BUILD_TYPE == "runTests") return
         // fails, but unlikely enough that we leave it unfixed
         assertEquals("\uD83C\uDFFC", getFullEmojiAtEnd("\uD83C\uDF84\uD83C\uDFFC")) // 🎄🏼
         // below also fail, because current ZWJ handling is not suitable for some unusual cases

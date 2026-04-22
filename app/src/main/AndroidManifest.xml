@@ -18,7 +18,7 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- androidx.security:security-crypto declares minSdk 23; we runtime-guard its usage in
-         SecretStore so API 21-22 installs fall back to plaintext storage cleanly. -->
+         SecretStore so API 21-22 installs disable secret-backed voice input cleanly. -->
     <uses-sdk tools:overrideLibrary="androidx.security" />
 
     <application android:label="@string/english_ime_name"
@@ -26,7 +26,8 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
-            android:allowBackup="true"
+            android:allowBackup="false"
+            android:dataExtractionRules="@xml/data_extraction_rules"
             android:defaultToDeviceProtectedStorage="true"
             android:directBootAware="true"
             android:enableOnBackInvokedCallback="true"

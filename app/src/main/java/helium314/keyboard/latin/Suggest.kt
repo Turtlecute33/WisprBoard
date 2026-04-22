@@ -25,6 +25,7 @@ import helium314.keyboard.latin.utils.AutoCorrectionUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SuggestionResults
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
 
 /**
@@ -34,7 +35,7 @@ import kotlin.math.min
 class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
     private var mAutoCorrectionThreshold = 0f
     private val mPlausibilityThreshold = 0f
-    private val nextWordSuggestionsCache = HashMap<NgramContext, SuggestionResults>()
+    private val nextWordSuggestionsCache = ConcurrentHashMap<NgramContext, SuggestionResults>()
 
     // cache cleared whenever LatinIME.loadSettings is called, notably on changing layout and switching input fields
     fun clearNextWordSuggestionsCache() = nextWordSuggestionsCache.clear()

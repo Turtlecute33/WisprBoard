@@ -26,6 +26,11 @@ public final class InputPointers {
         mTimes = new ResizableIntArray(defaultCapacity);
     }
 
+    public InputPointers(@NonNull final InputPointers source) {
+        this(Math.max(source.mDefaultCapacity, source.getPointerSize()));
+        copy(source);
+    }
+
     private void fillWithLastTimeUntil(final int index) {
         final int fromIndex = mTimes.getLength();
         // Fill the gap with the latest time.

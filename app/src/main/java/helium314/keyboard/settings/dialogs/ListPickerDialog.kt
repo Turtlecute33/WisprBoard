@@ -60,7 +60,7 @@ fun <T: Any> ListPickerDialog(
                 LocalTextStyle provides MaterialTheme.typography.bodyLarge
             ) {
                 LazyColumn(state = state) {
-                    items(items) { item ->
+                    items(items, key = { it }) { item ->
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -73,7 +73,7 @@ fun <T: Any> ListPickerDialog(
                                     selected = item
                                 }
                                 .padding(horizontal = if (showRadioButtons) 8.dp else 16.dp)
-                                .heightIn(min = 40.dp)
+                                .heightIn(min = 48.dp)
                         ) {
                             if (showRadioButtons)
                                 RadioButton(

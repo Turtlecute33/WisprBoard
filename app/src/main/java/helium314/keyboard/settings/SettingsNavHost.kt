@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -34,11 +35,8 @@ import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
 import helium314.keyboard.settings.screens.VoiceScreen
 import helium314.keyboard.settings.screens.gesturedata.GestureDataScreen
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 
 @Composable
 fun SettingsNavHost(
@@ -145,9 +143,19 @@ fun SettingsNavHost(
             SubtypeScreen(initialSubtype = it.arguments?.getString("subtype")!!.toSettingsSubtype(), onClickBack = ::goBack)
         }
     }
-    if (target.value != SettingsDestination.Settings/* && target.value != navController.currentBackStackEntry?.destination?.route*/)
-        navController.navigate(route = target.value)
+    LaunchedEffect(target.value) {
+        val request = target.value ?: return@LaunchedEffect
+        if (request.route != navController.currentBackStackEntry?.destination?.route) {
+            navController.navigate(route = request.route)
+        }
+        SettingsDestination.consumeNavigation(request)
+    }
 }
+
+data class SettingsNavigationRequest(
+    val route: String,
+    val id: Long,
+)
 
 object SettingsDestination {
     const val Settings = "settings"
@@ -170,16 +178,19 @@ object SettingsDestination {
     const val Subtype = "subtype/"
     const val Layouts = "layouts"
     const val Dictionaries = "dictionaries"
-    val navTarget = MutableStateFlow(Settings)
+    val navTarget = MutableStateFlow<SettingsNavigationRequest?>(null)
 
-    private val navScope = CoroutineScope(Dispatchers.Default)
+    private val nextNavigationId = AtomicLong(0L)
     fun navigateTo(target: String) {
-        if (navTarget.value == target) {
-            // triggers recompose twice, but that's ok as it's a rare event
-            navTarget.value = Settings
-            navScope.launch { delay(10); navTarget.value = target }
-        } else
-            navTarget.value = target
-        navScope.launch { delay(50); navTarget.value = Settings }
+        navTarget.value = SettingsNavigationRequest(
+            route = target,
+            id = nextNavigationId.incrementAndGet(),
+        )
+    }
+
+    fun consumeNavigation(request: SettingsNavigationRequest) {
+        if (navTarget.value == request) {
+            navTarget.value = null
+        }
     }
 }

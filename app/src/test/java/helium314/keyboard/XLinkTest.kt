@@ -2,10 +2,10 @@ package helium314.keyboard
 
 import androidx.test.core.app.ApplicationProvider
 import helium314.keyboard.latin.App
-import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.common.Links
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.utils.getKnownDictionariesForLocale
+import org.junit.Ignore
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.io.File
@@ -14,10 +14,10 @@ import java.net.URL
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@Ignore("External link validation is network-dependent and should be run manually.")
 @RunWith(RobolectricTestRunner::class)
 class XLinkTest { // Without the X, SubtypeTests fail with ClassCastException. WTF?
     @Test fun knownDictionaries() {
-        if (BuildConfig.BUILD_TYPE == "runTests") return // don't spam requests to Codeberg on every PR update
         val context = ApplicationProvider.getApplicationContext<App>()
         val urls = mutableSetOf<String>()
         context.assets.open("dictionaries_in_dict_repo.csv").reader().readLines().forEach { line ->

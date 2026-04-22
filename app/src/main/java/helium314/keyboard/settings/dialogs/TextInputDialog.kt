@@ -20,8 +20,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
@@ -44,6 +46,7 @@ fun TextInputDialog(
     initialText: String = "",
     textInputLabel: @Composable (() -> Unit)? = null,
     singleLine: Boolean = true,
+    isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Unspecified,
     properties: DialogProperties = DialogProperties(),
     reducePadding: Boolean = false,
@@ -76,9 +79,16 @@ fun TextInputDialog(
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
                     label = textInputLabel,
-                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = if (isPassword && keyboardType == KeyboardType.Unspecified) {
+                            KeyboardType.Password
+                        } else {
+                            keyboardType
+                        }
+                    ),
                     singleLine = singleLine,
                     textStyle = contentTextDirectionStyle,
+                    visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
                 )
                 LaunchedEffect(Unit) { focusRequester.requestFocus() }
             }

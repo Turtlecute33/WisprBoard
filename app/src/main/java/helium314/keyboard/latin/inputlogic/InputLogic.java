@@ -1416,7 +1416,8 @@ public final class InputLogic {
                         final int codePointBeforeCursorToDeleteAgain =
                                 mConnection.getCodePointBeforeCursor();
                         if (codePointBeforeCursorToDeleteAgain != Constants.NOT_A_CODE) {
-                            final int lengthToDeleteAgain = codePointBeforeCursor > 0xFE00 || StringUtils.mightBeEmoji(codePointBeforeCursor)
+                            final int lengthToDeleteAgain = codePointBeforeCursorToDeleteAgain > 0xFE00
+                                    || StringUtils.mightBeEmoji(codePointBeforeCursorToDeleteAgain)
                                     ? mConnection.getCharCountToDeleteBeforeCursor() : 1;
                             mConnection.deleteTextBeforeCursor(lengthToDeleteAgain);
                             totalDeletedLength += lengthToDeleteAgain;

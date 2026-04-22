@@ -10,7 +10,16 @@ on:
 #      - 'app/**'
   pull_request:
     paths:
-      - 'app/src/main/java**'
+      - '.github/workflows/build-test-auto.yml'
+      - '.github/workflows/build-release-apk.yml'
+      - 'app/**'
+      - 'build.gradle'
+      - 'build.gradle.kts'
+      - 'settings.gradle'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - 'gradle/**'
+      - 'scripts/**'
   workflow_dispatch:
 
 jobs:
@@ -32,8 +41,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;28.0.13004108"
+
       - name: Build with Gradle
-        run: ./gradlew testRunTestsUnitTest
+        run: ./gradlew --no-daemon lintDebug testDebugUnitTest
 
       - name: Archive reports for failed job
         uses: actions/upload-artifact@v4
