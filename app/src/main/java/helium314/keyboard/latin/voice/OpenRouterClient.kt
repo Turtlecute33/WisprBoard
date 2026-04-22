@@ -44,7 +44,10 @@ class OpenRouterClient(
         // Sanity cap to prevent pathological responses from consuming unbounded memory.
         // Real transcription responses are kilobytes; 1 MB is ~3 orders of magnitude of headroom.
         private const val MAX_RESPONSE_BYTES = 1_000_000L
-        private const val AUDIO_PLACEHOLDER = "\u0000__AUDIO_B64__\u0000"
+        // Plain ASCII sentinel: org.json escapes control characters (e.g. U+0000 -> literal "\u0000"),
+        // which used to make the placeholder un-findable in the serialized body. Unlikely to collide
+        // with real content.
+        private const val AUDIO_PLACEHOLDER = "__TURTLEBOARD_AUDIO_B64_PLACEHOLDER__"
         // Must be a multiple of 3 so chunked base64 encoding is padding-free until the final chunk.
         private const val AUDIO_READ_CHUNK = 48 * 1024
     }

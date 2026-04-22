@@ -313,24 +313,26 @@ private fun VoicePromptPresetPreference(setting: Setting) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     Preference(name = setting.title, onClick = { showDialog = true })
     if (showDialog) {
-        data class Preset(val labelRes: Int, val textRes: Int)
-        val presets = listOf(
-            Preset(R.string.voice_prompt_preset_verbatim, R.string.voice_prompt_preset_verbatim_text),
-            Preset(R.string.voice_prompt_preset_clean, R.string.voice_prompt_preset_clean_text),
-            Preset(R.string.voice_prompt_preset_punctuated, R.string.voice_prompt_preset_punctuated_text),
-            Preset(R.string.voice_prompt_preset_translate_en, R.string.voice_prompt_preset_translate_en_text),
+        // Keep items as primitive Ints so LazyColumn's key is Saveable — wrapping them in a
+        // local data class crashes the dialog on selection.
+        val labelToText = mapOf(
+            R.string.voice_prompt_preset_verbatim to R.string.voice_prompt_preset_verbatim_text,
+            R.string.voice_prompt_preset_clean to R.string.voice_prompt_preset_clean_text,
+            R.string.voice_prompt_preset_punctuated to R.string.voice_prompt_preset_punctuated_text,
+            R.string.voice_prompt_preset_translate_en to R.string.voice_prompt_preset_translate_en_text,
         )
         ListPickerDialog(
             onDismissRequest = { showDialog = false },
-            items = presets,
-            onItemSelected = { preset ->
+            items = labelToText.keys.toList(),
+            onItemSelected = { labelRes ->
+                val textRes = labelToText[labelRes] ?: return@ListPickerDialog
                 prefs.edit {
-                    putString(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT, ctx.getString(preset.textRes))
+                    putString(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT, ctx.getString(textRes))
                 }
                 showDialog = false
             },
             title = { Text(ctx.getString(R.string.voice_prompt_preset)) },
-            getItemName = { ctx.getString(it.labelRes) },
+            getItemName = { ctx.getString(it) },
         )
     }
 }
