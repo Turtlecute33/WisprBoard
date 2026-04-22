@@ -3,7 +3,4 @@
     <files-path
         name="gesture_data_directory"
         path="gesture_data"/>
-    <external-files-path
-        name="voice_diag_directory"
-        path="voice-diag"/>
 </paths>

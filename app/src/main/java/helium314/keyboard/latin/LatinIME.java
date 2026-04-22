@@ -581,7 +581,6 @@ public class LatinIME extends InputMethodService implements
         mVoiceInputManager = new VoiceInputManager(this, new VoiceInputManager.Callbacks() {
             @Override
             public void onRecordingStarted() {
-                helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(LatinIME.this, "CB", "onRecordingStarted");
                 if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(25L);
                 if (mSuggestionStripView != null) {
                     mSuggestionStripView.setVoiceTelemetryProvider(() ->
@@ -593,14 +592,12 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onTranscribing() {
-                helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(LatinIME.this, "CB", "onTranscribing");
                 if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(15L);
                 if (mSuggestionStripView != null) mSuggestionStripView.showTranscribingOverlay();
             }
 
             @Override
             public void onFinished() {
-                helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(LatinIME.this, "CB", "onFinished -> hideOverlay");
                 if (mSuggestionStripView != null) {
                     mSuggestionStripView.setVoiceTelemetryProvider(null);
                     mSuggestionStripView.hideRecordingOverlay();
@@ -614,7 +611,6 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onError(@NonNull final String message) {
-                helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(LatinIME.this, "CB", "onError: " + message);
                 Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
             }
 
@@ -767,7 +763,6 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
-        helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(this, "IME", "onDestroy (voiceState=" + (mVoiceInputManager == null ? "null" : mVoiceInputManager.getState()) + ")");
         mVoiceInputManager.cancelRecording();
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
@@ -1100,7 +1095,6 @@ public class LatinIME extends InputMethodService implements
     public void onWindowHidden() {
         super.onWindowHidden();
         Log.i(TAG, "onWindowHidden");
-        helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(this, "IME", "onWindowHidden (voiceState=" + (mVoiceInputManager == null ? "null" : mVoiceInputManager.getState()) + ")");
         cancelVoiceRecordingIfCapturing();
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
@@ -1123,7 +1117,6 @@ public class LatinIME extends InputMethodService implements
     void onFinishInputViewInternal(final boolean finishingInput) {
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
-        helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(this, "IME", "onFinishInputView finishingInput=" + finishingInput + " voiceState=" + (mVoiceInputManager == null ? "null" : mVoiceInputManager.getState()));
         cancelVoiceRecordingIfCapturing();
         cleanupInternalStateForFinishInput();
     }
@@ -1406,7 +1399,6 @@ public class LatinIME extends InputMethodService implements
         // Without this function the inline autofill suggestions will not be visible
         mHandler.cancelResumeSuggestions();
 
-        helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(this, "IME", "onInlineSuggestionsResponse -> replacing suggestion strip (voiceState=" + (mVoiceInputManager == null ? "null" : mVoiceInputManager.getState()) + ")");
         mSuggestionStripView.setExternalSuggestionView(inlineSuggestionView, true);
 
         return true;
@@ -1956,14 +1948,9 @@ public class LatinIME extends InputMethodService implements
     }
 
     private void cancelVoiceRecordingIfCapturing() {
-        if (mVoiceInputManager != null) {
-            helium314.keyboard.latin.voice.VoiceDiagnosticLog.INSTANCE.log(
-                    this,
-                    "IME",
-                    "cancelVoiceRecordingIfCapturing state=" + mVoiceInputManager.getState());
-            if (mVoiceInputManager.getState() == VoiceInputManager.State.RECORDING) {
-                mVoiceInputManager.cancelRecording();
-            }
+        if (mVoiceInputManager != null
+                && mVoiceInputManager.getState() == VoiceInputManager.State.RECORDING) {
+            mVoiceInputManager.cancelRecording();
         }
     }
 

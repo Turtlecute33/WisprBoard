@@ -84,7 +84,6 @@ internal fun buildVoiceScreenItems(
     Settings.PREF_VOICE_INPUT_ENABLED,
     if (voiceInputEnabled) Settings.PREF_OPENROUTER_API_KEY else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_TEST_KEY else null,
-    if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_SHARE_DIAG else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_MODEL else null,
     if (voiceInputEnabled && voiceModel == "custom") Settings.PREF_VOICE_MODEL_CUSTOM else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_PROMPT_PRESET else null,
@@ -228,9 +227,6 @@ fun createVoiceSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_VOICE_AUTO_STOP_SILENCE, R.string.voice_auto_stop_silence, R.string.voice_auto_stop_silence_summary) {
         SwitchPreference(it, Defaults.PREF_VOICE_AUTO_STOP_SILENCE)
-    },
-    Setting(context, Settings.PREF_VOICE_ACTION_SHARE_DIAG, R.string.voice_share_diagnostic_log, R.string.voice_share_diagnostic_log_summary) {
-        VoiceShareDiagnosticLogPreference(it)
     },
     Setting(context, Settings.PREF_VOICE_AUTO_STOP_SILENCE_SECONDS, R.string.voice_auto_stop_silence_seconds) { setting ->
         SliderPreference(
@@ -465,37 +461,6 @@ private fun probeModel(apiKey: String, model: String): TestResult {
     } finally {
         conn.disconnect()
     }
-}
-
-@Composable
-private fun VoiceShareDiagnosticLogPreference(setting: Setting) {
-    val ctx = LocalContext.current
-    Preference(
-        name = setting.title,
-        description = setting.description,
-        onClick = {
-            val logFile = helium314.keyboard.latin.voice.VoiceDiagnosticLog.logFile(ctx)
-            if (logFile == null || !logFile.exists() || logFile.length() == 0L) {
-                Toast.makeText(ctx, R.string.voice_diagnostic_log_empty, Toast.LENGTH_SHORT).show()
-                return@Preference
-            }
-            val uri = androidx.core.content.FileProvider.getUriForFile(
-                ctx,
-                ctx.getString(R.string.gesture_data_provider_authority),
-                logFile,
-            )
-            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                putExtra(android.content.Intent.EXTRA_SUBJECT, ctx.getString(R.string.voice_diagnostic_log_share_title))
-                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            val chooser = android.content.Intent.createChooser(intent, ctx.getString(R.string.voice_diagnostic_log_share_title))
-            chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            ctx.startActivity(chooser)
-        }
-    )
 }
 
 @Preview

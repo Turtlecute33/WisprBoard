@@ -69,7 +69,6 @@ class VoiceInputManager(
 
     @Synchronized
     fun startRecording() {
-        VoiceDiagnosticLog.log(context, "VIM", "startRecording() state=$state")
         if (state != State.IDLE) return
 
         val prefs = context.prefs()
@@ -135,22 +134,15 @@ class VoiceInputManager(
 
     @Synchronized
     fun stopRecording() {
-        VoiceDiagnosticLog.log(context, "VIM", "stopRecording() state=$state caller=${VoiceDiagnosticLog.callerTrace()}")
         if (state != State.RECORDING) return
 
         val wavFile = audioRecorder.stop()
-        VoiceDiagnosticLog.log(
-            context,
-            "VIM",
-            "audioRecorder.stop() -> file=${wavFile?.absolutePath} exists=${wavFile?.exists()} size=${wavFile?.length()} durationMs=${audioRecorder.lastDurationMs} meanAmp=${audioRecorder.lastMeanAmplitude}"
-        )
         if (wavFile == null || !wavFile.exists() || wavFile.length() <= 44L) {
             wavFile?.delete()
             currentAudioFile = null
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_no_audio))
-            VoiceDiagnosticLog.log(context, "VIM", "stopRecording -> NO_AUDIO error path")
             return
         }
         if (BuildConfig.DEBUG) {
@@ -187,10 +179,8 @@ class VoiceInputManager(
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_no_model))
-            VoiceDiagnosticLog.log(context, "VIM", "stopRecording -> NO_MODEL error path")
             return
         }
-        VoiceDiagnosticLog.log(context, "VIM", "stopRecording -> transitioning to TRANSCRIBING, model=$model, apiKeyLen=${apiKey.length}")
         val localeHint = if (languageHintEnabled) callbacks.getLocaleHint() else null
         val prompt = resolveVoicePrompt(savedPrompt, localeHint, transcriptionDictionary, expectedLanguages)
         val spacingContext = if (spaceHeuristicEnabled) callbacks.getSpacingContext() else null
@@ -213,11 +203,8 @@ class VoiceInputManager(
             )
         }
         val thread = Thread {
-            VoiceDiagnosticLog.log(context, "VIM", "transcription thread running, token=$requestToken")
             try {
-                VoiceDiagnosticLog.log(context, "VIM", "calling OpenRouterClient.transcribe()")
                 val transcription = sanitizeTranscription(client.transcribe(wavFile))
-                VoiceDiagnosticLog.log(context, "VIM", "transcribe() returned length=${transcription.length}")
                 if (transcription.isBlank()) {
                     finishTranscription(
                         requestToken = requestToken,
@@ -229,11 +216,9 @@ class VoiceInputManager(
                 finishTranscription(requestToken = requestToken, result = finalText)
             } catch (e: InterruptedException) {
                 if (BuildConfig.DEBUG) Log.i(TAG, "Transcription cancelled")
-                VoiceDiagnosticLog.log(context, "VIM", "transcription thread InterruptedException (token=$requestToken)")
                 finishTranscription(requestToken = requestToken)
             } catch (e: Exception) {
                 Log.e(TAG, "Transcription failed", e)
-                VoiceDiagnosticLog.log(context, "VIM", "transcription thread Exception: ${e.javaClass.simpleName}: ${e.message}")
                 finishTranscription(
                     requestToken = requestToken,
                     error = safeUserFacingError(e),
@@ -253,7 +238,6 @@ class VoiceInputManager(
     /** Cancel either a live recording or an in-flight upload. */
     @Synchronized
     fun cancelRecording() {
-        VoiceDiagnosticLog.log(context, "VIM", "cancelRecording() state=$state caller=${VoiceDiagnosticLog.callerTrace(10)}")
         when (state) {
             State.RECORDING -> {
                 audioRecorder.cancel()
@@ -330,14 +314,8 @@ class VoiceInputManager(
     ) {
         mainHandler.post {
             if (activeTranscriptionToken != requestToken) {
-                VoiceDiagnosticLog.log(context, "VIM", "finishTranscription token mismatch (requestToken=$requestToken active=$activeTranscriptionToken) - dropping")
                 return@post
             }
-            VoiceDiagnosticLog.log(
-                context,
-                "VIM",
-                "finishTranscription token=$requestToken resultLen=${result?.length ?: -1} error=${error ?: "null"}"
-            )
             transcriptionThread = null
             transcriptionClient = null
             state = State.IDLE
