@@ -39,6 +39,7 @@ import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -290,9 +291,13 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         onFinishInput() // the dictionaries will save updates to file
         val dictionaryGroupsToClose: List<DictionaryGroup>
         synchronized(this) {
+            mainDictionaryReloadGeneration += 1
+            mLatchForWaitingLoadingMainDictionaries.countDown()
+            mLatchForWaitingLoadingMainDictionaries = CountDownLatch(0)
             dictionaryGroupsToClose = dictionaryGroups
             dictionaryGroups = listOf(DictionaryGroup())
         }
+        scope.coroutineContext.cancelChildren()
         for (dictionaryGroup in dictionaryGroupsToClose) {
             for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
                 dictionaryGroup.closeDict(dictType)
@@ -506,19 +511,21 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         settingsValuesForSuggestion: SettingsValuesForSuggestion, sessionId: Int, inputStyle: Int
     ): SuggestionResults {
         val proximityInfoHandle = keyboard.proximityInfo.nativeProximityInfo
-        val weightOfLangModelVsSpatialModel = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
 
         val waitForOtherDicts = if (dictionaryGroups.size == 1) null else CountDownLatch(dictionaryGroups.size - 1)
         val suggestionsArray = Array<List<SuggestedWordInfo>?>(dictionaryGroups.size) { null }
         for (i in 1..dictionaryGroups.lastIndex) {
             scope.launch {
-                suggestionsArray[i] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-                    proximityInfoHandle, weightOfLangModelVsSpatialModel, dictionaryGroups[i])
-                waitForOtherDicts?.countDown()
+                try {
+                    suggestionsArray[i] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
+                        proximityInfoHandle, dictionaryGroups[i])
+                } finally {
+                    waitForOtherDicts?.countDown()
+                }
             }
         }
         suggestionsArray[0] = getSuggestions(composedData, ngramContext, settingsValuesForSuggestion, sessionId,
-            proximityInfoHandle, weightOfLangModelVsSpatialModel, dictionaryGroups[0])
+            proximityInfoHandle, dictionaryGroups[0])
         val suggestionResults = SuggestionResults(
             SuggestedWords.MAX_SUGGESTIONS, ngramContext.isBeginningOfSentenceContext, false
         )
@@ -538,10 +545,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     private fun getSuggestions(
         composedData: ComposedData, ngramContext: NgramContext,
         settingsValuesForSuggestion: SettingsValuesForSuggestion, sessionId: Int,
-        proximityInfoHandle: Long, weightOfLangModelVsSpatialModel: FloatArray, dictGroup: DictionaryGroup
+        proximityInfoHandle: Long, dictGroup: DictionaryGroup
     ): List<SuggestedWordInfo> {
         val suggestions = ArrayList<SuggestedWordInfo>()
         val weightForLocale = dictGroup.getWeightForLocale(dictionaryGroups, composedData.mIsBatchMode)
+        val weightOfLangModelVsSpatialModel = floatArrayOf(Dictionary.NOT_A_WEIGHT_OF_LANG_MODEL_VS_SPATIAL_MODEL)
         for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
             val dictionary = dictGroup.getDict(dictType) ?: continue
             val dictionarySuggestions = dictionary.getSuggestions(composedData, ngramContext, proximityInfoHandle,

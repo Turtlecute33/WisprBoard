@@ -219,6 +219,13 @@ class VoiceInputManager(
         val thread = Thread {
             try {
                 val transcription = sanitizeTranscription(client.transcribe(wavFile))
+                if (transcription.isBlank()) {
+                    finishTranscription(
+                        requestToken = requestToken,
+                        error = context.getString(R.string.voice_error_transcription_failed),
+                    )
+                    return@Thread
+                }
                 val finalText = applySpacing(transcription, spacingContext)
                 finishTranscription(requestToken = requestToken, result = finalText)
             } catch (e: InterruptedException) {
@@ -277,11 +284,13 @@ class VoiceInputManager(
     }
 
     private fun newRecorder(): AudioRecorder {
-        // Sweep any stale files left over from a previous process being killed mid-recording.
+        // Sweep orphaned captures left over from process death before starting a new recording.
         runCatching {
-            val dir = cacheAudioDir()
-            val cutoff = System.currentTimeMillis() - 60 * 60 * 1000L
-            dir.listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
+            cacheAudioDir().listFiles()?.forEach { file ->
+                if (file.name.startsWith("rec_") && file.extension.equals("wav", ignoreCase = true)) {
+                    file.delete()
+                }
+            }
         }
         return AudioRecorder(outputFile = File(cacheAudioDir(), "rec_placeholder.wav"))
     }

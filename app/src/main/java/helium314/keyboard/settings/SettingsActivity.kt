@@ -148,9 +148,15 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
         if (intent?.action == Intent.ACTION_VIEW) {
             intent?.data?.let {
-                cachedDictionaryFile.delete()
-                FileUtils.copyContentUriToNewFile(it, this, cachedDictionaryFile)
-                dictUriFlow.value = it
+                val uri = it
+                ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+                    runCatching {
+                        cachedDictionaryFile.delete()
+                        FileUtils.copyContentUriToNewFile(uri, this, cachedDictionaryFile)
+                    }.onSuccess {
+                        runOnUiThread { dictUriFlow.value = uri }
+                    }
+                }
             }
             intent = null
         }

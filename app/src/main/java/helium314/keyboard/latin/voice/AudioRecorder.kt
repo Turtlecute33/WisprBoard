@@ -117,15 +117,19 @@ class AudioRecorder(
             true
         } catch (e: SecurityException) {
             Log.e(TAG, "Microphone permission not granted", e)
-            closeOutputSafely()
+            cleanupStartFailure()
             false
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "AudioRecord construction failed", e)
-            closeOutputSafely()
+            cleanupStartFailure()
+            false
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "AudioRecord failed to start", e)
+            cleanupStartFailure()
             false
         } catch (e: java.io.IOException) {
             Log.e(TAG, "Failed to open recording output file", e)
-            closeOutputSafely()
+            cleanupStartFailure()
             false
         }
     }
@@ -227,16 +231,25 @@ class AudioRecorder(
 
     private fun teardownRecorder() {
         isRecording = false
+        try { audioRecord?.stop() } catch (e: IllegalStateException) { Log.w(TAG, "AudioRecord.stop() failed", e) }
         recordingThread?.let { t ->
             t.interrupt()
             try { t.join(2000) } catch (e: InterruptedException) { Thread.currentThread().interrupt() }
         }
         recordingThread = null
-        try { audioRecord?.stop() } catch (e: IllegalStateException) { Log.w(TAG, "AudioRecord.stop() failed", e) }
         releaseAudioEffects()
         audioRecord?.release()
         audioRecord = null
         recordingStartMs = 0L
+    }
+
+    private fun cleanupStartFailure() {
+        isRecording = false
+        recordingStartMs = 0L
+        closeOutputSafely()
+        releaseAudioEffects()
+        try { audioRecord?.release() } catch (_: Throwable) {}
+        audioRecord = null
     }
 
     private fun closeOutputSafely() {

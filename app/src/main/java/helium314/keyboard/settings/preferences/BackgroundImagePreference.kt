@@ -117,13 +117,12 @@ fun BackgroundImagePref(setting: Setting, isLandscape: Boolean) {
 private fun setBackgroundImage(ctx: Context, uri: Uri, isNight: Boolean, isLandscape: Boolean): Boolean {
     val imageFile = Settings.getCustomBackgroundFile(ctx, isNight, isLandscape)
     FileUtils.copyContentUriToNewFile(uri, ctx, imageFile)
-    KeyboardSwitcher.getInstance().setThemeNeedsReload()
-    try {
-        BitmapFactory.decodeFile(imageFile.absolutePath)
-    } catch (_: Exception) {
+    val decoded = runCatching { BitmapFactory.decodeFile(imageFile.absolutePath) }.getOrNull()
+    if (decoded == null) {
         imageFile.delete()
         return false
     }
     Settings.clearCachedBackgroundImages()
+    KeyboardSwitcher.getInstance().setThemeNeedsReload()
     return true
 }

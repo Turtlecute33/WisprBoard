@@ -23,8 +23,8 @@ android {
         applicationId = "helium314.keyboard.turtleboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 4000
-        versionName = "4.0.0"
+        versionCode = 4001
+        versionName = "4.0.1"
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))

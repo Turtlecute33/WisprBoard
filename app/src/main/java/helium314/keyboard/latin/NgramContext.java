@@ -227,9 +227,8 @@ public class NgramContext {
         int hashValue = 0;
         for (final WordInfo wordInfo : mPrevWordsInfo) {
             if (!WordInfo.EMPTY_WORD_INFO.equals(wordInfo)) {
-                break;
+                hashValue = 31 * hashValue + wordInfo.hashCode();
             }
-            hashValue ^= wordInfo.hashCode();
         }
         return hashValue;
     }

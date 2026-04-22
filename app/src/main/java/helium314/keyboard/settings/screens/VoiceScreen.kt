@@ -32,6 +32,7 @@ import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.latin.voice.OpenRouterClient
 import helium314.keyboard.latin.voice.parseVoiceDictionaryTerms
 import helium314.keyboard.latin.voice.parseExpectedLanguages
+import helium314.keyboard.latin.voice.resolveVoiceModel
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
@@ -390,7 +391,11 @@ private fun VoiceTestKeyPreference(setting: Setting) {
             }
             val selectedModel = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL) ?: Defaults.PREF_VOICE_MODEL
             val customModel = prefs.getString(Settings.PREF_VOICE_MODEL_CUSTOM, Defaults.PREF_VOICE_MODEL_CUSTOM) ?: ""
-            val model = if (selectedModel == "custom") customModel.ifBlank { Defaults.PREF_VOICE_MODEL } else selectedModel
+            val model = resolveVoiceModel(selectedModel, customModel)
+            if (model == null) {
+                Toast.makeText(ctx, R.string.voice_error_no_model, Toast.LENGTH_SHORT).show()
+                return@Preference
+            }
             busy = true
             scope.launch {
                 val result = withContext(Dispatchers.IO) { probeApiKey(apiKey, model) }

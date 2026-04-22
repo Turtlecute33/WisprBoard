@@ -606,7 +606,7 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onTranscriptionResult(@NonNull final String text) {
-                mInputLogic.mConnection.commitText(text, 1);
+                onTextInput(text);
             }
 
             @Override

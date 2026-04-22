@@ -132,5 +132,6 @@ private fun checkDict(file: File): Pair<Int?, DictionaryHeader?> {
         dict.close()
         return R.string.dictionary_load_error to null
     }
+    dict.close()
     return null to newHeader
 }

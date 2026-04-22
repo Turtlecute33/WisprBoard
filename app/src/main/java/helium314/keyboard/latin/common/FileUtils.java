@@ -79,13 +79,16 @@ public class FileUtils {
     }
 
     public static void copyStreamToNewFile(final InputStream in, final File outfile) throws IOException {
+        if (in == null) {
+            throw new IOException("could not open input stream");
+        }
         File parentFile = outfile.getParentFile();
         if (parentFile == null || (!parentFile.exists() && !parentFile.mkdirs())) {
             throw new IOException("could not create parent folder");
         }
-        FileOutputStream out = new FileOutputStream(outfile);
-        copyStreamToOtherStream(in, out);
-        out.close();
+        try (InputStream input = in; FileOutputStream out = new FileOutputStream(outfile)) {
+            copyStreamToOtherStream(input, out);
+        }
     }
 
     public static void copyStreamToOtherStream(final InputStream in, final OutputStream out) throws IOException {

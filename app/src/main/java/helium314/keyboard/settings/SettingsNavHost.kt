@@ -145,11 +145,20 @@ fun SettingsNavHost(
     }
     LaunchedEffect(target.value) {
         val request = target.value ?: return@LaunchedEffect
-        if (request.route != navController.currentBackStackEntry?.destination?.route) {
+        if (request.route != navController.currentBackStackEntry?.resolvedRoute()) {
             navController.navigate(route = request.route)
         }
         SettingsDestination.consumeNavigation(request)
     }
+}
+
+private fun androidx.navigation.NavBackStackEntry.resolvedRoute(): String? {
+    var resolved = destination.route ?: return null
+    destination.arguments.keys.forEach { key ->
+        val value = arguments?.getString(key) ?: return@forEach
+        resolved = resolved.replace("{$key}", value)
+    }
+    return resolved
 }
 
 data class SettingsNavigationRequest(
