@@ -2,6 +2,7 @@
 package helium314.keyboard.latin.voice
 
 import android.util.Base64
+import androidx.annotation.VisibleForTesting
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.utils.Log
 import org.json.JSONArray
@@ -44,6 +45,19 @@ class OpenRouterClient(
         // Sanity cap to prevent pathological responses from consuming unbounded memory.
         // Real transcription responses are kilobytes; 1 MB is ~3 orders of magnitude of headroom.
         private const val MAX_RESPONSE_BYTES = 1_000_000L
+        // Error bodies are strictly for debug logging; cap them tightly so a misbehaving server
+        // can't make us buffer megabytes of HTML just to log a prefix.
+        private const val MAX_ERROR_BYTES = 64 * 1024L
+        // Upper bound on how long we'll honor a server-supplied Retry-After, to stay responsive.
+        private const val MAX_RETRY_AFTER_MS = 30_000L
+        private val SENSITIVE_LOG_PATTERNS: List<Pair<Regex, String>> = listOf(
+            Regex("(?i)Bearer\\s+\\S+") to "Bearer ***",
+            Regex("(?i)Authorization\\s*[:=]\\s*\\S+") to "Authorization: ***",
+            Regex("(?i)X-Api-Key\\s*[:=]\\s*\\S+") to "X-Api-Key: ***",
+            Regex("(?i)(\"?api[_-]?key\"?\\s*[:=]\\s*\"?)[^\"\\s,}]+") to "$1***",
+            Regex("(?i)(\"?token\"?\\s*[:=]\\s*[\"']?)[^\"'\\s,}]+") to "$1***",
+            Regex("sk-[A-Za-z0-9_\\-]{10,}") to "sk-***",
+        )
         // Plain ASCII sentinel: org.json escapes control characters (e.g. U+0000 -> literal "\u0000"),
         // which used to make the placeholder un-findable in the serialized body. Unlikely to collide
         // with real content.
@@ -60,6 +74,7 @@ class OpenRouterClient(
      */
     fun transcribe(audioFile: File): String {
         var lastError: Exception? = null
+        var nextDelayOverrideMs: Long = -1L
         for (attempt in 0 until MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
             try {
@@ -67,16 +82,19 @@ class OpenRouterClient(
             } catch (e: OpenRouterException) {
                 if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
                 lastError = e
+                nextDelayOverrideMs = if ((e.statusCode == 429 || e.statusCode == 503) && e.retryAfterMs > 0) e.retryAfterMs else -1L
             } catch (e: SocketTimeoutException) {
                 if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Request timed out")
                 lastError = e
+                nextDelayOverrideMs = -1L
             } catch (e: InterruptedIOException) {
                 throw InterruptedException()
             } catch (e: java.io.IOException) {
                 if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException(sanitizeForLog(e.message ?: "Network error"))
                 lastError = e
+                nextDelayOverrideMs = -1L
             }
-            val delayMs = (500L shl attempt).coerceAtMost(4_000L)
+            val delayMs = if (nextDelayOverrideMs > 0) nextDelayOverrideMs else (500L shl attempt).coerceAtMost(4_000L)
             if (BuildConfig.DEBUG) Log.i(TAG, "Retrying after ${delayMs}ms (attempt ${attempt + 1})")
             try { Thread.sleep(delayMs) } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
@@ -97,6 +115,7 @@ class OpenRouterClient(
      */
     fun fixText(userText: String): String {
         var lastError: Exception? = null
+        var nextDelayOverrideMs: Long = -1L
         for (attempt in 0 until MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
             try {
@@ -104,16 +123,19 @@ class OpenRouterClient(
             } catch (e: OpenRouterException) {
                 if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
                 lastError = e
+                nextDelayOverrideMs = if ((e.statusCode == 429 || e.statusCode == 503) && e.retryAfterMs > 0) e.retryAfterMs else -1L
             } catch (e: SocketTimeoutException) {
                 if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Request timed out")
                 lastError = e
+                nextDelayOverrideMs = -1L
             } catch (e: InterruptedIOException) {
                 throw InterruptedException()
             } catch (e: java.io.IOException) {
                 if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException(sanitizeForLog(e.message ?: "Network error"))
                 lastError = e
+                nextDelayOverrideMs = -1L
             }
-            val delayMs = (500L shl attempt).coerceAtMost(4_000L)
+            val delayMs = if (nextDelayOverrideMs > 0) nextDelayOverrideMs else (500L shl attempt).coerceAtMost(4_000L)
             try { Thread.sleep(delayMs) } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
                 throw e
@@ -146,9 +168,10 @@ class OpenRouterClient(
             connection.outputStream.use { it.write(body) }
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                val errorBody = readErrorBodyCapped(connection.errorStream)
                 if (BuildConfig.DEBUG) Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
-                throw OpenRouterException("API error: $responseCode", responseCode)
+                val retryAfterMs = parseRetryAfterMs(connection.getHeaderField("Retry-After"))
+                throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs)
             }
             val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
             return parseContent(responseBody)
@@ -244,9 +267,10 @@ class OpenRouterClient(
 
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                val errorBody = readErrorBodyCapped(connection.errorStream)
                 if (BuildConfig.DEBUG) Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
-                throw OpenRouterException("API error: $responseCode", responseCode)
+                val retryAfterMs = parseRetryAfterMs(connection.getHeaderField("Retry-After"))
+                throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs)
             }
 
             val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
@@ -327,12 +351,67 @@ class OpenRouterClient(
         return buf.toString(Charsets.UTF_8.name())
     }
 
-    private fun sanitizeForLog(body: String): String {
+    @VisibleForTesting
+    internal fun sanitizeForLog(body: String): String {
         // Guard against the remote echoing our Authorization header or any api key field back to us.
-        return body
-            .replace(Regex("(?i)Bearer\\s+\\S+"), "Bearer ***")
-            .replace(Regex("(?i)(\"?api[_-]?key\"?\\s*[:=]\\s*\"?)[^\"\\s,}]+"), "$1***")
+        // Patterns are ordered from most-specific to least so each substitution leaves subsequent
+        // ones with cleaner input to match against.
+        var sanitized = body
+        for ((regex, replacement) in SENSITIVE_LOG_PATTERNS) {
+            sanitized = sanitized.replace(regex, replacement)
+        }
+        return sanitized
+    }
+
+    /**
+     * Reads up to [MAX_ERROR_BYTES] from [stream] for debug logging only. Unlike the success-path
+     * reader, hitting the cap is not an error — we silently truncate so a misbehaving server can't
+     * turn a 500 response into a second, bigger failure.
+     */
+    private fun readErrorBodyCapped(stream: java.io.InputStream?): String {
+        if (stream == null) return ""
+        val buf = java.io.ByteArrayOutputStream()
+        val chunk = ByteArray(4 * 1024)
+        var total = 0L
+        stream.use { s ->
+            while (true) {
+                val n = s.read(chunk)
+                if (n == -1) break
+                val writable = kotlin.math.min(n.toLong(), MAX_ERROR_BYTES - total).toInt()
+                if (writable > 0) { buf.write(chunk, 0, writable); total += writable }
+                if (total >= MAX_ERROR_BYTES) break
+            }
+        }
+        return buf.toString(Charsets.UTF_8.name())
+    }
+
+    /**
+     * Parses an HTTP `Retry-After` header value. Accepts either a non-negative integer number of
+     * seconds (RFC 7231 delta-seconds) or an HTTP-date. Returns -1 when absent/unparseable,
+     * otherwise the delay in milliseconds clamped to `[0, MAX_RETRY_AFTER_MS]`.
+     */
+    @VisibleForTesting
+    internal fun parseRetryAfterMs(header: String?): Long {
+        val raw = header?.trim().orEmpty()
+        if (raw.isEmpty()) return -1L
+        raw.toLongOrNull()?.let { seconds ->
+            if (seconds < 0) return -1L
+            return (seconds * 1000L).coerceIn(0L, MAX_RETRY_AFTER_MS)
+        }
+        return try {
+            val epochMs = java.util.Date.parse(raw) // lenient HTTP-date parser
+            val deltaMs = epochMs - System.currentTimeMillis()
+            deltaMs.coerceIn(0L, MAX_RETRY_AFTER_MS)
+        } catch (_: IllegalArgumentException) {
+            -1L
+        } catch (_: Exception) {
+            -1L
+        }
     }
 }
 
-class OpenRouterException(message: String, val statusCode: Int = -1) : Exception(message)
+class OpenRouterException(
+    message: String,
+    val statusCode: Int = -1,
+    val retryAfterMs: Long = -1L,
+) : Exception(message)

@@ -2,12 +2,10 @@
 package helium314.keyboard.latin.voice
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.annotation.StringRes
 import helium314.keyboard.latin.R
@@ -38,15 +36,37 @@ class TextFixManager(
             isPasswordField: Boolean,
             noLearning: Boolean,
             incognitoModeEnabled: Boolean,
+            imeOptions: Int,
         ): Int? {
-            if ((inputType and InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_TEXT) {
-                return R.string.text_fix_error_unsupported_field
-            }
+            // Sensitive signals first — caller-supplied flags and IME-level hints.
             if (isPasswordField || noLearning || incognitoModeEnabled) {
                 return R.string.text_fix_error_sensitive_field
             }
-            if (InputTypeUtils.isUriOrEmailType(inputType)) {
-                return R.string.text_fix_error_unsupported_field
+            if ((imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0) {
+                return R.string.text_fix_error_sensitive_field
+            }
+            if ((inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0) {
+                return R.string.text_fix_error_sensitive_field
+            }
+            when (inputType and InputType.TYPE_MASK_CLASS) {
+                InputType.TYPE_CLASS_TEXT -> {
+                    if (InputTypeUtils.isUriOrEmailType(inputType)) {
+                        return R.string.text_fix_error_unsupported_field
+                    }
+                }
+                InputType.TYPE_CLASS_NUMBER -> {
+                    // Preventative: today we reject NUMBER as unsupported, but check password
+                    // variation first so it registers as sensitive rather than unsupported.
+                    if ((inputType and InputType.TYPE_MASK_VARIATION) ==
+                        InputType.TYPE_NUMBER_VARIATION_PASSWORD) {
+                        return R.string.text_fix_error_sensitive_field
+                    }
+                    return R.string.text_fix_error_unsupported_field
+                }
+                else -> {
+                    // DATETIME / PHONE / etc. — unsupported.
+                    return R.string.text_fix_error_unsupported_field
+                }
             }
             return null
         }
@@ -63,13 +83,20 @@ class TextFixManager(
         fun onFinished()
         fun onResult(originalText: String, proposedText: String)
         fun onError(message: String)
+        /**
+         * Called when the user must acknowledge the "data is sent to OpenRouter" consent
+         * before the first text-fix request.
+         */
+        fun requestConsent() {}
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
     @Volatile private var activeClient: OpenRouterClient? = null
     @Volatile private var activeThread: Thread? = null
     @Volatile private var activeToken = 0L
-    private var state = State.IDLE
+    @Volatile private var state = State.IDLE
+    @Volatile private var pendingConsentDeadline: Long = 0L
+    private val consentWindowMs = 10_000L
 
     fun getState() = state
 
@@ -95,7 +122,18 @@ class TextFixManager(
             Toast.makeText(context, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
             return
         }
-        if (!isNetworkAvailable()) {
+        // First-use consent: same two-tap window as voice input.
+        if (!prefs.getBoolean(Settings.PREF_TEXT_FIX_CONSENT_GIVEN, Defaults.PREF_TEXT_FIX_CONSENT_GIVEN)) {
+            val now = System.currentTimeMillis()
+            if (pendingConsentDeadline == 0L || now > pendingConsentDeadline) {
+                pendingConsentDeadline = now + consentWindowMs
+                callbacks.requestConsent()
+                return
+            }
+            pendingConsentDeadline = 0L
+            prefs.edit().putBoolean(Settings.PREF_TEXT_FIX_CONSENT_GIVEN, true).apply()
+        }
+        if (!isNetworkAvailable(context)) {
             Toast.makeText(context, R.string.voice_error_no_network, Toast.LENGTH_SHORT).show()
             return
         }
@@ -187,11 +225,7 @@ class TextFixManager(
         }
     }
 
-    private fun sanitize(raw: String): String {
-        // Strip control characters (Cc) and format marks (Cf) to protect the host editor.
-        val cleaned = raw.replace(Regex("[\\p{Cc}\\p{Cf}]"), "").trim()
-        return if (cleaned.length > MAX_OUTPUT_LENGTH) cleaned.substring(0, MAX_OUTPUT_LENGTH) else cleaned
-    }
+    private fun sanitize(raw: String): String = sanitizeModelOutput(raw, MAX_OUTPUT_LENGTH)
 
     private fun safeUserFacingError(e: Throwable): String {
         if (e is OpenRouterException) {
@@ -203,18 +237,5 @@ class TextFixManager(
             }
         }
         return context.getString(R.string.text_fix_error_failed)
-    }
-
-    private fun isNetworkAvailable(): Boolean {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = cm.activeNetwork ?: return false
-            val caps = cm.getNetworkCapabilities(network) ?: return false
-            return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        }
-        @Suppress("DEPRECATION")
-        val activeNetwork = cm.activeNetworkInfo ?: return false
-        @Suppress("DEPRECATION")
-        return activeNetwork.isConnected
     }
 }

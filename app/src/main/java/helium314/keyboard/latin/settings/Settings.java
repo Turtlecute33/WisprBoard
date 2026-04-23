@@ -80,6 +80,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_VOICE_LANGUAGE_HINT = "voice_language_hint";
     public static final String PREF_VOICE_SPACE_HEURISTIC = "voice_space_heuristic";
     public static final String PREF_VOICE_HAPTIC_FEEDBACK = "voice_haptic_feedback";
+    public static final String PREF_VOICE_CONSENT_GIVEN = "voice_consent_given";
     // Virtual (non-stored) keys for action rows in settings UI.
     public static final String PREF_VOICE_ACTION_TEST_KEY = "voice_action_test_key";
     public static final String PREF_VOICE_ACTION_PROMPT_PRESET = "voice_action_prompt_preset";
@@ -88,6 +89,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_TEXT_FIX_MODEL = "text_fix_model";
     public static final String PREF_TEXT_FIX_MODEL_CUSTOM = "text_fix_model_custom";
     public static final String PREF_TEXT_FIX_PROMPT = "text_fix_prompt";
+    public static final String PREF_TEXT_FIX_CONSENT_GIVEN = "text_fix_consent_given";
 
     public static final String PREF_AUTO_CAP = "auto_cap";
     public static final String PREF_VIBRATE_ON = "vibrate_on";

@@ -81,7 +81,7 @@ class AudioRecorder(
 
         return try {
             audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
                 SAMPLE_RATE,
                 CHANNEL_CONFIG,
                 AUDIO_FORMAT,
@@ -177,6 +177,11 @@ class AudioRecorder(
                     }
                 }
                 read == 0 -> Unit
+                read == AudioRecord.ERROR_DEAD_OBJECT -> {
+                    Log.e(TAG, "AudioRecord dead object, recording aborted")
+                    isRecording = false
+                    break
+                }
                 else -> {
                     Log.e(TAG, "AudioRecord read error: $read")
                     isRecording = false
@@ -258,6 +263,9 @@ class AudioRecorder(
     }
 
     private fun attachAudioEffects(sessionId: Int) {
+        // Trade-off: VOICE_RECOGNITION on most Android devices already applies NS/AGC internally,
+        // so attaching these effects is often redundant. We keep the attach code because some OEMs
+        // do NOT apply NS/AGC on VOICE_RECOGNITION, and on those devices we still want the boost.
         // Free perceptual quality boost when the device supports it. Silent no-op otherwise.
         try {
             if (NoiseSuppressor.isAvailable()) {

@@ -1155,6 +1155,8 @@ New dictionary:
     <string name="voice_prompt_preset_clean_text">Transcribe this audio. Remove filler words (um, uh, like, you know), false starts, and repetitions. Output only the clean transcription, nothing else.</string>
     <string name="voice_prompt_preset_punctuated_text">Transcribe this audio with correct punctuation and sentence casing. Output only the transcription, nothing else.</string>
     <string name="voice_prompt_preset_translate_en_text">Transcribe this audio and translate it into natural English. Output only the English translation, nothing else.</string>
+    <string name="voice_prompt_preset_overwrite_title">Replace prompt?</string>
+    <string name="voice_prompt_preset_overwrite_message">This will overwrite your customized prompt with the selected preset.</string>
 
     <!-- Text Fix -->
     <string name="settings_screen_text_fix">Text Fix</string>
@@ -1174,4 +1176,6 @@ New dictionary:
     <string name="text_fix_error_unsupported_field">Text Fix is unavailable in this field</string>
     <string name="text_fix_error_empty">The model returned no text</string>
     <string name="text_fix_error_failed">Text fix failed</string>
+    <string name="voice_consent_prompt">Tap again to confirm — audio will be sent to OpenRouter with your API key.</string>
+    <string name="text_fix_consent_prompt">Tap again to confirm — your selected text will be sent to OpenRouter with your API key.</string>
 </resources>

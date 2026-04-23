@@ -42,8 +42,8 @@ android {
         applicationId = "helium314.keyboard.turtleboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 5001
-        versionName = "5.0.1"
+        versionCode = 5100
+        versionName = "5.1.0"
         buildConfigField("boolean", "ALLOW_USER_SUPPLIED_JNI", "false")
         buildConfigField("boolean", "ENABLE_GESTURE_DATA_GATHERING", "false")
         manifestPlaceholders["gestureDataProviderEnabled"] = "false"
@@ -75,6 +75,7 @@ android {
             // and for better performance in case users want to install a debug APK
             isMinifyEnabled = true
             isJniDebuggable = false
+            applicationIdSuffix = ".debug"
             buildConfigField("boolean", "ALLOW_USER_SUPPLIED_JNI", "true")
             buildConfigField("boolean", "ENABLE_GESTURE_DATA_GATHERING", "true")
             manifestPlaceholders["gestureDataProviderEnabled"] = "true"

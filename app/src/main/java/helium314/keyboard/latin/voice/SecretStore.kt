@@ -50,6 +50,9 @@ object SecretStore {
         }
     }
 
+    @Volatile
+    private var recoveryAttempted = false
+
     private fun securePrefs(context: Context): SharedPreferences? {
         // EncryptedSharedPreferences relies on KeyGenParameterSpec (API 23+). Keep the reference
         // inside this method so the class isn't loaded on older devices.
@@ -58,7 +61,35 @@ object SecretStore {
             EncryptedPrefsFactory.create(context, ENCRYPTED_FILE)
         } catch (e: Throwable) {
             Log.w(TAG, "Failed to open encrypted prefs", e)
-            null
+            if (recoveryAttempted) return null
+            recoveryAttempted = true
+            Log.w(TAG, "Attempting one-shot recovery of encrypted prefs master key")
+            attemptRecovery(context)
+            try {
+                EncryptedPrefsFactory.create(context, ENCRYPTED_FILE)
+            } catch (e2: Throwable) {
+                Log.w(TAG, "Encrypted prefs still unavailable after recovery", e2)
+                null
+            }
+        }
+    }
+
+    private fun attemptRecovery(context: Context) {
+        try {
+            context.getSharedPreferences(ENCRYPTED_FILE, Context.MODE_PRIVATE)
+                .edit().clear().commit()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                context.deleteSharedPreferences(ENCRYPTED_FILE)
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Failed to clear encrypted prefs file during recovery", e)
+        }
+        try {
+            java.security.KeyStore.getInstance("AndroidKeyStore")
+                .apply { load(null) }
+                .deleteEntry("_androidx_security_master_key_")
+        } catch (e: Throwable) {
+            Log.w(TAG, "Failed to delete master key alias during recovery", e)
         }
     }
 }

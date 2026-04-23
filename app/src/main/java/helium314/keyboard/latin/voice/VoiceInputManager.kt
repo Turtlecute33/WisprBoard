@@ -3,9 +3,6 @@ package helium314.keyboard.latin.voice
 
 import android.Manifest
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -35,8 +32,11 @@ class VoiceInputManager(
 
     enum class State { IDLE, RECORDING, TRANSCRIBING }
 
-    /** Snapshot of text immediately adjacent to the cursor, used for spacing heuristics. */
-    data class SpacingContext(val charBefore: Char?, val charAfter: Char?)
+    /**
+     * Snapshot of text immediately adjacent to the cursor, used for spacing heuristics.
+     * Values are Unicode code points (surrogate-pair safe), or null if no text on that side.
+     */
+    data class SpacingContext(val charBefore: Int?, val charAfter: Int?)
 
     interface Callbacks {
         fun onRecordingStarted()
@@ -49,11 +49,18 @@ class VoiceInputManager(
         fun getLocaleHint(): Locale? = null
         /** Optional surrounding-text snapshot; used to decide whether to insert spaces. */
         fun getSpacingContext(): SpacingContext? = null
+        /**
+         * Called when the user must acknowledge the "data is sent to OpenRouter" consent
+         * before the first recording. Implementation should show a brief in-keyboard prompt.
+         */
+        fun requestConsent() {}
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var audioRecorder: AudioRecorder = newRecorder()
-    private var state = State.IDLE
+    @Volatile private var state = State.IDLE
+    @Volatile private var pendingConsentDeadline: Long = 0L
+    private val consentWindowMs = 10_000L
     private var currentAudioFile: File? = null
     @Volatile private var transcriptionThread: Thread? = null
     @Volatile private var transcriptionClient: OpenRouterClient? = null
@@ -94,7 +101,21 @@ class VoiceInputManager(
             return
         }
 
-        if (!isNetworkAvailable()) {
+        // First-use consent gate: user must tap twice within consentWindowMs to acknowledge
+        // that audio leaves the device en route to OpenRouter. Persisted once granted.
+        if (!prefs.getBoolean(Settings.PREF_VOICE_CONSENT_GIVEN, Defaults.PREF_VOICE_CONSENT_GIVEN)) {
+            val now = System.currentTimeMillis()
+            if (pendingConsentDeadline == 0L || now > pendingConsentDeadline) {
+                pendingConsentDeadline = now + consentWindowMs
+                callbacks.requestConsent()
+                return
+            }
+            // Second tap within window: persist consent and fall through to start recording.
+            pendingConsentDeadline = 0L
+            prefs.edit().putBoolean(Settings.PREF_VOICE_CONSENT_GIVEN, true).apply()
+        }
+
+        if (!isNetworkAvailable(context)) {
             Toast.makeText(context, R.string.voice_error_no_network, Toast.LENGTH_SHORT).show()
             return
         }
@@ -300,12 +321,8 @@ class VoiceInputManager(
         return context.getString(R.string.voice_error_transcription_failed)
     }
 
-    private fun sanitizeTranscription(raw: String): String {
-        // Strip control characters (category Cc) and bidi/format marks; the API occasionally
-        // returns stray characters that corrupt the host editor when committed.
-        val cleaned = raw.replace(Regex("[\\p{Cc}\\p{Cf}]"), "").trim()
-        return if (cleaned.length > MAX_TRANSCRIPTION_LENGTH) cleaned.substring(0, MAX_TRANSCRIPTION_LENGTH) else cleaned
-    }
+    private fun sanitizeTranscription(raw: String): String =
+        sanitizeModelOutput(raw, MAX_TRANSCRIPTION_LENGTH)
 
     private fun finishTranscription(
         requestToken: Long,
@@ -328,31 +345,4 @@ class VoiceInputManager(
         }
     }
 
-    /**
-     * Prepends a space when the cursor sits immediately after a letter/digit, and appends one
-     * when the next char is a letter/digit. Keeps `"hello".world` from becoming `"hello"world`.
-     */
-    private fun applySpacing(text: String, ctx: SpacingContext?): String {
-        if (text.isEmpty() || ctx == null) return text
-        val needsLeading = ctx.charBefore?.let { isWordChar(it) && !text.first().isWhitespace() } == true
-        val needsTrailing = ctx.charAfter?.let { isWordChar(it) && !text.last().isWhitespace() } == true
-        val prefix = if (needsLeading) " " else ""
-        val suffix = if (needsTrailing) " " else ""
-        return prefix + text + suffix
-    }
-
-    private fun isWordChar(c: Char): Boolean = c.isLetterOrDigit()
-
-    private fun isNetworkAvailable(): Boolean {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = cm.activeNetwork ?: return false
-            val caps = cm.getNetworkCapabilities(network) ?: return false
-            return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        }
-        @Suppress("DEPRECATION")
-        val activeNetwork = cm.activeNetworkInfo ?: return false
-        @Suppress("DEPRECATION")
-        return activeNetwork.isConnected
-    }
 }

@@ -662,13 +662,24 @@ public class LatinIME extends InputMethodService implements
             public VoiceInputManager.SpacingContext getSpacingContext() {
                 try {
                     final int cp = mInputLogic.mConnection.getCodePointBeforeCursor();
-                    final Character before = cp <= 0 ? null : (Character) (char) cp;
-                    final CharSequence after = mInputLogic.mConnection.getTextAfterCursor(1, 0);
-                    final Character afterCh = (after != null && after.length() > 0) ? after.charAt(0) : null;
-                    return new VoiceInputManager.SpacingContext(before, afterCh);
+                    final Integer before = cp <= 0 ? null : Integer.valueOf(cp);
+                    // Fetch up to 2 chars so we can reconstruct a surrogate pair if present.
+                    final CharSequence after = mInputLogic.mConnection.getTextAfterCursor(2, 0);
+                    final Integer afterCp;
+                    if (after != null && after.length() > 0) {
+                        afterCp = Integer.valueOf(Character.codePointAt(after, 0));
+                    } else {
+                        afterCp = null;
+                    }
+                    return new VoiceInputManager.SpacingContext(before, afterCp);
                 } catch (Exception e) {
                     return null;
                 }
+            }
+
+            @Override
+            public void requestConsent() {
+                Toast.makeText(LatinIME.this, R.string.voice_consent_prompt, Toast.LENGTH_LONG).show();
             }
         });
 
@@ -680,11 +691,14 @@ public class LatinIME extends InputMethodService implements
                 if (settingsValues == null) {
                     return R.string.text_fix_error_unsupported_field;
                 }
+                final EditorInfo ei = getCurrentInputEditorInfo();
+                final int imeOptions = ei != null ? ei.imeOptions : 0;
                 return TextFixManager.getBlockedErrorResId(
                         settingsValues.mInputAttributes.mInputType,
                         settingsValues.mInputAttributes.mIsPasswordField,
                         settingsValues.mInputAttributes.mNoLearning,
-                        settingsValues.mIncognitoModeEnabled);
+                        settingsValues.mIncognitoModeEnabled,
+                        imeOptions);
             }
 
             @Nullable
@@ -722,6 +736,11 @@ public class LatinIME extends InputMethodService implements
             public void onError(@NonNull final String message) {
                 Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
                 if (mSuggestionStripView != null) mSuggestionStripView.hideTextFixOverlay();
+            }
+
+            @Override
+            public void requestConsent() {
+                Toast.makeText(LatinIME.this, R.string.text_fix_consent_prompt, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -867,6 +886,7 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onDestroy() {
         mVoiceInputManager.cancelRecording();
+        if (mTextFixManager != null) mTextFixManager.cancel();
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
         mSettings.onDestroy();

@@ -1,8 +1,60 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.voice
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
 import helium314.keyboard.latin.settings.Defaults
 import java.util.Locale
+
+/**
+ * Strip control characters (Cc) and a narrow set of bidi/format marks that corrupt host editors,
+ * but intentionally preserve U+200D (ZWJ) so emoji sequences survive.
+ */
+internal fun sanitizeModelOutput(raw: String, maxLength: Int): String {
+    val cleaned = raw.replace(
+        Regex("[\\p{Cc}\\u200B\\u200C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFEFF]"),
+        ""
+    ).trim()
+    if (cleaned.length <= maxLength) return cleaned
+    // Avoid splitting a surrogate pair at the truncation boundary.
+    var end = maxLength
+    if (end > 0 && Character.isHighSurrogate(cleaned[end - 1])) end -= 1
+    return cleaned.substring(0, end)
+}
+
+/**
+ * Prepends a space when the cursor sits immediately after a letter/digit, and appends one
+ * when the next char is a letter/digit. Keeps `"hello".world` from becoming `"hello"world`.
+ * Accepts a [VoiceInputManager.SpacingContext] whose fields are Unicode code points (surrogate-pair safe),
+ * or null to leave the text unchanged.
+ */
+internal fun applySpacing(text: String, ctx: VoiceInputManager.SpacingContext?): String {
+    if (text.isEmpty() || ctx == null) return text
+    val leadingCp = Character.codePointAt(text, 0)
+    val trailingCp = Character.codePointBefore(text, text.length)
+    val leadingIsWhitespace = Character.isWhitespace(leadingCp)
+    val trailingIsWhitespace = Character.isWhitespace(trailingCp)
+    val needsLeading = ctx.charBefore?.let { Character.isLetterOrDigit(it) && !leadingIsWhitespace } == true
+    val needsTrailing = ctx.charAfter?.let { Character.isLetterOrDigit(it) && !trailingIsWhitespace } == true
+    val prefix = if (needsLeading) " " else ""
+    val suffix = if (needsTrailing) " " else ""
+    return prefix + text + suffix
+}
+
+internal fun isNetworkAvailable(context: Context): Boolean {
+    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+    @Suppress("DEPRECATION")
+    val activeNetwork = cm.activeNetworkInfo ?: return false
+    @Suppress("DEPRECATION")
+    return activeNetwork.isConnected
+}
 
 internal data class ResolvedVoicePrompt(
     val systemPrompt: String,

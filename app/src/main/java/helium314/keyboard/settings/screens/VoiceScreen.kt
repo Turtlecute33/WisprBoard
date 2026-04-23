@@ -243,7 +243,7 @@ fun createVoiceSettings(context: Context) = listOf(
 private fun VoiceApiKeyPreference(setting: Setting) {
     val ctx = LocalContext.current
     var showDialog by rememberSaveable { mutableStateOf(false) }
-    val stored = SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
+    var stored by remember { mutableStateOf(SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)) }
     Preference(
         name = setting.title,
         onClick = {
@@ -258,7 +258,10 @@ private fun VoiceApiKeyPreference(setting: Setting) {
     if (showDialog) {
         TextInputDialog(
             onDismissRequest = { showDialog = false },
-            onConfirmed = { SecretStore.setApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, it.trim()) },
+            onConfirmed = {
+                SecretStore.setApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, it.trim())
+                stored = it.trim()
+            },
             initialText = stored,
             title = { Text(setting.title) },
             singleLine = true,
@@ -307,6 +310,7 @@ private fun VoicePromptPresetPreference(setting: Setting) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
     var showDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingPresetTextRes by rememberSaveable { mutableStateOf<Int?>(null) }
     Preference(name = setting.title, onClick = { showDialog = true })
     if (showDialog) {
         // Keep items as primitive Ints so LazyColumn's key is Saveable — wrapping them in a
@@ -322,13 +326,35 @@ private fun VoicePromptPresetPreference(setting: Setting) {
             items = labelToText.keys.toList(),
             onItemSelected = { labelRes ->
                 val textRes = labelToText[labelRes] ?: return@ListPickerDialog
-                prefs.edit {
-                    putString(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT, ctx.getString(textRes))
+                val newText = ctx.getString(textRes)
+                val current = prefs.getString(
+                    Settings.PREF_VOICE_TRANSCRIPTION_PROMPT,
+                    Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
+                ) ?: Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
+                if (current.isBlank() || current == Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT) {
+                    prefs.edit {
+                        putString(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT, newText)
+                    }
+                } else {
+                    pendingPresetTextRes = textRes
                 }
                 showDialog = false
             },
             title = { Text(ctx.getString(R.string.voice_prompt_preset)) },
             getItemName = { ctx.getString(it) },
+        )
+    }
+    pendingPresetTextRes?.let { textRes ->
+        ConfirmationDialog(
+            onDismissRequest = { pendingPresetTextRes = null },
+            onConfirmed = {
+                prefs.edit {
+                    putString(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT, ctx.getString(textRes))
+                }
+                pendingPresetTextRes = null
+            },
+            title = { Text(stringResource(R.string.voice_prompt_preset_overwrite_title)) },
+            content = { Text(stringResource(R.string.voice_prompt_preset_overwrite_message)) },
         )
     }
 }
