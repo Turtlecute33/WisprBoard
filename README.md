@@ -1,14 +1,16 @@
 # WisprBoard
 
-An Android keyboard that types what you say.
+An Android keyboard that transcribes your voice and fixes your text — powered by whatever model you point it at on [OpenRouter](https://openrouter.ai/).
 
 [<img src="https://user-images.githubusercontent.com/663460/26973090-f8fdc986-4d14-11e7-995a-e7c5e79ed925.png" alt="Get APK from GitHub" height="70">](https://github.com/Turtlecute33/WisprBoard/releases/latest)
 
 ## Why this exists
 
-I was a Wispr Flow user. I wanted dictation that felt like magic and got a bloated desktop app, a mandatory cloud account, and transcripts I didn't own. So I built the thing I actually wanted: a plain Android keyboard with a mic button, pointed at whatever model I pick, using my own key. No account, no middleman, no app to babysit.
+I was a Wispr Flow user. It was slow, clunky, locked behind an account, and I didn't like the transcription quality for what they charged. So I built the thing I actually wanted: a plain Android keyboard with a mic button and a "fix this" button, both wired straight to OpenRouter with my own key. Pick a better model, get better results. Swap it whenever something new ships. No Wispr-branded cloud, no subscription, no desktop app to babysit.
 
-WisprBoard is a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard) — a great open-source keyboard that doesn't do voice. This adds voice. That's it.
+It's not local. It's not hyper-private. Your audio and selected text go to OpenRouter — that's how transcription and rewriting happen. What's different from Wispr Flow is that **you** pick the model, **you** own the key, and there's no WisprBoard server sitting in the middle skimming anything.
+
+WisprBoard is a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard) — a great open-source keyboard that doesn't do voice or text fix. This adds both. That's it.
 
 ## WisprBoard vs HeliBoard
 
@@ -16,28 +18,27 @@ WisprBoard is a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard) — a
 | ------------------------------------ | :-------: | :--------: |
 | Everything HeliBoard does            |     ✅     |     ✅      |
 | Installs alongside HeliBoard         |     —     |     ✅      |
-| Voice-to-text (bring your own key)   |     —     |     ✅      |
-| Text Fix — rewrite selected text with AI |   —   |     ✅      |
-| API key stored encrypted, never logged |    —    |     ✅      |
+| Voice-to-text via OpenRouter         |     —     |     ✅      |
+| Text Fix — rewrite selected text via OpenRouter | — |   ✅      |
+| API key stored encrypted on-device   |     —     |     ✅      |
 
-If you don't want voice, stay on HeliBoard. It's excellent.
+If you don't want AI features, stay on HeliBoard. It's excellent.
 
-## How voice works
+## Voice
 
-Long-press **Return**, tap the mic, speak, release. Audio records locally, uploads over HTTPS to [OpenRouter](https://openrouter.ai/) with your API key, the text lands in the field, and the recording is deleted.
+Long-press **Return**, tap the mic, speak, release. Audio uploads over HTTPS to [OpenRouter](https://openrouter.ai/) with your API key, the transcript lands in the field, the local recording is deleted.
 
-- **Your key, your model.** Pick any OpenRouter speech model. Set a custom prompt or dictionary.
-- **No server in between.** WisprBoard talks to OpenRouter directly. There is no WisprBoard backend, no analytics, no telemetry.
-- **Key stays local.** Encrypted with the Android Keystore, excluded from cloud backup and device transfer, stripped from in-app backups, never written to logs.
-- **Opt-in.** Disabled until you add a key. Mic permission is explained before Android asks for it.
-
-OpenRouter's own logging depends on the model you pick — [check their policy](https://openrouter.ai/privacy) before using voice for anything sensitive.
+Pick any speech model OpenRouter offers. Set a custom prompt or dictionary. Swap models whenever something better ships.
 
 ## Text Fix
 
-Typos, clumsy phrasing, wrong tone — select the text, long-press **Return**, and the AI rewrites it in place. Same contract as voice: your key, your model, your prompt. Nothing touches a WisprBoard server because there isn't one.
+Typos, clumsy phrasing, wrong tone — select the text, long-press **Return**, the model rewrites it in place. Same setup: your key, your model, your prompt. Blocked in password fields, and a one-tap confirmation flashes before anything is sent.
 
-Blocked in password and sensitive fields by default, and a one-tap confirmation reminds you what's about to leave the device.
+## About privacy
+
+Voice and Text Fix send data to OpenRouter. That's how they work. WisprBoard itself has no backend, no analytics, no telemetry — but OpenRouter (and the model you pick) will see your audio and selected text, and their logging depends on the model. [Check their policy](https://openrouter.ai/privacy) before pointing this at sensitive content.
+
+Your API key is encrypted with the Android Keystore, excluded from cloud backup and device transfer, and never written to logs. Both features are opt-in and off until you add a key.
 
 ## Install
 
