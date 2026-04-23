@@ -17,6 +17,7 @@ WisprBoard is a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard) — a
 | Everything HeliBoard does            |     ✅     |     ✅      |
 | Installs alongside HeliBoard         |     —     |     ✅      |
 | Voice-to-text (bring your own key)   |     —     |     ✅      |
+| Text Fix — rewrite selected text with AI |   —   |     ✅      |
 | API key stored encrypted, never logged |    —    |     ✅      |
 
 If you don't want voice, stay on HeliBoard. It's excellent.
@@ -31,6 +32,12 @@ Long-press **Return**, tap the mic, speak, release. Audio records locally, uploa
 - **Opt-in.** Disabled until you add a key. Mic permission is explained before Android asks for it.
 
 OpenRouter's own logging depends on the model you pick — [check their policy](https://openrouter.ai/privacy) before using voice for anything sensitive.
+
+## Text Fix
+
+Typos, clumsy phrasing, wrong tone — select the text, long-press **Return**, and the AI rewrites it in place. Same contract as voice: your key, your model, your prompt. Nothing touches a WisprBoard server because there isn't one.
+
+Blocked in password and sensitive fields by default, and a one-tap confirmation reminds you what's about to leave the device.
 
 ## Install
 
