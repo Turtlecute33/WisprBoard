@@ -12,8 +12,8 @@ class VoiceInputConfigTest {
     @Test
     fun parseVoiceDictionaryTermsSplitsAndDeduplicates() {
         assertEquals(
-            listOf("OpenRouter", "TurtleBoard", "gRPC"),
-            parseVoiceDictionaryTerms("OpenRouter, TurtleBoard\nopenrouter; gRPC"),
+            listOf("OpenRouter", "WisprBoard", "gRPC"),
+            parseVoiceDictionaryTerms("OpenRouter, WisprBoard\nopenrouter; gRPC"),
         )
     }
 
@@ -41,11 +41,11 @@ class VoiceInputConfigTest {
     fun resolveVoicePromptAppendsDictionaryToCachedSystemPrompt() {
         val prompt = resolveVoicePrompt(
             savedPrompt = "Transcribe this audio exactly as spoken.",
-            transcriptionDictionaryRaw = "OpenRouter, TurtleBoard, gRPC",
+            transcriptionDictionaryRaw = "OpenRouter, WisprBoard, gRPC",
         )
 
         assertTrue(prompt.systemPrompt.contains("Prefer these exact spellings"))
-        assertTrue(prompt.systemPrompt.contains("OpenRouter, TurtleBoard, gRPC"))
+        assertTrue(prompt.systemPrompt.contains("OpenRouter, WisprBoard, gRPC"))
         assertNull(prompt.runtimeInstruction)
     }
 

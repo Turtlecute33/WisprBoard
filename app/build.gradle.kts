@@ -39,11 +39,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "helium314.keyboard.turtleboard"
+        applicationId = "helium314.keyboard.wisprboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 5100
-        versionName = "5.1.0"
+        versionCode = 6000
+        versionName = "6.0.0"
         buildConfigField("boolean", "ALLOW_USER_SUPPLIED_JNI", "false")
         buildConfigField("boolean", "ENABLE_GESTURE_DATA_GATHERING", "false")
         manifestPlaceholders["gestureDataProviderEnabled"] = "false"
@@ -90,7 +90,7 @@ android {
             buildConfigField("boolean", "ENABLE_GESTURE_DATA_GATHERING", "true")
             manifestPlaceholders["gestureDataProviderEnabled"] = "true"
         }
-        base.archivesBaseName = "TurtleBoard_" + defaultConfig.versionName
+        base.archivesBaseName = "WisprBoard_" + defaultConfig.versionName
         // got a little too big for GitHub after some dependency upgrades, so we remove the largest dictionary
         androidComponents.onVariants { variant: ApplicationVariant ->
             if (variant.buildType == "debug") {

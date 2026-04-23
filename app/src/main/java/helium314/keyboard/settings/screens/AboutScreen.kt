@@ -169,7 +169,7 @@ fun createAboutSettings(context: Context) = listOf(
                 ctx.getActivity()?.contentResolver?.openOutputStream(uri)?.use { os ->
                     os.writer().use { writer ->
                         val exportDate = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Calendar.getInstance().time)
-                        writer.write("Turtleboard internal log export\n")
+                        writer.write("WisprBoard internal log export\n")
                         writer.write("Version: ${BuildConfig.VERSION_NAME}\n")
                         writer.write("Generated: $exportDate\n\n")
                         writer.write(Log.getLogForExport().joinToString("\n"))

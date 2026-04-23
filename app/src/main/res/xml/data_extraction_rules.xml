@@ -6,16 +6,16 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="turtleboard_secrets.xml" />
-        <exclude domain="device_sharedpref" path="turtleboard_secrets.xml" />
+        <exclude domain="sharedpref" path="wisprboard_secrets.xml" />
+        <exclude domain="device_sharedpref" path="wisprboard_secrets.xml" />
         <exclude domain="database" path="heliboard.db" />
         <exclude domain="device_database" path="heliboard.db" />
         <exclude domain="file" path="dicts/" />
         <exclude domain="device_file" path="dicts/" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" path="turtleboard_secrets.xml" />
-        <exclude domain="device_sharedpref" path="turtleboard_secrets.xml" />
+        <exclude domain="sharedpref" path="wisprboard_secrets.xml" />
+        <exclude domain="device_sharedpref" path="wisprboard_secrets.xml" />
         <exclude domain="database" path="heliboard.db" />
         <exclude domain="device_database" path="heliboard.db" />
         <exclude domain="file" path="dicts/" />

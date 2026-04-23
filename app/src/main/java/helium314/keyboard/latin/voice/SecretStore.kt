@@ -17,7 +17,7 @@ import helium314.keyboard.latin.utils.prefs
 object SecretStore {
 
     private const val TAG = "SecretStore"
-    private const val ENCRYPTED_FILE = "turtleboard_secrets"
+    private const val ENCRYPTED_FILE = "wisprboard_secrets"
 
     fun isSecureStorageAvailable(context: Context): Boolean = securePrefs(context) != null
 
