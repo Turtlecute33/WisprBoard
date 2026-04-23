@@ -105,7 +105,7 @@ object Defaults {
     const val PREF_ALWAYS_INCOGNITO_MODE = false
     const val PREF_BIGRAM_PREDICTIONS = true
     const val PREF_SUGGEST_PUNCTUATION = false
-    const val PREF_SUGGEST_CLIPBOARD_CONTENT = true
+    const val PREF_SUGGEST_CLIPBOARD_CONTENT = false
     const val PREF_GESTURE_INPUT = true
     const val PREF_VIBRATION_DURATION_SETTINGS = -1
     const val PREF_KEYPRESS_SOUND_VOLUME = -0.01f
@@ -140,7 +140,7 @@ object Defaults {
     const val PREF_MORE_POPUP_KEYS = "main"
     const val PREF_SPACE_TO_CHANGE_LANG = true
     const val PREF_LANGUAGE_SWIPE_DISTANCE = 5
-    const val PREF_ENABLE_CLIPBOARD_HISTORY = true
+    const val PREF_ENABLE_CLIPBOARD_HISTORY = false
     const val PREF_CLIPBOARD_HISTORY_RETENTION_TIME = 10 // minutes
     const val PREF_CLIPBOARD_HISTORY_PINNED_FIRST = true
     const val PREF_ADD_TO_PERSONAL_DICTIONARY = false

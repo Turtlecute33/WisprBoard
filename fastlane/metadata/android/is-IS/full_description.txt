@@ -1,30 +1,31 @@
-HeliBoard er lyklaborð sem verndar persónuleg gögn, byggt á AOSP / OpenBoard.
-Notar ekki heimildir fyrir internet og er þannig 100% ónettengt.
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
 
-Eiginleikar:
+Features:
 <ul>
-  <li>Bættu við orðasöfnum fyrir tillögur og stafsetningaryfirferð</li>
+  <li>Add dictionaries for suggestions and spell check</li>
   <ul>
-    <li>útbúðu þín eigin orðasöfn eða náðu í þau  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">hér</a>, eða í <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">tilrauna</a>-hlutanum okkar (gæði gætu verið af ýmsum toga)</li>
-    <li>viðbótar-orðasöfn með emoji-tjáningartáknum eða vísindatáknum er hægt að nota við tillögur (svipað "emoji leit")</li>
-    <li>athugaðu að fyrir Kóreskar lyklaborðsframsetningar, munu tillögur einungis virka með því að nota <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">þetta orðasafn</a>, þar sem verkfærin í orðasafnageymslunni okkar ná ekki að útbúa önnur orðasöfn sem virka</li>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
   </ul>
-  <li>Sérsníddu lyklaborðsþemu (stíl, liti og bakgrunnsmynd)</li>
+  <li>Customize keyboard themes (style, colors and background image)</li>
   <ul>
-    <li>getur fylgt dags-/nætur stillingum kerfisins á Android 10+ (og á sumum útgáfum Android 9)</li>
-    <li>getur fylgt breytilegum litum á Android 12+</li>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
   </ul>
-  <li>Sérsníddu <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">framsetningar</a> lyklaborðsins (einungis tiltækt þegar <i>nota tungumál kerfis</i> hefur verið gert óvirkt)</li>
-  <li>Sérsníddu sérstakar framsetningar, eins og tákn, tölur eða framsetningu aðgerðalykla</li>
-  <li>Fjöltyngdur innsláttur</li>
-  <li>Glide-innsláttur (<i>einungis með lokuðu séreignar-aðgerðasafni</i> ☹️)</li>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
   <ul>
-    <li>aðgerðasafnið fylgir ekki með hugbúnaðnum, því miður er ekkert samhæft aðgerðasafn tiltækt með opnum grunnkóða</li>
-    <li>hægt er að nálgast það úr GApps-pökkum ("<i>swypelibs</i>") eða sækja það <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">hér</a> (smelltu á skrána og síðan á "raw" eða litla niðurhalshnappinn)</li>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
   </ul>
-  <li>Klippispjaldsferill</li>
-  <li>Einnar-handar hamur</li>
-  <li>Skipt lyklaborð (aðeins í boði ef skjárinn er nógu stór)</li>
-  <li>Talnaborð</li>
-  <li>Taktu öryggisafrit og endurheimtu stillingarnar þínar eða lærð orð eða gögn vinnsluferils</li>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
 </ul>

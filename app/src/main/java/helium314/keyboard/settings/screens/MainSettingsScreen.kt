@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils.displayName
@@ -94,7 +95,10 @@ fun MainSettingsScreen(
                         icon = R.drawable.ic_settings_gesture
                     ) { NextScreenIcon() }
                 // we don't even show the menu if data gathering phase ended more than 2 weeks ago
-                if (JniUtils.sHaveGestureLib && System.currentTimeMillis() < END_DATE_EPOCH_MILLIS + TWO_WEEKS_IN_MILLIS)
+                if (BuildConfig.ENABLE_GESTURE_DATA_GATHERING
+                    && JniUtils.sHaveGestureLib
+                    && System.currentTimeMillis() < END_DATE_EPOCH_MILLIS + TWO_WEEKS_IN_MILLIS
+                )
                     Preference(
                         name = stringResource(R.string.gesture_data_screen),
                         onClick = onClickDataGathering,

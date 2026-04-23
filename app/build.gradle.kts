@@ -11,18 +11,30 @@ plugins {
 android {
     compileSdk = 35
 
+    val configuredKeystore = System.getenv("KEYSTORE_FILE")?.takeIf { it.isNotBlank() }?.let {
+        val candidate = File(it)
+        if (candidate.isAbsolute) candidate else project.file(it)
+    }
+    val configuredStorePassword = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+    val configuredKeyAlias = System.getenv("KEY_ALIAS")?.takeIf { it.isNotBlank() }
+    val configuredKeyPassword = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+    val releaseSigningConfigured = configuredKeystore != null
+            && configuredStorePassword != null
+            && configuredKeyAlias != null
+            && configuredKeyPassword != null
+    val requestedReleaseBuild = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+    if (requestedReleaseBuild && !releaseSigningConfigured) {
+        throw GradleException("Release signing must be provided via KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD.")
+    }
+
     signingConfigs {
-        create("release") {
-            val configuredKeystore = System.getenv("KEYSTORE_FILE")?.takeIf { it.isNotBlank() }?.let {
-                val candidate = File(it)
-                if (candidate.isAbsolute) candidate else project.file(it)
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = configuredKeystore
+                storePassword = configuredStorePassword
+                keyAlias = configuredKeyAlias
+                keyPassword = configuredKeyPassword
             }
-            val repoKeystore = rootProject.file("release-signing/heliboard-release.jks").takeIf { it.exists() }
-            val appKeystore = project.file("keystore.jks").takeIf { it.exists() }
-            storeFile = configuredKeystore ?: repoKeystore ?: appKeystore ?: project.file("keystore.jks")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
-            keyAlias = System.getenv("KEY_ALIAS") ?: ""
-            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
         }
     }
 
@@ -32,6 +44,9 @@ android {
         targetSdk = 35
         versionCode = 5001
         versionName = "5.0.1"
+        buildConfigField("boolean", "ALLOW_USER_SUPPLIED_JNI", "false")
+        buildConfigField("boolean", "ENABLE_GESTURE_DATA_GATHERING", "false")
+        manifestPlaceholders["gestureDataProviderEnabled"] = "false"
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
@@ -45,9 +60,11 @@ android {
             isShrinkResources = false
             isDebuggable = false
             isJniDebuggable = false
-            signingConfig = signingConfigs.getByName("release")
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
-        create("nouserlib") { // same as release, but does not allow the user to provide a library
+        create("nouserlib") { // retained for compatibility; production builds disable external JNI by default
             isMinifyEnabled = true
             isShrinkResources = false
             isDebuggable = false
@@ -58,6 +75,9 @@ android {
             // and for better performance in case users want to install a debug APK
             isMinifyEnabled = true
             isJniDebuggable = false
+            buildConfigField("boolean", "ALLOW_USER_SUPPLIED_JNI", "true")
+            buildConfigField("boolean", "ENABLE_GESTURE_DATA_GATHERING", "true")
+            manifestPlaceholders["gestureDataProviderEnabled"] = "true"
         }
         create("debugNoMinify") { // for faster builds in IDE
             isDebuggable = true
@@ -65,6 +85,9 @@ android {
             isJniDebuggable = false
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
+            buildConfigField("boolean", "ALLOW_USER_SUPPLIED_JNI", "true")
+            buildConfigField("boolean", "ENABLE_GESTURE_DATA_GATHERING", "true")
+            manifestPlaceholders["gestureDataProviderEnabled"] = "true"
         }
         base.archivesBaseName = "TurtleBoard_" + defaultConfig.versionName
         // got a little too big for GitHub after some dependency upgrades, so we remove the largest dictionary

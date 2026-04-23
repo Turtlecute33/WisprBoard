@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.settings.Settings
@@ -34,8 +35,13 @@ fun LoadGestureLibPreference(setting: Setting) {
     val ctx = LocalContext.current
     val prefs = ctx.protectedPrefs()
     val abi = Build.SUPPORTED_ABIS[0]
+    val allowsUserSuppliedJni = BuildConfig.ALLOW_USER_SUPPLIED_JNI
     val libFile = File(ctx.filesDir?.absolutePath + File.separator + JniUtils.JNI_LIB_IMPORT_FILE_NAME)
     fun renameToLibFileAndRestart(file: File, checksum: String) {
+        if (!allowsUserSuppliedJni) {
+            file.delete()
+            return
+        }
         libFile.setWritable(true)
         libFile.delete()
         // store checksum in default preferences (see JniUtils)
@@ -79,14 +85,26 @@ fun LoadGestureLibPreference(setting: Setting) {
             onDismissRequest = { showDialog = false },
             onConfirmed = {
                 showDialog = false
+                if (!allowsUserSuppliedJni) return@ConfirmationDialog
                 val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
                     .addCategory(Intent.CATEGORY_OPENABLE)
                     .setType("application/octet-stream")
                 launcher.launch(intent)
             },
-            confirmButtonText = stringResource(R.string.load_gesture_library_button_load),
+            confirmButtonText = if (allowsUserSuppliedJni)
+                stringResource(R.string.load_gesture_library_button_load)
+            else
+                stringResource(android.R.string.ok),
             title = { Text(stringResource(R.string.load_gesture_library)) },
-            content = { Text(stringResource(R.string.load_gesture_library_message, abi)) },
+            content = {
+                Text(
+                    if (allowsUserSuppliedJni) {
+                        stringResource(R.string.load_gesture_library_message, abi)
+                    } else {
+                        "This build does not allow loading external gesture libraries."
+                    }
+                )
+            },
             neutralButtonText = if (libFile.exists()) stringResource(R.string.load_gesture_library_button_delete) else null,
             onNeutral = {
                 libFile.delete()

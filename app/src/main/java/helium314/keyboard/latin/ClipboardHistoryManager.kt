@@ -33,8 +33,12 @@ class ClipboardHistoryManager(
         clipboardManager = latinIME.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboardManager.addPrimaryClipChangedListener(this)
         clipboardDao = ClipboardDao.getInstance(latinIME)
-        if (latinIME.mSettings.current.mClipboardHistoryEnabled)
+        if (latinIME.mSettings.current.mClipboardHistoryEnabled) {
+            clipboardDao?.clearOldClips(true)
             fetchPrimaryClip()
+        } else {
+            clipboardDao?.clear()
+        }
     }
 
     fun onDestroy() {
@@ -56,6 +60,7 @@ class ClipboardHistoryManager(
             val timeStamp = ClipboardManagerCompat.getClipTimestamp(clipData)
             val content = clipItem.coerceToText(latinIME)
             if (TextUtils.isEmpty(content)) return
+            if (ClipboardManagerCompat.getClipSensitivity(clipData.description) == true) return
             clipboardDao?.addClip(timeStamp, false, content.toString())
         }
     }

@@ -1,31 +1,31 @@
-HeliBoard ist eine datenschutzbewusste quelloffene Tastatur, die auf AOSP / OpenBoard basiert.
-Verwendet keine Internetberechtigung und ist daher zu 100 % offline.
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
 
 Features:
 <ul>
-   <li>Wörterbücher für Vorschläge und Rechtschreibprüfung hinzufügen</li>
-   <ul>
-     <li>Erstelle deine eigenen oder hole sie dir <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">hier</a> oder im <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimentellen</a> Bereich (Qualität kann variieren)</li>
-     <li>Zusätzliche Wörterbücher für Emojis oder wissenschaftliche Symbole können zur Bereitstellung von Vorschlägen genutzt werden (ähnlich wie bei der „Emoji-Suche“)</li>
-     <li>Beachte, dass die Vorschläge für koreanische Layouts nur mit <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">diesem Wörterbuch</a> funktionieren, die Werkzeuge im Wörterbuch-Repository können keine funktionierenden Wörterbücher erstellen</li>
-   </ul>
-   <li>Tastaturdesigns anpassen (Stil, Farben und Hintergrundbild)</li>
-   <ul>
-     <li>kann der Tag-/Nachteinstellung des Systems auf Android 10+ (und auf einigen Versionen von Android 9) folgen</li>
-     <li>kann dynamischen Farben für Android 12+ folgen</li>
-   </ul>
-   <li>Tastatur-<a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">Layouts</a> anpassen (nur verfügbar, wenn <i>Systemsprachen verwenden</i deaktiviert ist >)
-   </li>Anpassen spezieller Layouts, wie Symbole, Zahlen oder Funktionstastenlayout</li>
-   <li>Mehrsprachiges Tippen</li>
-   <li>Gleitendes Tippen (<i>nur mit quellgeschlossener Bibliothek</i> ☹️)</li>
-   <ul>
-     <li>Bibliothek nicht in der App enthalten, da keine kompatible quelloffene Bibliothek verfügbar ist</li>
-     <li>kann aus GApps-Paketen („<i>swypelibs</i>“) extrahiert oder heruntergeladen werden <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main /jniLibs">hier</a>
-(klicke auf die Datei und dann auf "raw" oder den kleinen Download-Button)</li>
-   </ul>
-   <li>Zwischenablageverlauf</li>
-   <li>Einhandmodus</li>
-   <li>Geteilte Tastatur (nur verfügbar, wenn der Bildschirm groß genug ist)</li>
-   <li>Ziffernblock</li>
-   <li>Sichere und stelle deine Einstellungen und gelernte Wort-/Verlaufsdaten wieder her</li>
+  <li>Add dictionaries for suggestions and spell check</li>
+  <ul>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
+  </ul>
+  <li>Customize keyboard themes (style, colors and background image)</li>
+  <ul>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
+  </ul>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
+  <ul>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
+  </ul>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
 </ul>

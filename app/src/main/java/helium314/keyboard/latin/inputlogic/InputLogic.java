@@ -58,6 +58,7 @@ import helium314.keyboard.latin.utils.DictionaryInfoUtils;
 import helium314.keyboard.latin.utils.InputTypeUtils;
 import helium314.keyboard.latin.utils.IntentUtils;
 import helium314.keyboard.latin.utils.Log;
+import java.util.concurrent.atomic.AtomicInteger;
 import helium314.keyboard.latin.utils.RecapitalizeMode;
 import helium314.keyboard.latin.utils.RecapitalizeStatus;
 import helium314.keyboard.latin.utils.ScriptUtils;
@@ -104,6 +105,7 @@ public final class InputLogic {
     /* package */ final WordComposer mWordComposer;
     public final RichInputConnection mConnection;
     private final RecapitalizeStatus mRecapitalizeStatus = new RecapitalizeStatus();
+    private final AtomicInteger mInFlightSuggestionStripUpdates = new AtomicInteger();
 
     private int mDeleteCount;
     private long mLastKeyTime;
@@ -1765,6 +1767,61 @@ public final class InputLogic {
         }
     }
 
+    public void performUpdateSuggestionStripAsync(final SettingsValues settingsValues,
+            final int inputStyle, final int suggestionStripSequenceNumber) {
+        if (DebugFlags.DEBUG_ENABLED) {
+            Log.d(TAG, "performUpdateSuggestionStripAsync()");
+        }
+        // Check if we have a suggestion engine attached.
+        if (!settingsValues.needsToLookupSuggestions()) {
+            if (mWordComposer.isComposingWord()) {
+                Log.w(TAG, "Called updateSuggestionsOrPredictions but suggestions were not "
+                        + "requested!");
+            }
+            // Clear the suggestions strip.
+            mSuggestionStripViewAccessor.setSuggestions(SuggestedWords.getEmptyInstance());
+            return;
+        }
+
+        if (!mWordComposer.isComposingWord() && !settingsValues.mBigramPredictionEnabled) {
+            mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
+            return;
+        }
+
+        mInFlightSuggestionStripUpdates.incrementAndGet();
+        mInputLogicHandler.getSuggestedWords(() -> {
+            try {
+                getSuggestedWords(inputStyle, SuggestedWords.NOT_A_SEQUENCE_NUMBER,
+                        suggestedWords -> {
+                            final String typedWordString = mWordComposer.getTypedWord();
+                            final SuggestedWordInfo typedWordInfo = new SuggestedWordInfo(
+                                    typedWordString, "", SuggestedWordInfo.MAX_SCORE,
+                                    SuggestedWordInfo.KIND_TYPED, Dictionary.DICTIONARY_USER_TYPED,
+                                    SuggestedWordInfo.NOT_AN_INDEX,
+                                    SuggestedWordInfo.NOT_A_CONFIDENCE);
+                            final SuggestedWords suggestionsToApply;
+                            // Show new suggestions if we have at least one. Otherwise keep the old
+                            // suggestions with the new typed word. Exception: if the length of the
+                            // typed word is <= 1 (after a deletion typically) we clear old suggestions.
+                            if (suggestedWords.size() > 1 || typedWordString.length() <= 1) {
+                                suggestionsToApply = suggestedWords;
+                            } else {
+                                suggestionsToApply = retrieveOlderSuggestions(typedWordInfo,
+                                        mSuggestedWords);
+                            }
+                            mLatinIME.mHandler.setSuggestions(suggestionsToApply,
+                                    suggestionStripSequenceNumber);
+                        });
+            } finally {
+                mInFlightSuggestionStripUpdates.decrementAndGet();
+            }
+        });
+    }
+
+    public boolean hasInFlightSuggestionStripUpdate() {
+        return mInFlightSuggestionStripUpdates.get() > 0;
+    }
+
     /**
      * Check if the cursor is touching a word. If so, restart suggestions on this word, else
      * do nothing.
@@ -2356,7 +2413,7 @@ public final class InputLogic {
     private void commitCurrentAutoCorrection(final SettingsValues settingsValues,
             final String separator, final LatinIME.UIHandler handler) {
         // Complete any pending suggestions query first
-        if (handler.hasPendingUpdateSuggestions()) {
+        if (handler.hasPendingUpdateSuggestions() || hasInFlightSuggestionStripUpdate()) {
             handler.cancelUpdateSuggestionStrip();
             // To know the input style here, we should retrieve the in-flight "update suggestions"
             // message and read its arg1 member here. However, the Handler class does not let
@@ -2662,7 +2719,7 @@ public final class InputLogic {
         }
     }
 
-    private static boolean isInlineEmojiSearchAction() {
+    public static boolean isInlineEmojiSearchAction() {
         var keyboard = KeyboardSwitcher.getInstance().getKeyboard();
         var internalAction = keyboard != null? keyboard.mId.mInternalAction : null;
         return internalAction != null && internalAction.code() == KeyCode.INLINE_EMOJI_SEARCH_DONE;

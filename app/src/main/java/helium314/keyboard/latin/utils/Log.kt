@@ -10,6 +10,10 @@ import java.util.Date
  * half performance (still fast enough to not be noticeable, unless spamming thousands of log lines)
  */
 object Log {
+    private const val MAX_LOG_LINES = 12000
+    private const val TRIMMED_LOG_LINES = 2000
+    private const val MAX_EXPORT_LINES = 2000
+
     @JvmStatic
     fun wtf(tag: String?, message: String) {
         log(LogLine('F', tag, message))
@@ -72,8 +76,8 @@ object Log {
 
     private fun log(line: LogLine) {
         synchronized(logLines) {
-            if (logLines.size > 12000) // clear oldest entries if list gets too long
-                logLines.subList(0, 2000).clear()
+            if (logLines.size > MAX_LOG_LINES) // clear oldest entries if list gets too long
+                logLines.subList(0, TRIMMED_LOG_LINES).clear()
             logLines.add(line)
         }
     }
@@ -82,9 +86,27 @@ object Log {
 
     /** returns a copy of [logLines] */
     fun getLog(maxLines: Int = logLines.size) = synchronized(logLines) { logLines.takeLast(maxLines) }
+
+    /**
+     * Returns a safer snapshot for user-facing export. We omit verbose/debug noise and collapse
+     * multi-line entries so stack traces and accidental payloads are not dumped wholesale.
+     */
+    fun getLogForExport(maxLines: Int = MAX_EXPORT_LINES) = synchronized(logLines) {
+        logLines
+            .asSequence()
+            .filter { it.level != 'V' && it.level != 'D' }
+            .toList()
+            .takeLast(maxLines)
+            .map { it.toExportString() }
+    }
+
+    internal fun clearForTests() = synchronized(logLines) { logLines.clear() }
 }
 
 data class LogLine(val level: Char, val tag: String?, val message: String) {
+    companion object {
+        private const val MAX_EXPORT_MESSAGE_LENGTH = 500
+    }
 
     // time can be Date or LocalDateTime, doesn't matter because but it's used for toString only
     private val time = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -95,4 +117,22 @@ data class LogLine(val level: Char, val tag: String?, val message: String) {
 
     override fun toString(): String = // should look like a normal android log line, at least for api26+
         "${time.toString().replace('T', ' ')} $level $tag: $message"
+
+    fun toExportString(): String {
+        val compactMessage = message
+            .lineSequence()
+            .firstOrNull()
+            .orEmpty()
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .let {
+                if (it.length > MAX_EXPORT_MESSAGE_LENGTH) {
+                    it.take(MAX_EXPORT_MESSAGE_LENGTH) + "..."
+                } else {
+                    it
+                }
+            }
+        val suffix = if (message.contains('\n')) " [details omitted]" else ""
+        return "${time.toString().replace('T', ' ')} $level $tag: $compactMessage$suffix"
+    }
 }

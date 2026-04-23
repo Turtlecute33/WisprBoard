@@ -1,30 +1,31 @@
-HeliBoard היא מקלדת קוד פתוח מכבדת פרטיות, מבוססת על AOSP / OpenBoard.
-היא איננה משתמשת בהרשאת אינטרנט, וכך היא 100% בלתי-מקוונת.
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
 
-תכונות:
+Features:
 <ul>
-  <li>ניתן להוסיף מילונים להצעות ולבדיקת איות</li>
+  <li>Add dictionaries for suggestions and spell check</li>
   <ul>
-    <li>הגדירו בעצמכם או הורידו אותם  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">כאן</a>, או באזור ה<a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">נסיוני</a> (האיכות איננה אחידה)</li>
-    <li>מילונים נוספים לאימוג'ים או סימנים מדעיים יכולים לשמש להצעות (בדומה ל"חיפוש אימוג'י")</li>
-    <li>שימו לב שלפריסה קוריאנית, הצעות יפעלו רק בשימוש ב<a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">מילון זה</a>, הכלים במאגר המילונים אינם יכולים ליצור מילונים שפועלים</li>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
   </ul>
-  <li>ניתן להתאים ערכות-נושא (סגנון, צבעים ותמונת רקע)</li>
+  <li>Customize keyboard themes (style, colors and background image)</li>
   <ul>
-    <li>ניתן להתאים להגדרת מצב תצוגת יום/לילה המוגדר באנדרואיד 10+ (וגם במספר גרסאות של אנדרואיד 9)</li>
-    <li>ניתן להתאים להגדרת הצבעים החיים באנדרואיד 12+</li>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
   </ul>
-  <li>התאמת <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">פריסות</a>המקלדת )האפשרות זמינה רק כשמשביתים את <i>שימוש בשפות המערכת</i>)</li>
-  <li>התאמת פריסות מיוחדות, כמו סימנים, מספרים או פריסת מקשים פונקציונליים</li>
-  <li>הקלדה מרובת שפות</li>
-  <li>הקלדה בהחלקה (<i>רק עם ספרייה בקוד סגור</i> ☹️)</li>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
   <ul>
-    <li>הספריה איננה כלולה ביישום, משום שאין ספריה זמינה תואמת בקוד פתוח</li>
-    <li>ניתנת לחילוץ מחבילות GApps ("<i>swypelibs</i>"), או להורדה <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">כאן</a> (הקליקו על הקובץ ואז על "raw" או על כפתור ההורדה הזעיר)</li>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
   </ul>
-  <li>היסטוריית הלוח</li>
-  <li>מצב הקלדה ביד אחת</li>
-  <li>מקלדת מפוצלת (זמינה רק אם המסך גדול מספיק)</li>
-  <li>מקלדת מספרים</li>
-  <li>גיבוי ושחזור ההגדרות שלך והמילים שנלמדו / נתוני ההיסטוריה</li>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
 </ul>

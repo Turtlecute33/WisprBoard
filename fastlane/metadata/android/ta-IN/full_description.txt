@@ -1,29 +1,31 @@
-ஹெலிபோர்டு என்பது AOSP / OpenBoard ஐ அடிப்படையாகக் கொண்ட தனியுரிமை உணர்வுள்ள திறந்த மூல விசைப்பலகை ஆகும்.
-இணைய அனுமதியைப் பயன்படுத்தாது, எனவே 100% ஆஃப்லைனில் உள்ளது.
-அம்சங்கள்:
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
+
+Features:
 <ul>
-  <li>பரிந்துரைகள் மற்றும் எழுத்துப்பிழை சரிபார்ப்புக்கு அகராதிகளைச் சேர்</li>
+  <li>Add dictionaries for suggestions and spell check</li>
   <ul>
-    <li>உங்கள் சொந்தமாக உருவாக்கவும், அல்லது அவற்றை <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">இங்கே</a> அல்லது <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">சோதனை</a> பிரிவில் (தரம் மாறுபடலாம்) பெறவும்</li>
-    <li>ஈமோஜிகள் அல்லது அறிவியல் சின்னங்களுக்கான கூடுதல் அகராதிகளைப் பயன்படுத்தி பரிந்துரைகளை வழங்கலாம் ("ஈமோஜி தேடல்" போன்றவை)</li>
-    <li>கொரிய தளவமைப்புகளுக்கு, பரிந்துரைகள் <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">இந்த அகராதியைப் பயன்படுத்தி மட்டுமே செயல்படும் என்பதை நினைவில் கொள்ளவும்</a>, அகராதி களஞ்சியத்தில் உள்ள கருவிகள் வேலை செய்ய முடியாது அகராதிகள்</li>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
   </ul>
-  <li>விசைப்பலகை தீம்களைத் தனிப்பயனாக்குங்கள் (நடை, வண்ணங்கள் மற்றும் பின்னணி படம்)</li>
+  <li>Customize keyboard themes (style, colors and background image)</li>
   <ul>
-    <li>Android 10+ இல் (மற்றும் Android 9 இன் சில பதிப்புகளில்) கணினியின் பகல்/இரவு அமைப்பைப் பின்பற்றலாம்</li>
-    <li>Android 12+ க்கான டைனமிக் வண்ணங்களைப் பின்பற்றலாம்</li>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
   </ul>
-  <li>விசைப்பலகையைத் தனிப்பயனாக்குங்கள் <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">தளவமைப்புகள்</a> (முடக்கும்போது மட்டுமே கிடைக்கும்<i>கணினி மொழிகளைப் பயன்படுத்தவும்</i>)</li>
-  <li>சின்னங்கள், எண் அல்லது செயல்பாட்டு விசை தளவமைப்பு போன்ற சிறப்பு தளவமைப்புகளைத் தனிப்பயனாக்குங்கள்</li>
-  <li>பன்மொழி தட்டச்சு</li>
-  <li>கிளைடு தட்டச்சு (<i>மூடப்பட்ட மூல நூலகத்துடன் மட்டும்</i> ☹️)</li>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
   <ul>
-    <li>இணக்கமான திறந்த மூல நூலகம் இல்லாததால் நூலகம் பயன்பாட்டில் சேர்க்கப்படவில்லை</li>
-    <li>GApps தொகுப்புகளிலிருந்து ("swypelibs") பிரித்தெடுக்கலாம் அல்லது <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">இங்கே</a> பதிவிறக்கம் செய்யலாம் (கோப்பில் கிளிக் செய்து "raw" அல்லது சிறிய பதிவிறக்க பொத்தானைக் கிளிக் செய்யவும்)</li>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
   </ul>
-  <li>கிளிப்போர்டு வரலாறு</li>
-  <li>ஒரு கைப்பயன்முறை</li>
-  <li>பிரிப்பு விசைப்பலகை (திரை போதுமானதாக இருந்தால் மட்டுமே கிடைக்கும்)</li>
-  <li>எண் திண்டு</li>
-  <li>உங்கள் அமைப்புகளையும் கற்றறிந்த சொல் / வரலாற்றுத் தரவையும் காப்புப்பிரதி எடுத்து மீட்டெடு</li>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
 </ul>

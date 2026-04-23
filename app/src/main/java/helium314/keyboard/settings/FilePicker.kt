@@ -93,7 +93,7 @@ fun dictionaryFilePicker(mainLocale: Locale?): ManagedActivityResultLauncher<Int
             val copied = withContext(Dispatchers.IO) {
                 runCatching {
                     cachedDictionaryFile.delete()
-                    FileUtils.copyContentUriToNewFile(uri, ctx, cachedDictionaryFile)
+                    FileUtils.copyDictionaryContentUriToNewFile(uri, ctx, cachedDictionaryFile)
                 }.isSuccess
             }
             if (copied) done = true

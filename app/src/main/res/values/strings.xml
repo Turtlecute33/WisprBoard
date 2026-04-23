@@ -1170,6 +1170,8 @@ New dictionary:
     <string name="text_fix_discard">Discard</string>
     <string name="text_fix_error_no_selection">Select text first, then long-press Return to fix</string>
     <string name="text_fix_error_not_enabled">Enable Text Fix in settings</string>
+    <string name="text_fix_error_sensitive_field">Text Fix is unavailable in sensitive fields</string>
+    <string name="text_fix_error_unsupported_field">Text Fix is unavailable in this field</string>
     <string name="text_fix_error_empty">The model returned no text</string>
     <string name="text_fix_error_failed">Text fix failed</string>
 </resources>

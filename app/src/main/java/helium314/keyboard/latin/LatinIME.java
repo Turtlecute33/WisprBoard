@@ -213,6 +213,7 @@ public class LatinIME extends InputMethodService implements
 
         private int mDelayInMillisecondsToUpdateSuggestions;
         private int mDelayInMillisecondsToUpdateShiftState;
+        private int mSuggestionStripSequenceNumber;
 
         public UIHandler(@NonNull final LatinIME ownerInstance) {
             super(ownerInstance);
@@ -238,9 +239,12 @@ public class LatinIME extends InputMethodService implements
             }
             switch (msg.what) {
                 case MSG_UPDATE_SUGGESTION_STRIP:
-                    cancelUpdateSuggestionStrip();
-                    latinIme.mInputLogic.performUpdateSuggestionStripSync(
-                            latinIme.mSettings.getCurrent(), msg.arg1 /* inputStyle */);
+                    removeMessages(MSG_UPDATE_SUGGESTION_STRIP);
+                    if (msg.arg2 != mSuggestionStripSequenceNumber) {
+                        break;
+                    }
+                    latinIme.mInputLogic.performUpdateSuggestionStripAsync(
+                            latinIme.mSettings.getCurrent(), msg.arg1 /* inputStyle */, msg.arg2);
                     break;
                 case MSG_UPDATE_SHIFT_STATE:
                     latinIme.mKeyboardSwitcher.requestUpdatingShiftState(latinIme.getCurrentAutoCapsState(),
@@ -249,7 +253,18 @@ public class LatinIME extends InputMethodService implements
                 case MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS:
                     if (msg.arg1 == ARG1_NOT_GESTURE_INPUT) {
                         final SuggestedWords suggestedWords = (SuggestedWords) msg.obj;
-                        latinIme.setSuggestedWords(suggestedWords);
+                        if (msg.arg2 != ARG2_UNUSED && msg.arg2 != mSuggestionStripSequenceNumber) {
+                            break;
+                        }
+                        if (!(suggestedWords.mInputStyle == SuggestedWords.INPUT_STYLE_BEGINNING_OF_SENTENCE_PREDICTION
+                                && latinIme.tryShowClipboardSuggestion())) {
+                            latinIme.setSuggestions(suggestedWords);
+                        }
+                        if (!suggestedWords.isEmpty()
+                                && latinIme.mSettings.getCurrent().isSuggestionsEnabledPerUserSettings()
+                                && latinIme.mInputLogic.isInlineEmojiSearchAction()) {
+                            latinIme.showSuggestionStrip();
+                        }
                     } else {
                         latinIme.showGesturePreviewAndSetSuggestions((SuggestedWords) msg.obj,
                                 msg.arg1 == ARG1_DISMISS_GESTURE_FLOATING_PREVIEW_TEXT);
@@ -296,8 +311,9 @@ public class LatinIME extends InputMethodService implements
         }
 
         public void postUpdateSuggestionStrip(final int inputStyle) {
+            final int updateSequenceNumber = ++mSuggestionStripSequenceNumber;
             sendMessageDelayed(obtainMessage(MSG_UPDATE_SUGGESTION_STRIP, inputStyle,
-                    0 /* ignored */), mDelayInMillisecondsToUpdateSuggestions);
+                    updateSequenceNumber), mDelayInMillisecondsToUpdateSuggestions);
         }
 
         public void postReopenDictionaries() {
@@ -342,6 +358,7 @@ public class LatinIME extends InputMethodService implements
         }
 
         public void cancelUpdateSuggestionStrip() {
+            ++mSuggestionStripSequenceNumber;
             removeMessages(MSG_UPDATE_SUGGESTION_STRIP);
         }
 
@@ -381,6 +398,7 @@ public class LatinIME extends InputMethodService implements
         }
 
         public void removeAllMessages() {
+            ++mSuggestionStripSequenceNumber;
             for (int i = 0; i <= MSG_LAST; ++i) {
                 removeMessages(i);
             }
@@ -397,9 +415,14 @@ public class LatinIME extends InputMethodService implements
         }
 
         public void setSuggestions(final SuggestedWords suggestedWords) {
+            setSuggestions(suggestedWords, ARG2_UNUSED);
+        }
+
+        public void setSuggestions(final SuggestedWords suggestedWords,
+                                   final int suggestionStripSequenceNumber) {
             removeMessages(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS);
             obtainMessage(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS,
-                    ARG1_NOT_GESTURE_INPUT, ARG2_UNUSED, suggestedWords).sendToTarget();
+                    ARG1_NOT_GESTURE_INPUT, suggestionStripSequenceNumber, suggestedWords).sendToTarget();
         }
 
         public void showTailBatchInputResult(final SuggestedWords suggestedWords) {
@@ -568,8 +591,9 @@ public class LatinIME extends InputMethodService implements
 
         final IntentFilter newDictFilter = new IntentFilter();
         newDictFilter.addAction(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION);
-        // RECEIVER_EXPORTED is necessary because apparently Android 15 (and others?) don't recognize if the sender and receiver are the same app, see https://github.com/HeliBorg/HeliBoard/pull/1756
-        ContextCompat.registerReceiver(this, mDictionaryPackInstallReceiver, newDictFilter, ContextCompat.RECEIVER_EXPORTED);
+        // Keep dictionary refresh broadcasts internal to the app to avoid exposing a public
+        // dictionary-reset trigger to other packages.
+        ContextCompat.registerReceiver(this, mDictionaryPackInstallReceiver, newDictFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         final IntentFilter dictDumpFilter = new IntentFilter();
         dictDumpFilter.addAction(DictionaryDumpBroadcastReceiver.DICTIONARY_DUMP_INTENT_ACTION);
@@ -651,6 +675,20 @@ public class LatinIME extends InputMethodService implements
         mTextFixManager = new TextFixManager(this, new TextFixManager.Callbacks() {
             @Nullable
             @Override
+            public Integer getBlockedErrorResId() {
+                final SettingsValues settingsValues = mSettings.getCurrent();
+                if (settingsValues == null) {
+                    return R.string.text_fix_error_unsupported_field;
+                }
+                return TextFixManager.getBlockedErrorResId(
+                        settingsValues.mInputAttributes.mInputType,
+                        settingsValues.mInputAttributes.mIsPasswordField,
+                        settingsValues.mInputAttributes.mNoLearning,
+                        settingsValues.mIncognitoModeEnabled);
+            }
+
+            @Nullable
+            @Override
             public CharSequence getSelectedText() {
                 try {
                     return mInputLogic.mConnection.getSelectedText(0);
@@ -700,6 +738,10 @@ public class LatinIME extends InputMethodService implements
     }
 
     private void discardTextFix() {
+        clearPendingTextFixState();
+    }
+
+    private void clearPendingTextFixState() {
         mPendingTextFixOriginal = null;
         mPendingTextFixProposed = null;
         if (mTextFixManager != null) mTextFixManager.cancel();
@@ -990,14 +1032,17 @@ public class LatinIME extends InputMethodService implements
 
     void onStartInputViewInternal(final EditorInfo editorInfo, final boolean restarting) {
         super.onStartInputView(editorInfo, restarting);
+        clearPendingTextFixState();
 
-        // only for active gesture data gathering, remove when data gathering phase is done (end of 2026 latest)
-        if (GestureDataGatheringKt.isInActiveGatheringMode(editorInfo)) {
+        if (BuildConfig.ENABLE_GESTURE_DATA_GATHERING
+                && GestureDataGatheringKt.isInActiveGatheringMode(editorInfo)) {
             mDictionaryFacilitator = GestureDataGatheringKt.getGestureDataActiveFacilitator();
         } else {
             mDictionaryFacilitator = mOriginalDictionaryFacilitator;
         }
-        GestureDataGatheringKt.showEndNotificationIfNecessary(this); // will do nothing for a long time
+        if (BuildConfig.ENABLE_GESTURE_DATA_GATHERING) {
+            GestureDataGatheringKt.showEndNotificationIfNecessary(this);
+        }
         mInputLogic.setFacilitator(mDictionaryFacilitator);
 
         mDictionaryFacilitator.onStartInput();
@@ -1157,6 +1202,7 @@ public class LatinIME extends InputMethodService implements
         super.onWindowHidden();
         Log.i(TAG, "onWindowHidden");
         cancelVoiceRecordingIfCapturing();
+        clearPendingTextFixState();
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
             mainKeyboardView.closing();
@@ -1168,6 +1214,7 @@ public class LatinIME extends InputMethodService implements
         super.onFinishInput();
         Log.i(TAG, "onFinishInput");
 
+        clearPendingTextFixState();
         mDictionaryFacilitator.onFinishInput();
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
@@ -1185,6 +1232,7 @@ public class LatinIME extends InputMethodService implements
     private void cleanupInternalStateForFinishInput() {
         // Remove pending messages related to update suggestions
         mHandler.cancelUpdateSuggestionStrip();
+        clearPendingTextFixState();
         // Should do the following in onFinishInputInternal but until JB MR2 it's not called :(
         mInputLogic.finishInput();
         mKeyboardActionListener.resetMetaState();

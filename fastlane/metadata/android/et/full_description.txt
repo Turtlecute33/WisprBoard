@@ -1,30 +1,31 @@
-HeliBoard on privaatsust austav avatud lähtekoodiga klahvistik, mis põhineb AOSP-il / OpenBoardil.
-Ei kasuta interneti luba ning on seega toimib 100% võrguühenduseta.
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
 
-Funktsionaalsus:
+Features:
 <ul>
-  <li>Lisa sõnastikke soovituste ja õigekirjakontrolli jaoks</li>
+  <li>Add dictionaries for suggestions and spell check</li>
   <ul>
-    <li>loo enda oma või hangi need <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">siit</a> või <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">katselise</a> valiku seast (kvaliteet võib varieeruda)</li>
-    <li>täiendavaid sõnastikke emotikonide või teadussümbolite jaoks saab kasutada soovituste pakkumiseks (sarnaselt „emoji otsingule“)</li>
-    <li>pane tähele, et korea paigutuste puhul töötavad soovitused ainult <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">selle sõnastikuga</a>; sõnastike lähtekoodihoidla tarvikud ei suuda luua toimivaid sõnastikke</li>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
   </ul>
-  <li>Kohanda klahvistiku välimust (stiil, värvid ja taustapilt)</li>
+  <li>Customize keyboard themes (style, colors and background image)</li>
   <ul>
-    <li>võib järgida süsteemi päeva/öö seadistust Android 10+ puhul (ja mõnes Android 9 versioonis)</li>
-    <li>võib järgida dünaamilisi värve Android 12+ puhul</li>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
   </ul>
-  <li>Kohanda klahvistiku <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">paigutusi</a> (saadaval ainult siis, kui „kasuta süsteemi keeli“ on keelatud)</li>
-  <li>Kohanda eripaigutusi, nagu sümbolite, numbrite või funktsiooniklahvide paigutus</li>
-  <li>Mitmekeelne sisestus</li>
-  <li>Libistustippimine (<i>ainult suletud lähtekoodiga teegiga</i> ☹️)</li>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
   <ul>
-    <li>teek ei kuulu rakenduse koosseisu, kuna ühilduvat avatud lähtekoodiga teeki pole saadaval</li>
-    <li>selle saab eraldada GApps pakettidest („<i>swypelibs</i>“) või alla laadida <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">siit</a> (klõpsa failil ja seejärel „raw“ või väikesel allalaadimisnupul)</li>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
   </ul>
-  <li>Lõikelaua ajalugu</li>
-  <li>Režiim kasutamiseks ühe käega</li>
-  <li>Jagatud klahvistik (saadaval ainult siis, kui ekraan on piisavalt suur)</li>
-  <li>Numbriklahvistik</li>
-  <li>Varunda ja taasta oma seadistused ning õpitud sõnade / ajaloo andmed</li>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
 </ul>

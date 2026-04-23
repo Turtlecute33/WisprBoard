@@ -7,10 +7,13 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
 import android.widget.Toast
+import androidx.annotation.StringRes
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.InputTypeUtils
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 
@@ -27,11 +30,33 @@ class TextFixManager(
         private const val TAG = "TextFixManager"
         private const val MAX_INPUT_LENGTH = 10_000
         private const val MAX_OUTPUT_LENGTH = 10_000
+
+        @JvmStatic
+        @StringRes
+        fun getBlockedErrorResId(
+            inputType: Int,
+            isPasswordField: Boolean,
+            noLearning: Boolean,
+            incognitoModeEnabled: Boolean,
+        ): Int? {
+            if ((inputType and InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_TEXT) {
+                return R.string.text_fix_error_unsupported_field
+            }
+            if (isPasswordField || noLearning || incognitoModeEnabled) {
+                return R.string.text_fix_error_sensitive_field
+            }
+            if (InputTypeUtils.isUriOrEmailType(inputType)) {
+                return R.string.text_fix_error_unsupported_field
+            }
+            return null
+        }
     }
 
     enum class State { IDLE, WORKING }
 
     interface Callbacks {
+        @StringRes
+        fun getBlockedErrorResId(): Int?
         /** Return the currently selected text, or null/empty if nothing is selected. */
         fun getSelectedText(): CharSequence?
         fun onWorking()
@@ -55,6 +80,10 @@ class TextFixManager(
 
         if (!prefs.getBoolean(Settings.PREF_TEXT_FIX_ENABLED, Defaults.PREF_TEXT_FIX_ENABLED)) {
             Toast.makeText(context, R.string.text_fix_error_not_enabled, Toast.LENGTH_SHORT).show()
+            return
+        }
+        callbacks.getBlockedErrorResId()?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             return
         }
         if (!SecretStore.isSecureStorageAvailable(context)) {

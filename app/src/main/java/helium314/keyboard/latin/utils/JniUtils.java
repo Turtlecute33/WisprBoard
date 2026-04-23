@@ -63,7 +63,7 @@ public final class JniUtils {
         } catch (Exception e) {
             userSuppliedLibrary = null;
         }
-        if (!BuildConfig.BUILD_TYPE.equals("nouserlib") && userSuppliedLibrary != null) {
+        if (BuildConfig.ALLOW_USER_SUPPLIED_JNI && userSuppliedLibrary != null) {
             String wantedChecksum = expectedDefaultChecksum();
             try {
                 if (app != null) {
@@ -89,6 +89,8 @@ public final class JniUtils {
                     // but don't log if device is locked, here we expect the exception and only load system library, if possible
                     Log.w(TAG, "Could not load user-supplied library", t);
             }
+        } else if (userSuppliedLibrary != null) {
+            Log.i(TAG, "Ignoring user-supplied library in this build.");
         }
 
         if (!sHaveGestureLib) {

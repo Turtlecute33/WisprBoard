@@ -44,6 +44,7 @@ import helium314.keyboard.latin.utils.UncachedInputMethodManagerUtils
 import helium314.keyboard.latin.utils.cleanUnusedMainDicts
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
+import helium314.keyboard.settings.dialogs.InfoDialog
 import helium314.keyboard.settings.dialogs.NewDictionaryDialog
 import helium314.keyboard.settings.screens.gesturedata.END_DATE_EPOCH_MILLIS
 import helium314.keyboard.settings.screens.gesturedata.TWO_WEEKS_IN_MILLIS
@@ -65,6 +66,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     val prefChanged = MutableStateFlow(0) // simple counter, as the only relevant information is that something changed
     fun prefChanged() = prefChanged.value++
     private val dictUriFlow = MutableStateFlow<Uri?>(null)
+    private val dictImportErrorFlow = MutableStateFlow(false)
     private val cachedDictionaryFile by lazy { File(this.cacheDir.path + File.separator + "temp_dict") }
     private val crashReportFiles = MutableStateFlow<List<File>>(emptyList())
     private var paused = true
@@ -90,6 +92,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
             Theme {
                 Surface {
                     val dictUri by dictUriFlow.collectAsState()
+                    val dictImportError by dictImportErrorFlow.collectAsState()
                     val crashReports by crashReportFiles.collectAsState()
                     val crashFilePicker = filePicker { saveCrashReports(it) }
                     var showWelcomeWizard by rememberSaveable { mutableStateOf(
@@ -131,7 +134,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                 },
                                 content = { Text("Crash report files found") },
                             )
-                        } else if (JniUtils.sHaveGestureLib && System.currentTimeMillis() < END_DATE_EPOCH_MILLIS + TWO_WEEKS_IN_MILLIS) {
+                        } else if (BuildConfig.ENABLE_GESTURE_DATA_GATHERING
+                            && JniUtils.sHaveGestureLib
+                            && System.currentTimeMillis() < END_DATE_EPOCH_MILLIS + TWO_WEEKS_IN_MILLIS
+                        ) {
                             GestureDataPromotionReminderDialog()
                         }
                     }
@@ -141,6 +147,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             cachedFile = cachedDictionaryFile,
                             mainLocale = null
                         )
+                    } else if (dictImportError) {
+                        InfoDialog(stringResource(R.string.file_read_error)) {
+                            dictImportErrorFlow.value = false
+                        }
                     }
                 }
             }
@@ -152,9 +162,14 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                 ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
                     runCatching {
                         cachedDictionaryFile.delete()
-                        FileUtils.copyContentUriToNewFile(uri, this, cachedDictionaryFile)
+                        FileUtils.copyDictionaryContentUriToNewFile(uri, this, cachedDictionaryFile)
                     }.onSuccess {
-                        runOnUiThread { dictUriFlow.value = uri }
+                        runOnUiThread {
+                            dictImportErrorFlow.value = false
+                            dictUriFlow.value = uri
+                        }
+                    }.onFailure {
+                        runOnUiThread { dictImportErrorFlow.value = true }
                     }
                 }
             }

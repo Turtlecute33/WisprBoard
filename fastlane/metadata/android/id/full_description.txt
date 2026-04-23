@@ -1,56 +1,31 @@
-HeliBoard adalah papan ketik sumber terbuka yang mengutamakan privasi, berdasarkan AOSP OpenBoard.
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
 
-Tidak menggunakan izin internet, dan karenanya 100% offline.
-
-Fitur:
-
+Features:
 <ul>
-
-<li>Tambahkan kamus untuk saran dan pemeriksaan ejaan<li>
-
-<ul>
-
-<li>buat kamus Anda sendiri, atau dapatkan <a href="https:codeberg.orgHelium314aosp-dictionaries#dictionaries">di sini<a>, atau di bagian <a href="https:codeberg.orgHelium314aosp-dictionaries#experimental-dictionaries">eksperimental<a> (kualitas dapat bervariasi)<li>
-
-<li>kamus tambahan untuk emoji atau simbol ilmiah dapat digunakan untuk memberikan saran (mirip dengan "pencarian emoji")<li>
-
-<li>perlu dicatat bahwa untuk tata letak Korea, saran hanya berfungsi menggunakan <a href="https:github.comopenboard-teamopenboardcommit83fca9533c03b9fecc009fc632577226bbd6301f">kamus ini<a>, alat-alat dalam repositori kamus tidak dapat membuat kamus yang berfungsi<li>
-
-<ul>
-
-<li>Sesuaikan tema keyboard (gaya, warna, dan gambar latar)<li>
-
-<ul>
-
-<li>dapat mengikuti pengaturan siang dan malam sistem pada Android 10+ (dan pada beberapa versi Android 9)<li>
-
-<li>dapat mengikuti warna dinamis untuk Android 12+<li>
-
-<ul>
-
-<li>Sesuaikan tata letak keyboard <a href="https:github.comHelium314HeliBoardblobmainlayouts.md">(hanya tersedia saat menonaktifkan <i>gunakan bahasa sistem<i>)<li>
-
-<li>Sesuaikan tata letak khusus, seperti simbol, angka, atau tata letak tombol fungsional<li>
-
-<li>Mengetik multibahasa<li>
-
-<li>Mengetik geser (<i>hanya dengan pustaka sumber tertutup<i> ☹️)<li>
-
-<ul>
-
-<li>pustaka tidak disertakan dalam aplikasi, karena tidak ada pustaka sumber terbuka yang kompatibel yang tersedia<li>
-
-<li>dapat diekstrak dari paket GApps ("<i>swypelibs<i>"), atau diunduh <a href="https:github.comerkserkserksopenboardtree46fdf2b550035ca69299ce312fa158e7ade36967appsrcmainjniLibs">di sini<a> (klik pada berkas dan kemudian "raw" atau tombol unduh kecil)<li>
-
-<ul>
-
-<li>Riwayat clipboard<li>
-
-<li>Mode satu tangan<li>
-
-<li>Papan ketik terpisah (hanya tersedia jika layar cukup besar)<li>
-
-<li>Papan angka<li>
-
-<li>Cadangkan dan pulihkan setelan dan data riwayat kata yang dipelajari<li>
-<ul>
+  <li>Add dictionaries for suggestions and spell check</li>
+  <ul>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
+  </ul>
+  <li>Customize keyboard themes (style, colors and background image)</li>
+  <ul>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
+  </ul>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
+  <ul>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
+  </ul>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
+</ul>

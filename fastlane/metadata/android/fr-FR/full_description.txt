@@ -1,29 +1,31 @@
-HeliBoard est un clavier open-source respectueux de la vie privée, basé sur AOSP / OpenBoard.
-N'utilise pas l'autorisation internet et est donc 100% hors ligne.
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
 
-Caractéristiques :
+Features:
 <ul>
-  <li>Ajouter des dictionnaires pour les suggestions et la vérification de l'orthographe</li>
+  <li>Add dictionaries for suggestions and spell check</li>
   <ul>
-    <li>construisez les vôtres ou obtenez-les  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">ici</a>, ou dans la section <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">expérimental</a> (la qualité peut varier)</li>
-    <li>des dictionnaires supplémentaires pour les emojis ou les symboles scientifiques peuvent être utilisés pour fournir des suggestions (similaires à la "recherche d'emojis")</li>
-    <li>Notez que pour les mises en page coréennes, les suggestions ne fonctionnent qu'en utilisant <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">ce dictionnaire</a> ; les outils du dépôt des dictionnaires ne sont pas en mesure de créer des dictionnaires fonctionnels</li>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
   </ul>
-  <li>Personnalisation des thèmes du clavier (style, couleurs et image de fond)</li>
+  <li>Customize keyboard themes (style, colors and background image)</li>
   <ul>
-    <li>peut utiliser les paramètres jour/nuit du système sur Android 10+ (et sur certaines versions d'Android 9)</li>
-    <li>peut utiliser les couleurs dynamiques pour Android 12+</li>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
   </ul>
-  <li>Personnaliser les <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">dispositions</a> du clavier (disponible uniquement lorsque l'option <i>"utiliser les langues du système"</i> est désactivée)</li>
-  <li>Saisie multilingue</li>
-  <li>Saisie par glissement (<i>uniquement avec une bibliothèque à code source privé</i> ☹️)</li>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
   <ul>
-    <li>bibliothèque non incluse dans l'application car il n'y a pas de bibliothèque open source compatible disponible</li>
-    <li>peut être extraite des paquets GApps ("<i>swypelibs</i>"), ou téléchargée <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">ici</a></li>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
   </ul>
-  <li>Historique du presse-papiers</li>
-  <li>Mode à une main</li>
-  <li>Clavier fractionné (disponible uniquement si l'écran est suffisamment grand)</li>
-  <li>Pavé numérique</li>
-  <li>Sauvegarde et restauration des mots appris et des historiques</li>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
 </ul>

@@ -1,30 +1,31 @@
-A HeliBoard egy adatvédelem-tudatos, nyílt forráskódú billentyűzet, amely az AOSP / OpenBoard alapjain nyugszik.
-Nem használ internet-hozzáférést, így 100%-ban offline működik.
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
 
-Funkciók:
+Features:
 <ul>
-  <li>Szótárak hozzáadása a javaslatokhoz és a helyesírás-ellenőrzéshez</li>
+  <li>Add dictionaries for suggestions and spell check</li>
   <ul>
-    <li>készítsen sajátot, vagy szerezze be őket <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">innen</a>, vagy a <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">kísérleti</a> szekcióból (a minőség változó lehet)</li>
-    <li>további szótárak használhatók emodzsikhoz vagy tudományos szimbólumokhoz javaslatok biztosítására (hasonlóan az „Emodzsikeresés” funkcióhoz)</li>
-    <li>vegye figyelembe, hogy a koreai elrendezéseknél a javaslatok csak <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">ezzel a szótárral</a> működnek, a szótár-adattárban lévő eszközök nem képesek működő szótárakat létrehozni</li>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
   </ul>
-  <li>Billentyűzet témáinak testreszabása (stílus, színek és háttérkép)</li>
+  <li>Customize keyboard themes (style, colors and background image)</li>
   <ul>
-    <li>követheti a rendszer nappali/éjszakai beállítását Android 10+ (és néhány Android 9 verzió) esetén</li>
-    <li>követheti a dinamikus színeket Android 12+ esetén</li>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
   </ul>
-  <li>Billentyűzet <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">elrendezések</a> testreszabása (csak a <i>rendszernyelvek használata</i> letiltásakor érhető el)</li>
-  <li>Speciális elrendezések testreszabása, mint például szimbólumok, számok vagy funkcióbillentyűk elrendezése</li>
-  <li>Többnyelvű gépelés</li>
-  <li>Ujjmozdulatokkal való gépelés (<i>csak zárt forráskódú könyvtárral</i> ☹️)</li>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
   <ul>
-    <li>a könyvtár nem része az alkalmazásnak, mivel nincs kompatibilis nyílt forráskódú könyvtár</li>
-    <li>GApps csomagokból („<i>swypelibs</i>”) nyerhető ki, vagy letölthető <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">innen</a> (kattintson a fájlra, majd a „raw” vagy a kis letöltés gombra)</li>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
   </ul>
-  <li>Vágólapelőzmények</li>
-  <li>Egykezes mód</li>
-  <li>Osztott billentyűzet (csak akkor érhető el, ha a képernyő elég nagy)</li>
-  <li>Számbillentyűzet</li>
-  <li>Beállítások és a tanult szavak / előzmények adatainak biztonsági mentése és visszaállítása</li>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
 </ul>

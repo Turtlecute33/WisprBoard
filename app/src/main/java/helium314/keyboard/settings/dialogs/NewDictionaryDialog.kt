@@ -83,6 +83,7 @@ fun NewDictionaryDialog(
                     internalMainDictFile.delete()
                 }
                 val newDictBroadcast = Intent(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION)
+                    .setPackage(ctx.packageName)
                 ctx.sendBroadcast(newDictBroadcast)
             },
             confirmButtonText = stringResource(if (dictFile.exists()) R.string.replace_dictionary else android.R.string.ok),

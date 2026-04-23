@@ -1,30 +1,31 @@
-HeliBoard это клавиатура с открытым исходным кодом, обеспечивающая приватность, основанная на AOSP / OpenBoard.
-Не использует Интернет и, таким образом, на 100% автономна.
+HeliBoard is a privacy-conscious open-source keyboard, based on AOSP / OpenBoard.
+Core typing features run locally on-device.
+Optional voice transcription and Text Fix features require internet access and send audio or selected text to the configured service only when you explicitly enable and use them.
 
-Возможности:
+Features:
 <ul>
-  <li>Добавьте словари для подсказок и проверки правописания.</li>
+  <li>Add dictionaries for suggestions and spell check</li>
   <ul>
-    <li>Создайте свои собственные или получите их <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">здесь</a> или в <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">экспериментальном</a> разделе (качество может отличаться)</li>
-    <li>Для предоставления подсказок можно использовать дополнительные словари смайлов или научных символов (аналогично «поиску смайлов»)</li>
-    <li>Обратите внимание, что для корейских раскладок предложения работают только с использованием <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">этого словаря</a>, инструментов из репозитория словарей.</li>
+    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a>, or in the <a href="https://codeberg.org/Helium314/aosp-dictionaries#experimental-dictionaries">experimental</a> section (quality may vary)</li>
+    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
+    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
   </ul>
-  <li>Настройка тем клавиатуры (стиль, цвета и фоновое изображение)</li>
+  <li>Customize keyboard themes (style, colors and background image)</li>
   <ul>
-    <li>Может следовать настройкам дня/ночи системы на Android 10+ (и на некоторых версиях Android 9)</li>
-    <li>Может следовать динамическим цветам для Android 12+</li>
+    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
+    <li>can follow dynamic colors for Android 12+</li>
   </ul>
-  <li>Настроить <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">раскладки клавиатуры</a> (доступно только при отключении <i>использования системных языков</i>)</li>
-  <li>Настроить специальные расскладки такие как, символьная, числовая, или функциональная раскладка</li>
-  <li>Многоязычный набор текста</li>
-  <li>Скользящий ввод текста (<i>только с закрытой библиотекой</i> ☹️)</li>
+  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
+  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Multilingual typing</li>
+  <li>Glide typing (<i>depends on build/distribution and closed-source libraries</i> ☹️)</li>
   <ul>
-    <li>Библиотека не включена в приложение, поскольку не совместима с открытым исходным кодом.</li>
-    <li>Можно извлечь из пакетов GApps (<i>swypelibs</i>) или загрузить <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">здесь</a> (нажмите на файле на маленькую кнопку Скачать)</li>
+    <li>library not included in the app, as there is no compatible open source library available</li>
+    <li>availability depends on the build or system image; standard releases do not prompt you to load external native libraries</li>
   </ul>
-  <li>История буфера обмена</li>
-  <li>Режим одной руки</li>
-  <li>Раздельная клавиатура (доступна только при достаточно большом экране)</li>
-  <li>Цифровая клавиатура</li>
-  <li>Создание резервной копии и восстанавление запомненных слов/истории</li>
+  <li>Clipboard history</li>
+  <li>One-handed mode</li>
+  <li>Split keyboard (only available if the screen is large enough)</li>
+  <li>Number pad</li>
+  <li>Backup and restore your settings and selected custom assets</li>
 </ul>

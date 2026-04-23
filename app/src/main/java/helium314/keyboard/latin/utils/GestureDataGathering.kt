@@ -48,7 +48,9 @@ import kotlin.random.Random
 // will be removed once the project is finished
 
 fun isInActiveGatheringMode(editorInfo: EditorInfo) =
-    dictTestImeOption == editorInfo.privateImeOptions && gestureDataActiveFacilitator != null
+    BuildConfig.ENABLE_GESTURE_DATA_GATHERING
+        && dictTestImeOption == editorInfo.privateImeOptions
+        && gestureDataActiveFacilitator != null
 
 fun setWordIgnoreList(context: Context, list: Collection<String>) {
     val json = Json.encodeToString(list)
@@ -79,6 +81,7 @@ fun getExportedActiveDeletionCount(context: Context) = context.prefs().getInt(PR
 
 /** shows dialog promoting contribution of gesture data, or ask to do again if last contribution was more than 2 weeks ago */
 @Composable fun GestureDataPromotionReminderDialog() {
+    if (!BuildConfig.ENABLE_GESTURE_DATA_GATHERING) return
     val ctx = LocalContext.current
     val promotionShowNext = ctx.prefs().getLong(PREF_SHOW_PROMOTION_DIALOG_NEXT, 0)
     val reminderShowNext = ctx.prefs().getLong(PREF_SHOW_REMINDER_DIALOG_NEXT, 0)
@@ -132,6 +135,7 @@ fun getExportedActiveDeletionCount(context: Context) = context.prefs().getInt(PR
 
 /** shows a toast notification if we're close to the end of the data gathering phase (at most once per 24 hours, only if there is non-exported data) */
 fun showEndNotificationIfNecessary(context: Context) {
+    if (!BuildConfig.ENABLE_GESTURE_DATA_GATHERING) return
     val now = System.currentTimeMillis()
     if (now < END_DATE_EPOCH_MILLIS - TWO_WEEKS_IN_MILLIS) return
     val lastShown = context.prefs().getLong(PREF_END_NOTIFICATION_LAST_SHOWN, 0)
@@ -181,6 +185,7 @@ class WordData(
     private val timestamp = System.currentTimeMillis()
 
     fun save(context: Context) {
+        if (!BuildConfig.ENABLE_GESTURE_DATA_GATHERING) return
         if (context.prefs().getLong(PREF_SHOW_PROMOTION_DIALOG_NEXT, 0) < Long.MAX_VALUE)
             context.prefs().edit { putLong(PREF_SHOW_REMINDER_DIALOG_NEXT, System.currentTimeMillis() + TWO_WEEKS_IN_MILLIS) }
         if (!isSavingOk(context))

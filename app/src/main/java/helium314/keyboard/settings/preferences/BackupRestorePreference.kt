@@ -21,7 +21,6 @@ import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
-import helium314.keyboard.latin.database.Database
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -123,14 +122,6 @@ private fun backupLauncher(onError: (String) -> Unit): ManagedActivityResultLaun
                         fileStream.close()
                         zipStream.closeEntry()
                     }
-                    val dbFile = ctx.getDatabasePath(Database.NAME)
-                    if (dbFile.exists()) {
-                        val fileStream = FileInputStream(dbFile).buffered()
-                        zipStream.putNextEntry(ZipEntry(Database.NAME))
-                        fileStream.copyTo(zipStream, 1024)
-                        fileStream.close()
-                        zipStream.closeEntry()
-                    }
                     zipStream.putNextEntry(ZipEntry(PREFS_FILE_NAME))
                     settingsToJsonStream(ctx.prefs().all, zipStream)
                     zipStream.closeEntry()
@@ -189,10 +180,11 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
 // here as defense-in-depth against pre-migration or future pref leaks.
 private val SENSITIVE_BACKUP_KEYS = setOf(
     Settings.PREF_OPENROUTER_API_KEY,
+    LEGACY_PINNED_CLIPS_KEY,
 )
 
 @Suppress("UNCHECKED_CAST") // it is checked... but whatever (except string set, because can't check for that))
-private fun settingsToJsonStream(settings: Map<String?, Any?>, out: OutputStream) {
+internal fun settingsToJsonString(settings: Map<String?, Any?>): String {
     val filtered = settings.filterKeys { it !in SENSITIVE_BACKUP_KEYS }
     val booleans = filtered.filter { it.key is String && it.value is Boolean } as Map<String, Boolean>
     val ints = filtered.filter { it.key is String && it.value is Int } as Map<String, Int>
@@ -200,34 +192,27 @@ private fun settingsToJsonStream(settings: Map<String?, Any?>, out: OutputStream
     val floats = filtered.filter { it.key is String && it.value is Float } as Map<String, Float>
     val strings = filtered.filter { it.key is String && it.value is String } as Map<String, String>
     val stringSets = filtered.filter { it.key is String && it.value is Set<*> } as Map<String, Set<String>>
-    // now write
-    out.write("boolean settings\n".toByteArray())
-    out.write(Json.encodeToString(booleans).toByteArray())
-    out.write("\nint settings\n".toByteArray())
-    out.write(Json.encodeToString(ints).toByteArray())
-    out.write("\nlong settings\n".toByteArray())
-    out.write(Json.encodeToString(longs).toByteArray())
-    out.write("\nfloat settings\n".toByteArray())
-    out.write(Json.encodeToString(floats).toByteArray())
-    out.write("\nstring settings\n".toByteArray())
-    out.write(Json.encodeToString(strings).toByteArray())
-    out.write("\nstring set settings\n".toByteArray())
-    out.write(Json.encodeToString(stringSets).toByteArray())
-}
-
-private fun readJsonLinesToSettings(list: List<String>, prefs: SharedPreferences): Boolean {
-    return try {
-        prefs.edit {
-            clear()
-            putAll(parseSettingsSnapshot(list))
-        }
-        true
-    } catch (e: Exception) {
-        false
+    return buildString {
+        append("boolean settings\n")
+        append(Json.encodeToString(booleans))
+        append("\nint settings\n")
+        append(Json.encodeToString(ints))
+        append("\nlong settings\n")
+        append(Json.encodeToString(longs))
+        append("\nfloat settings\n")
+        append(Json.encodeToString(floats))
+        append("\nstring settings\n")
+        append(Json.encodeToString(strings))
+        append("\nstring set settings\n")
+        append(Json.encodeToString(stringSets))
     }
 }
 
-private fun parseSettingsSnapshot(list: List<String>): SettingsSnapshot {
+private fun settingsToJsonStream(settings: Map<String?, Any?>, out: OutputStream) {
+    out.write(settingsToJsonString(settings).toByteArray())
+}
+
+internal fun parseSettingsSnapshot(list: List<String>): SettingsSnapshot {
     val i = list.iterator()
     try {
         val booleans = mutableMapOf<String, Boolean>()
@@ -252,7 +237,7 @@ private fun parseSettingsSnapshot(list: List<String>): SettingsSnapshot {
     }
 }
 
-private data class SettingsSnapshot(
+internal data class SettingsSnapshot(
     val booleans: Map<String, Boolean> = emptyMap(),
     val ints: Map<String, Int> = emptyMap(),
     val longs: Map<String, Long> = emptyMap(),
@@ -281,7 +266,6 @@ private data class StagedBackup(
     val root: File,
     val filesDir: File,
     val protectedFilesDir: File,
-    val databaseFile: File?,
     val prefs: SettingsSnapshot?,
     val protectedPrefs: SettingsSnapshot?,
 )
@@ -291,14 +275,14 @@ private fun collectBackupFiles(ctx: android.content.Context): BackupFiles {
     val filesPrefix = filesDir.path + File.separator
     val files = filesDir.walk().filter { file ->
         val path = file.path.removePrefix(filesPrefix)
-        file.isFile && backupFilePatterns.any { path.matches(it) }
+        file.isFile && isAllowedBackupFile(path)
     }.toList()
 
     val protectedFilesDir = DeviceProtectedUtils.getFilesDir(ctx)
     val protectedFilesPrefix = protectedFilesDir.path + File.separator
     val protectedFiles = protectedFilesDir.walk().filter { file ->
         val path = file.path.removePrefix(protectedFilesPrefix)
-        file.isFile && backupFilePatterns.any { path.matches(it) }
+        file.isFile && isAllowedBackupFile(path)
     }.toList()
     return BackupFiles(files, protectedFiles, filesPrefix, protectedFilesPrefix)
 }
@@ -307,10 +291,8 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
     val stageRoot = File(ctx.cacheDir, "backup_restore_stage_${System.currentTimeMillis()}")
     val stageFilesDir = File(stageRoot, "files")
     val stageProtectedFilesDir = File(stageRoot, "device_protected")
-    val stageDb = File(stageRoot, Database.NAME + "_restored")
     var prefsSnapshot: SettingsSnapshot? = null
     var protectedPrefsSnapshot: SettingsSnapshot? = null
-    var hasDb = false
     ZipInputStream(inputStream).use { zip ->
         var entry: ZipEntry? = zip.nextEntry
         while (entry != null) {
@@ -319,16 +301,12 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
                 entry.isDirectory -> Unit
                 entryName.startsWith("unprotected/") -> {
                     val adjustedName = entryName.removePrefix("unprotected/")
-                    if (backupFilePatterns.any { adjustedName.matches(it) }) {
+                    if (isAllowedBackupFile(adjustedName)) {
                         FileUtils.copyStreamToNewFile(zip, File(stageProtectedFilesDir, adjustedName))
                     }
                 }
-                backupFilePatterns.any { entryName.matches(it) } -> {
+                isAllowedBackupFile(entryName) -> {
                     FileUtils.copyStreamToNewFile(zip, File(stageFilesDir, entryName))
-                }
-                entryName == Database.NAME -> {
-                    FileUtils.copyStreamToNewFile(zip, stageDb)
-                    hasDb = true
                 }
                 entryName == PREFS_FILE_NAME -> {
                     prefsSnapshot = parseSettingsSnapshot(String(zip.readBytes()).split("\n"))
@@ -345,7 +323,6 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
         root = stageRoot,
         filesDir = stageFilesDir,
         protectedFilesDir = stageProtectedFilesDir,
-        databaseFile = stageDb.takeIf { hasDb },
         prefs = prefsSnapshot,
         protectedPrefs = protectedPrefsSnapshot,
     )
@@ -354,13 +331,10 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
 private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup) {
     val filesDir = ctx.filesDir ?: error("Files directory unavailable")
     val protectedFilesDir = DeviceProtectedUtils.getFilesDir(ctx)
-    filesDir.deleteRecursively()
-    protectedFilesDir.deleteRecursively()
     filesDir.mkdirs()
     protectedFilesDir.mkdirs()
     copyDirectoryContents(backup.filesDir, filesDir)
     copyDirectoryContents(backup.protectedFilesDir, protectedFilesDir)
-    backup.databaseFile?.let { Database.copyFromDb(it, ctx) }
     backup.prefs?.let { snapshot ->
         ctx.prefs().edit {
             clear()
@@ -382,8 +356,14 @@ private fun copyDirectoryContents(source: File, target: File) {
         val relativePath = file.relativeTo(source).path
         val targetFile = File(target, relativePath)
         if (file.isDirectory) {
+            if (targetFile.isFile) {
+                targetFile.delete()
+            }
             targetFile.mkdirs()
         } else {
+            if (targetFile.isDirectory) {
+                targetFile.deleteRecursively()
+            }
             file.inputStream().buffered().use { input ->
                 FileUtils.copyStreamToNewFile(input, targetFile)
             }
@@ -391,7 +371,7 @@ private fun copyDirectoryContents(source: File, target: File) {
     }
 }
 
-private fun normalizeBackupEntryName(name: String): String {
+internal fun normalizeBackupEntryName(name: String): String {
     val normalized = name.replace('\\', '/').trimStart('/')
     require(!normalized.contains("../")) { "Unsafe backup entry: $name" }
     return normalized
@@ -403,6 +383,7 @@ private fun refreshAfterRestore(ctx: android.content.Context) {
     Settings.getInstance().startListener()
     SubtypeSettings.reloadEnabledSubtypes(ctx)
     val newDictBroadcast = Intent(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION)
+        .setPackage(ctx.packageName)
     ctx.getActivity()?.sendBroadcast(newDictBroadcast)
     LayoutUtilsCustom.onLayoutFileChanged()
     LayoutUtilsCustom.removeMissingLayouts(ctx)
@@ -417,13 +398,14 @@ private fun postToMain(action: () -> Unit) {
 
 private const val PREFS_FILE_NAME = "preferences.json"
 private const val PROTECTED_PREFS_FILE_NAME = "protected_preferences.json"
+private const val LEGACY_PINNED_CLIPS_KEY = "pinned_clips"
 
-private val backupFilePatterns by lazy { listOf(
+internal val backupFilePatterns by lazy { listOf(
     "blacklists${File.separator}.*\\.txt".toRegex(),
     "layouts${File.separator}.*${LayoutUtilsCustom.CUSTOM_LAYOUT_PREFIX}+\\..{0,4}".toRegex(), // can't expect a period at the end, as this would break restoring older backups
-    "dicts${File.separator}.*${File.separator}.*user\\.dict".toRegex(),
-    "UserHistoryDictionary.*${File.separator}UserHistoryDictionary.*\\.(body|header)".toRegex(),
     "custom_background_image.*".toRegex(),
     "custom_font".toRegex(),
     "custom_emoji_font".toRegex(),
 ) }
+
+internal fun isAllowedBackupFile(path: String) = backupFilePatterns.any { path.matches(it) }

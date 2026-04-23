@@ -164,7 +164,7 @@ fun createPreferencesSettings(context: Context) = listOf(
         R.string.enable_clipboard_history, R.string.enable_clipboard_history_summary)
     {
         val ctx = LocalContext.current
-        SwitchPreference(it, Defaults.PREF_ENABLE_CLIPBOARD_HISTORY) { ClipboardDao.getInstance(ctx)?.clearNonPinned() }
+        SwitchPreference(it, Defaults.PREF_ENABLE_CLIPBOARD_HISTORY) { ClipboardDao.getInstance(ctx)?.clear() }
     },
     Setting(context, Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME, R.string.clipboard_history_retention_time) { setting ->
         val ctx = LocalContext.current

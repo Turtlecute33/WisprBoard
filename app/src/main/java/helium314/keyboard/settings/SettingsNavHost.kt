@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.settings.SettingsSubtype.Companion.toSettingsSubtype
 import helium314.keyboard.latin.settings.getTransitionAnimationScale
@@ -103,8 +104,10 @@ fun SettingsNavHost(
         composable(SettingsDestination.GestureTyping) {
             GestureTypingScreen(onClickBack = ::goBack)
         }
-        composable(SettingsDestination.DataGathering) {
-            GestureDataScreen(onClickBack = ::goBack)
+        if (BuildConfig.ENABLE_GESTURE_DATA_GATHERING) {
+            composable(SettingsDestination.DataGathering) {
+                GestureDataScreen(onClickBack = ::goBack)
+            }
         }
 /*      will be added as part of passive data gathering
         composable(SettingsDestination.DataReview) {

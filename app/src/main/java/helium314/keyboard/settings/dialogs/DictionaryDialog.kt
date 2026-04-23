@@ -138,7 +138,10 @@ private fun DictionaryDetails(dict: File) {
             confirmButtonText = stringResource(R.string.remove),
             onConfirmed = {
                 dict.delete()
-                context.sendBroadcast(Intent(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION))
+                context.sendBroadcast(
+                    Intent(DictionaryPackConstants.NEW_DICTIONARY_INTENT_ACTION)
+                        .setPackage(context.packageName)
+                )
             },
             content = { Text(stringResource(R.string.remove_dictionary_message, type)) }
         )
