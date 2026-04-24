@@ -8,6 +8,7 @@ import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.annotation.StringRes
+import androidx.core.content.edit
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
@@ -131,7 +132,7 @@ class TextFixManager(
                 return
             }
             pendingConsentDeadline = 0L
-            prefs.edit().putBoolean(Settings.PREF_TEXT_FIX_CONSENT_GIVEN, true).apply()
+            prefs.edit { putBoolean(Settings.PREF_TEXT_FIX_CONSENT_GIVEN, true) }
         }
         if (!isNetworkAvailable(context)) {
             Toast.makeText(context, R.string.voice_error_no_network, Toast.LENGTH_SHORT).show()

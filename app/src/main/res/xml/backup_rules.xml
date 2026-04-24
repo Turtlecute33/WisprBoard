@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pre-Android-12 backup rules. Backup is disabled at the application level, but keeping
+  these exclusions explicit prevents tooling drift and mirrors data_extraction_rules.xml.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="wisprboard_secrets.xml" />
+    <exclude domain="database" path="heliboard.db" />
+    <exclude domain="file" path="dicts/" />
+</full-backup-content>

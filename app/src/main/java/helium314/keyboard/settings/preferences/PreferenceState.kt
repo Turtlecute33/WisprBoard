@@ -7,6 +7,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.core.content.edit
 import androidx.compose.ui.platform.LocalContext
 import helium314.keyboard.latin.utils.prefs
 
@@ -42,7 +43,7 @@ fun rememberFloatPreferenceState(key: String, default: Float): MutableState<Floa
  */
 private inline fun <T> SharedPreferences.safeGet(key: String, default: T, block: SharedPreferences.() -> T): T =
     try { block() } catch (_: ClassCastException) {
-        edit().remove(key).apply()
+        edit { remove(key) }
         default
     }
 

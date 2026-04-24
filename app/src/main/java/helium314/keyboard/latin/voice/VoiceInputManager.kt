@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import androidx.core.content.edit
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.permissions.PermissionsUtil
@@ -28,6 +29,8 @@ class VoiceInputManager(
         private const val TAG = "VoiceInputManager"
         private const val MAX_TRANSCRIPTION_LENGTH = 10_000
         private const val AUDIO_CACHE_SUBDIR = "voice_audio"
+        private const val MIN_RECORDING_DURATION_MS = 500L
+        private const val MIN_SPEECH_MEAN_AMPLITUDE = 150.0
     }
 
     enum class State { IDLE, RECORDING, TRANSCRIBING }
@@ -112,7 +115,7 @@ class VoiceInputManager(
             }
             // Second tap within window: persist consent and fall through to start recording.
             pendingConsentDeadline = 0L
-            prefs.edit().putBoolean(Settings.PREF_VOICE_CONSENT_GIVEN, true).apply()
+            prefs.edit { putBoolean(Settings.PREF_VOICE_CONSENT_GIVEN, true) }
         }
 
         if (!isNetworkAvailable(context)) {
@@ -171,6 +174,22 @@ class VoiceInputManager(
                 TAG,
                 "Uploading voice clip: durationMs=${audioRecorder.lastDurationMs}, meanAmplitude=${audioRecorder.lastMeanAmplitude}, bytes=${wavFile.length()}"
             )
+        }
+        if (audioRecorder.lastDurationMs < MIN_RECORDING_DURATION_MS) {
+            wavFile.delete()
+            currentAudioFile = null
+            state = State.IDLE
+            callbacks.onFinished()
+            callbacks.onError(context.getString(R.string.voice_error_too_short))
+            return
+        }
+        if (audioRecorder.lastMeanAmplitude < MIN_SPEECH_MEAN_AMPLITUDE) {
+            wavFile.delete()
+            currentAudioFile = null
+            state = State.IDLE
+            callbacks.onFinished()
+            callbacks.onError(context.getString(R.string.voice_error_silent))
+            return
         }
 
         state = State.TRANSCRIBING

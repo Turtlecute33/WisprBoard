@@ -15,6 +15,9 @@ import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Sends audio to OpenRouter's chat completions API for transcription.
@@ -64,6 +67,13 @@ class OpenRouterClient(
         private const val AUDIO_PLACEHOLDER = "__WISPRBOARD_AUDIO_B64_PLACEHOLDER__"
         // Must be a multiple of 3 so chunked base64 encoding is padding-free until the final chunk.
         private const val AUDIO_READ_CHUNK = 48 * 1024
+        private val HTTP_DATE_FORMAT = object : ThreadLocal<SimpleDateFormat>() {
+            override fun initialValue(): SimpleDateFormat =
+                SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("GMT")
+                    isLenient = false
+                }
+        }
     }
 
     /**
@@ -399,11 +409,9 @@ class OpenRouterClient(
             return (seconds * 1000L).coerceIn(0L, MAX_RETRY_AFTER_MS)
         }
         return try {
-            val epochMs = java.util.Date.parse(raw) // lenient HTTP-date parser
+            val epochMs = (HTTP_DATE_FORMAT.get() ?: return -1L).parse(raw)?.time ?: return -1L
             val deltaMs = epochMs - System.currentTimeMillis()
             deltaMs.coerceIn(0L, MAX_RETRY_AFTER_MS)
-        } catch (_: IllegalArgumentException) {
-            -1L
         } catch (_: Exception) {
             -1L
         }

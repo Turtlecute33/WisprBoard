@@ -76,8 +76,9 @@ object SecretStore {
 
     private fun attemptRecovery(context: Context) {
         try {
-            context.getSharedPreferences(ENCRYPTED_FILE, Context.MODE_PRIVATE)
-                .edit().clear().commit()
+            context.getSharedPreferences(ENCRYPTED_FILE, Context.MODE_PRIVATE).edit(commit = true) {
+                clear()
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 context.deleteSharedPreferences(ENCRYPTED_FILE)
             }
