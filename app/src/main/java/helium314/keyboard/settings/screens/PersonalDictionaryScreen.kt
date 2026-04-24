@@ -107,7 +107,7 @@ private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> 
         if (newWord != word || locale != newLocale) {
             deleteWord(word, locale, ctx.contentResolver)
             val saveWeight = newWord.weight ?: WEIGHT_FOR_USER_DICTIONARY_ADDS
-            UserDictionary.Words.addWord(ctx, newWord.word, saveWeight, newWord.shortcut, newLocale)
+            runCatching { UserDictionary.Words.addWord(ctx, newWord.word, saveWeight, newWord.shortcut, newLocale) }
         }
     }
     ThreeButtonAlertDialog(
@@ -198,29 +198,31 @@ private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> 
 private fun deleteWord(wordDetails: Word, locale: Locale?, resolver: ContentResolver) {
     val (word, shortcut, weightInt) = wordDetails
     val weight = weightInt.toString()
-    if (shortcut.isNullOrBlank()) {
-        if (locale == null) {
-            resolver.delete(
-                UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITHOUT_SHORTCUT_AND_WITH_ALL_LOCALES,
-                arrayOf(word, weight)
-            )
+    runCatching {
+        if (shortcut.isNullOrBlank()) {
+            if (locale == null) {
+                resolver.delete(
+                    UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITHOUT_SHORTCUT_AND_WITH_ALL_LOCALES,
+                    arrayOf(word, weight)
+                )
+            } else {
+                resolver.delete( // requires use of locale string for interaction with Android system
+                    UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITHOUT_SHORTCUT_AND_WITH_LOCALE,
+                    arrayOf(word, weight, locale.toString())
+                )
+            }
         } else {
-            resolver.delete( // requires use of locale string for interaction with Android system
-                UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITHOUT_SHORTCUT_AND_WITH_LOCALE,
-                arrayOf(word, weight, locale.toString())
-            )
-        }
-    } else {
-        if (locale == null) {
-            resolver.delete(
-                UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITH_SHORTCUT_AND_WITH_ALL_LOCALES,
-                arrayOf(word, shortcut, weight)
-            )
-        } else {
-            resolver.delete( // requires use of locale string for interaction with Android system
-                UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITH_SHORTCUT_AND_WITH_LOCALE,
-                arrayOf(word, shortcut, weight, locale.toString())
-            )
+            if (locale == null) {
+                resolver.delete(
+                    UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITH_SHORTCUT_AND_WITH_ALL_LOCALES,
+                    arrayOf(word, shortcut, weight)
+                )
+            } else {
+                resolver.delete( // requires use of locale string for interaction with Android system
+                    UserDictionary.Words.CONTENT_URI, DELETE_SELECTION_WITH_SHORTCUT_AND_WITH_LOCALE,
+                    arrayOf(word, shortcut, weight, locale.toString())
+                )
+            }
         }
     }
 }
@@ -238,7 +240,9 @@ private fun doesWordExist(word: String, locale: Locale?, context: Context): Bool
         // requires use of locale string (as opposed to more useful language tag) for interaction with Android system
         selectArgs = arrayOf(word, locale.toString())
     }
-    val cursor = context.contentResolver.query(UserDictionary.Words.CONTENT_URI, hasWordProjection, select, selectArgs, null)
+    val cursor = runCatching {
+        context.contentResolver.query(UserDictionary.Words.CONTENT_URI, hasWordProjection, select, selectArgs, null)
+    }.getOrNull()
     cursor.use {
         if (null == it) return false
         return it.count > 0
@@ -265,17 +269,18 @@ private data class Word(val word: String, val shortcut: String?, val weight: Int
 private fun getAll(locale: Locale?, context: Context): List<Word> {
     val cursor = createCursor(locale, context) ?: return emptyList()
 
-    if (!cursor.moveToFirst()) return emptyList()
-    val result = mutableListOf<Word>()
-    val wordIndex = cursor.getColumnIndexOrThrow(UserDictionary.Words.WORD)
-    val shortcutIndex = cursor.getColumnIndexOrThrow(UserDictionary.Words.SHORTCUT)
-    val frequencyIndex = cursor.getColumnIndexOrThrow(UserDictionary.Words.FREQUENCY)
-    while (!cursor.isAfterLast) {
-        result.add(Word(cursor.getString(wordIndex), cursor.getString(shortcutIndex), cursor.getInt(frequencyIndex)))
-        cursor.moveToNext()
+    cursor.use {
+        if (!it.moveToFirst()) return emptyList()
+        val result = mutableListOf<Word>()
+        val wordIndex = it.getColumnIndexOrThrow(UserDictionary.Words.WORD)
+        val shortcutIndex = it.getColumnIndexOrThrow(UserDictionary.Words.SHORTCUT)
+        val frequencyIndex = it.getColumnIndexOrThrow(UserDictionary.Words.FREQUENCY)
+        while (!it.isAfterLast) {
+            result.add(Word(it.getString(wordIndex), it.getString(shortcutIndex), it.getInt(frequencyIndex)))
+            it.moveToNext()
+        }
+        return result
     }
-    cursor.close()
-    return result
 }
 
 private fun createCursor(locale: Locale?, context: Context): Cursor? {
@@ -298,9 +303,11 @@ private fun createCursor(locale: Locale?, context: Context): Cursor? {
         selectArgs = arrayOf(locale.toString())
     }
 
-    return context.contentResolver.query(
-        UserDictionary.Words.CONTENT_URI, QUERY_PROJECTION, select, selectArgs, SORT_ORDER
-    )
+    return runCatching {
+        context.contentResolver.query(
+            UserDictionary.Words.CONTENT_URI, QUERY_PROJECTION, select, selectArgs, SORT_ORDER
+        )
+    }.getOrNull()
 }
 
 private val QUERY_PROJECTION =
