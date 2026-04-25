@@ -1100,6 +1100,8 @@ New dictionary:
     <string name="voice_input_enabled_summary">After adding your OpenRouter API key, enable this and long-press Return to record and transcribe</string>
     <string name="openrouter_api_key">OpenRouter API Key</string>
     <string name="openrouter_api_key_summary">Required before long-pressing Return to use voice input with your OpenRouter account</string>
+    <string name="openrouter_zdr_enabled">Use zero data retention</string>
+    <string name="openrouter_zdr_enabled_summary">Ask OpenRouter to use only zero data retention endpoints when the selected model supports them. If no ZDR route is available, WisprBoard retries normally so voice and Text Fix still work.</string>
     <string name="voice_model">Voice Model</string>
     <string name="voice_model_custom">Custom Model ID</string>
     <string name="voice_model_custom_summary">Only used when Voice Model is set to Custom</string>
@@ -1141,6 +1143,7 @@ New dictionary:
     <string name="voice_stop_recording">Stop recording</string>
     <string name="voice_validate_key">Validate key and model</string>
     <string name="voice_test_key_success">API key works</string>
+    <string name="voice_test_key_success_zdr_unavailable">API key works, but the selected model has no ZDR endpoint</string>
     <string name="voice_test_key_invalid">API key rejected</string>
     <string name="voice_test_key_invalid_model">Selected model is unavailable</string>
     <string name="voice_test_key_network_error">Network error while testing key</string>

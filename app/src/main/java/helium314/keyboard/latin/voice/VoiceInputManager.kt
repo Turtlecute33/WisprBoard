@@ -213,6 +213,7 @@ class VoiceInputManager(
         ) ?: Defaults.PREF_VOICE_EXPECTED_LANGUAGES
         val languageHintEnabled = prefs.getBoolean(Settings.PREF_VOICE_LANGUAGE_HINT, Defaults.PREF_VOICE_LANGUAGE_HINT)
         val spaceHeuristicEnabled = prefs.getBoolean(Settings.PREF_VOICE_SPACE_HEURISTIC, Defaults.PREF_VOICE_SPACE_HEURISTIC)
+        val useZdr = prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
 
         val model = resolveVoiceModel(selectedModel, customModel)
         if (model == null) {
@@ -230,6 +231,7 @@ class VoiceInputManager(
             model = model,
             systemPrompt = prompt.systemPrompt,
             runtimeInstruction = prompt.runtimeInstruction,
+            useZeroDataRetention = useZdr,
         )
         val requestToken = activeTranscriptionToken + 1
         activeTranscriptionToken = requestToken

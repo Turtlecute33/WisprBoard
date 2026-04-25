@@ -50,6 +50,7 @@ import helium314.keyboard.settings.preferences.rememberStringPreferenceState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 @Composable
 fun VoiceScreen(
@@ -83,6 +84,7 @@ internal fun buildVoiceScreenItems(
 ): List<Any?> = listOf(
     Settings.PREF_VOICE_INPUT_ENABLED,
     if (voiceInputEnabled) Settings.PREF_OPENROUTER_API_KEY else null,
+    if (voiceInputEnabled) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_TEST_KEY else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_MODEL else null,
     if (voiceInputEnabled && voiceModel == "custom") Settings.PREF_VOICE_MODEL_CUSTOM else null,
@@ -156,6 +158,9 @@ fun createVoiceSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_OPENROUTER_API_KEY, R.string.openrouter_api_key, R.string.openrouter_api_key_summary) {
         VoiceApiKeyPreference(it)
+    },
+    Setting(context, Settings.PREF_OPENROUTER_ZDR_ENABLED, R.string.openrouter_zdr_enabled, R.string.openrouter_zdr_enabled_summary) {
+        SwitchPreference(it, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
     },
     Setting(context, Settings.PREF_VOICE_MODEL, R.string.voice_model) { setting ->
         val ctx = LocalContext.current
@@ -424,11 +429,13 @@ private fun VoiceTestKeyPreference(setting: Setting) {
                 Toast.makeText(ctx, R.string.voice_error_no_model, Toast.LENGTH_SHORT).show()
                 return@Preference
             }
+            val useZdr = prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
             busy = true
             scope.launch {
-                val result = withContext(Dispatchers.IO) { probeApiKey(apiKey, model) }
+                val result = withContext(Dispatchers.IO) { probeApiKey(apiKey, model, useZdr) }
                 val msgRes = when (result) {
                     TestResult.OK -> R.string.voice_test_key_success
+                    TestResult.OK_ZDR_UNAVAILABLE -> R.string.voice_test_key_success_zdr_unavailable
                     TestResult.INVALID -> R.string.voice_test_key_invalid
                     TestResult.INVALID_MODEL -> R.string.voice_test_key_invalid_model
                     TestResult.NETWORK -> R.string.voice_test_key_network_error
@@ -440,9 +447,9 @@ private fun VoiceTestKeyPreference(setting: Setting) {
     )
 }
 
-private enum class TestResult { OK, INVALID, INVALID_MODEL, NETWORK }
+private enum class TestResult { OK, OK_ZDR_UNAVAILABLE, INVALID, INVALID_MODEL, NETWORK }
 
-private fun probeApiKey(apiKey: String, model: String): TestResult {
+private fun probeApiKey(apiKey: String, model: String, useZdr: Boolean): TestResult {
     val keyConn = (java.net.URL(OpenRouterClient.KEY_ENDPOINT).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
@@ -451,7 +458,7 @@ private fun probeApiKey(apiKey: String, model: String): TestResult {
     }
     return try {
         when (keyConn.responseCode) {
-            200 -> probeModel(apiKey, model)
+            200 -> probeModel(apiKey, model, useZdr)
             401, 403 -> TestResult.INVALID
             else -> TestResult.NETWORK
         }
@@ -462,7 +469,7 @@ private fun probeApiKey(apiKey: String, model: String): TestResult {
     }
 }
 
-private fun probeModel(apiKey: String, model: String): TestResult {
+private fun probeModel(apiKey: String, model: String, useZdr: Boolean): TestResult {
     val parts = model.trim().split("/", limit = 2)
     if (parts.size != 2 || parts.any { it.isBlank() }) {
         return TestResult.INVALID_MODEL
@@ -477,13 +484,35 @@ private fun probeModel(apiKey: String, model: String): TestResult {
     }
     return try {
         when (conn.responseCode) {
-            200 -> TestResult.OK
+            200 -> if (useZdr && !probeZdrModelSupport(apiKey, model)) TestResult.OK_ZDR_UNAVAILABLE else TestResult.OK
             401, 403 -> TestResult.INVALID
             404 -> TestResult.INVALID_MODEL
             else -> TestResult.NETWORK
         }
     } catch (_: Exception) {
         TestResult.NETWORK
+    } finally {
+        conn.disconnect()
+    }
+}
+
+private fun probeZdrModelSupport(apiKey: String, model: String): Boolean {
+    val conn = (java.net.URL(OpenRouterClient.ZDR_ENDPOINT).openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        setRequestProperty("Authorization", "Bearer $apiKey")
+        connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
+        readTimeout = 10_000
+    }
+    return try {
+        if (conn.responseCode != 200) return true
+        val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        val endpoints = JSONObject(body).optJSONArray("data") ?: return true
+        for (i in 0 until endpoints.length()) {
+            if (endpoints.optJSONObject(i)?.optString("model_id") == model) return true
+        }
+        false
+    } catch (_: Exception) {
+        true
     } finally {
         conn.disconnect()
     }

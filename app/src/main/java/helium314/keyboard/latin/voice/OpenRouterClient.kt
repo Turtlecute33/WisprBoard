@@ -28,6 +28,7 @@ class OpenRouterClient(
     private val model: String,
     private val systemPrompt: String,
     private val runtimeInstruction: String?,
+    private val useZeroDataRetention: Boolean = false,
     private val connectTimeoutMs: Int = DEFAULT_CONNECT_TIMEOUT_MS,
     private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
 ) {
@@ -38,6 +39,7 @@ class OpenRouterClient(
         const val API_BASE = "https://openrouter.ai/api/v1"
         private const val ENDPOINT = "$API_BASE/chat/completions"
         const val KEY_ENDPOINT = "$API_BASE/key"
+        const val ZDR_ENDPOINT = "$API_BASE/endpoints/zdr"
         /** Template: call [modelEndpointUrl] to fill in the model id safely. */
         fun modelEndpointUrl(author: String, slug: String): String = "$API_BASE/models/$author/$slug/endpoints"
         private const val STABLE_AUDIO_INSTRUCTION = "Process the attached audio input according to the system instructions. Return only the final answer."
@@ -85,11 +87,19 @@ class OpenRouterClient(
     fun transcribe(audioFile: File): String {
         var lastError: Exception? = null
         var nextDelayOverrideMs: Long = -1L
-        for (attempt in 0 until MAX_ATTEMPTS) {
+        var enforceZdr = useZeroDataRetention
+        var attempt = 0
+        while (attempt < MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
             try {
-                return performRequest(audioFile)
+                return performRequest(audioFile, enforceZdr)
             } catch (e: OpenRouterException) {
+                if (enforceZdr && e.isZdrRouteUnavailable()) {
+                    if (BuildConfig.DEBUG) Log.w(TAG, "ZDR route unavailable for $model; retrying without ZDR")
+                    enforceZdr = false
+                    lastError = e
+                    continue
+                }
                 if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
                 lastError = e
                 nextDelayOverrideMs = if ((e.statusCode == 429 || e.statusCode == 503) && e.retryAfterMs > 0) e.retryAfterMs else -1L
@@ -110,6 +120,7 @@ class OpenRouterClient(
                 Thread.currentThread().interrupt()
                 throw e
             }
+            attempt++
         }
         throw OpenRouterException(sanitizeForLog(lastError?.message ?: "Transcription failed"))
     }
@@ -126,11 +137,19 @@ class OpenRouterClient(
     fun fixText(userText: String): String {
         var lastError: Exception? = null
         var nextDelayOverrideMs: Long = -1L
-        for (attempt in 0 until MAX_ATTEMPTS) {
+        var enforceZdr = useZeroDataRetention
+        var attempt = 0
+        while (attempt < MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
             try {
-                return performTextRequest(userText)
+                return performTextRequest(userText, enforceZdr)
             } catch (e: OpenRouterException) {
+                if (enforceZdr && e.isZdrRouteUnavailable()) {
+                    if (BuildConfig.DEBUG) Log.w(TAG, "ZDR route unavailable for $model; retrying without ZDR")
+                    enforceZdr = false
+                    lastError = e
+                    continue
+                }
                 if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
                 lastError = e
                 nextDelayOverrideMs = if ((e.statusCode == 429 || e.statusCode == 503) && e.retryAfterMs > 0) e.retryAfterMs else -1L
@@ -150,11 +169,12 @@ class OpenRouterClient(
                 Thread.currentThread().interrupt()
                 throw e
             }
+            attempt++
         }
         throw OpenRouterException(sanitizeForLog(lastError?.message ?: "Request failed"))
     }
 
-    private fun performTextRequest(userText: String): String {
+    private fun performTextRequest(userText: String, enforceZdr: Boolean): String {
         val messages = JSONArray().apply {
             put(buildSystemMessage())
             put(buildTextMessage(userText))
@@ -162,6 +182,7 @@ class OpenRouterClient(
         val body = JSONObject().apply {
             put("model", model)
             put("messages", messages)
+            putProviderPreferences(this, enforceZdr)
         }.toString().toByteArray(Charsets.UTF_8)
 
         val connection = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
@@ -181,7 +202,7 @@ class OpenRouterClient(
                 val errorBody = readErrorBodyCapped(connection.errorStream)
                 if (BuildConfig.DEBUG) Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
                 val retryAfterMs = parseRetryAfterMs(connection.getHeaderField("Retry-After"))
-                throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs)
+                throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs, errorBody)
             }
             val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
             return parseContent(responseBody)
@@ -196,7 +217,7 @@ class OpenRouterClient(
      * streamed separately. The placeholder sentinel is split in half so both halves can be
      * emitted verbatim around the live base64 stream.
      */
-    private fun buildRequestEnvelope(): Pair<String, String> {
+    private fun buildRequestEnvelope(enforceZdr: Boolean): Pair<String, String> {
         val messages = JSONArray().apply {
             put(buildSystemMessage())
             put(buildTextMessage(STABLE_AUDIO_INSTRUCTION))
@@ -206,10 +227,16 @@ class OpenRouterClient(
         val body = JSONObject().apply {
             put("model", model)
             put("messages", messages)
+            putProviderPreferences(this, enforceZdr)
         }.toString()
         val placeholderIndex = body.indexOf(AUDIO_PLACEHOLDER)
         check(placeholderIndex >= 0) { "Audio placeholder not found in request body" }
         return body.substring(0, placeholderIndex) to body.substring(placeholderIndex + AUDIO_PLACEHOLDER.length)
+    }
+
+    private fun putProviderPreferences(body: JSONObject, enforceZdr: Boolean) {
+        if (!enforceZdr) return
+        body.put("provider", JSONObject().apply { put("zdr", true) })
     }
 
     private fun buildSystemMessage(): JSONObject {
@@ -251,8 +278,8 @@ class OpenRouterClient(
         }
     }
 
-    private fun performRequest(audioFile: File): String {
-        val (prefix, suffix) = buildRequestEnvelope()
+    private fun performRequest(audioFile: File, enforceZdr: Boolean): String {
+        val (prefix, suffix) = buildRequestEnvelope(enforceZdr)
         val connection = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
@@ -280,7 +307,7 @@ class OpenRouterClient(
                 val errorBody = readErrorBodyCapped(connection.errorStream)
                 if (BuildConfig.DEBUG) Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
                 val retryAfterMs = parseRetryAfterMs(connection.getHeaderField("Retry-After"))
-                throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs)
+                throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs, errorBody)
             }
 
             val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
@@ -416,10 +443,20 @@ class OpenRouterClient(
             -1L
         }
     }
+
+    private fun OpenRouterException.isZdrRouteUnavailable(): Boolean {
+        if (statusCode !in setOf(400, 404, 409, 422)) return false
+        val lowerBody = errorBody.lowercase(Locale.US)
+        return lowerBody.contains("zdr") ||
+            lowerBody.contains("zero data") ||
+            lowerBody.contains("data retention") ||
+            lowerBody.contains("no endpoint")
+    }
 }
 
 class OpenRouterException(
     message: String,
     val statusCode: Int = -1,
     val retryAfterMs: Long = -1L,
+    val errorBody: String = "",
 ) : Exception(message)

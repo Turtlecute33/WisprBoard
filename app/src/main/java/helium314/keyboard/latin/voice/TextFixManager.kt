@@ -155,6 +155,7 @@ class TextFixManager(
         }
         val prompt = (prefs.getString(Settings.PREF_TEXT_FIX_PROMPT, Defaults.PREF_TEXT_FIX_PROMPT) ?: Defaults.PREF_TEXT_FIX_PROMPT)
             .trim().ifEmpty { Defaults.PREF_TEXT_FIX_PROMPT }
+        val useZdr = prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
 
         state = State.WORKING
         callbacks.onWorking()
@@ -164,6 +165,7 @@ class TextFixManager(
             model = model,
             systemPrompt = prompt,
             runtimeInstruction = null,
+            useZeroDataRetention = useZdr,
         )
         val token = activeToken + 1
         activeToken = token

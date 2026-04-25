@@ -1,0 +1,3 @@
+* add default-on OpenRouter zero data retention routing for Voice and Text Fix
+* warn during model validation when the selected model has no ZDR endpoint
+* retry without ZDR when no ZDR route is available so keyboard features still work

@@ -34,6 +34,7 @@ class VoiceScreenLogicTest {
         )
 
         assertTrue(Settings.PREF_OPENROUTER_API_KEY in regularModelItems)
+        assertTrue(Settings.PREF_OPENROUTER_ZDR_ENABLED in regularModelItems)
         assertTrue(Settings.PREF_VOICE_MODEL in regularModelItems)
         assertTrue(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT in regularModelItems)
         assertTrue(Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY in regularModelItems)

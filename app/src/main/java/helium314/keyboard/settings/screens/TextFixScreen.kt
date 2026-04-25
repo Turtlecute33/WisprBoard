@@ -45,6 +45,7 @@ fun TextFixScreen(
         settings = listOf(
             Settings.PREF_TEXT_FIX_ENABLED,
             if (enabled) Settings.PREF_OPENROUTER_API_KEY else null,
+            if (enabled) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
             if (enabled) Settings.PREF_TEXT_FIX_MODEL else null,
             if (enabled && model == "custom") Settings.PREF_TEXT_FIX_MODEL_CUSTOM else null,
             if (enabled) Settings.PREF_TEXT_FIX_PROMPT else null,
@@ -76,6 +77,9 @@ fun createTextFixSettings(context: Context) = listOf(
             ctx.getString(R.string.voice_custom_model) to "custom",
         )
         ListPreference(setting, items, Defaults.PREF_TEXT_FIX_MODEL)
+    },
+    Setting(context, Settings.PREF_OPENROUTER_ZDR_ENABLED, R.string.openrouter_zdr_enabled, R.string.openrouter_zdr_enabled_summary) {
+        SwitchPreference(it, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
     },
     Setting(context, Settings.PREF_TEXT_FIX_MODEL_CUSTOM, R.string.text_fix_model_custom, R.string.text_fix_model_custom_summary) {
         TextInputPreference(it, Defaults.PREF_TEXT_FIX_MODEL_CUSTOM)
