@@ -16,9 +16,9 @@ An open-source Android keyboard with **AI Voice-to-Text** and **AI Text Fix**. B
 
 ## Why I built this
 
-I tried Wispr Flow, the trendy dictation app everyone talks about. The Android version is rough: slow, account-locked, and with a very clunky and low quality user experience. I wanted the same idea (talk, get clean text) but with a better UX and more customization.
+I tried Wispr Flow, the trendy dictation app everyone talks about. The Android version is rough: slow, account-locked, and with a very clunky and low-quality user experience. I wanted the same idea (talk, get clean text) but with a better UX and more customization.
 
-So I forked [HeliBoard](https://github.com/HeliBorg/HeliBoard) and added two AI buttons. You bring an OpenRouter key (more provider supported in the future) and you can choose you preferred speech model. WisprBoard asks for zero-data-retention endpoints by default, so nothing about you is logged or trained on. I also polished and optimized other minor flaws and bugs of the Heliboard codebase, offering a smoother experience and more secure and private backup and restore handling.
+So I forked [HeliBoard](https://github.com/Helium314/HeliBoard) and added two AI buttons. You bring an OpenRouter key (more providers supported in the future) and you can choose your preferred speech model. WisprBoard asks for zero-data-retention endpoints by default, so nothing about you is logged or trained on. I also polished and optimized other minor flaws and bugs of the HeliBoard codebase, offering a smoother experience and more secure and private backup and restore handling.
 
 No subscription. No account. No telemetry. Just a keyboard.
 
@@ -116,5 +116,5 @@ WisprBoard stands on the shoulders of giants:
 
 <div align="center">
 <br>
-<sub> Most of the codebase changes are made with the assistant of AI, even with Zero Data Retention always try to minimize sensible data disclosure with 3rd parties</sub>
+<sub>Most of the codebase changes are made with the assistance of AI. Even with Zero Data Retention, always try to minimize sensitive data disclosure to 3rd parties.</sub>
 </div>
