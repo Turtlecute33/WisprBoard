@@ -1,0 +1,3 @@
+Setup:
+- Adds an optional OpenRouter onboarding step for API key setup, microphone permission, Voice Input, and ZDR guidance.
+- Keeps the launcher icon inside the adaptive safe zone so aggressive launchers do not crop it.
