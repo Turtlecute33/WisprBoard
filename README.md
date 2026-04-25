@@ -1,18 +1,14 @@
 <div align="center">
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" alt="WisprBoard" width="140" />
+<img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="WisprBoard" width="140" />
 
 # WisprBoard
 
-### Speak any language. Fix any typo. Keep your data yours.
+### A keyboard with two superpowers, built for people who care about privacy.
 
-An open-source Android keyboard with AI voice-to-text and a one-tap text fixer — powered by [OpenRouter](https://openrouter.ai/), with **zero data retention on by default**.
+An open-source Android keyboard with **AI Voice-to-Text** and **AI Text Fix** — both powered by your own [OpenRouter](https://openrouter.ai/) key, with **zero data retention on by default**.
 
 [<img src="https://user-images.githubusercontent.com/663460/26973090-f8fdc986-4d14-11e7-995a-e7c5e79ed925.png" alt="Get APK from GitHub" height="64">](https://github.com/Turtlecute33/WisprBoard/releases/latest)
-
-<br>
-
-<img src="fastlane/metadata/android/en-US/images/featureGraphic.png" alt="WisprBoard banner" width="100%" />
 
 </div>
 
@@ -20,32 +16,41 @@ An open-source Android keyboard with AI voice-to-text and a one-tap text fixer �
 
 ## Why WisprBoard?
 
-Ever tried writing a long message in a language you only half-speak? Or hunted for that one word your fingers can't find on a tiny screen?
-
-**Talk instead. Let AI clean it up.**
-
-WisprBoard is the keyboard I wished existed: a normal Android keyboard with two extra buttons — a **mic** that transcribes your voice, and a **fix** button that rewrites whatever you just typed. Both run through your own [OpenRouter](https://openrouter.ai/) key, so you pick the model, you control the cost, and nothing routes through a server we own.
+I love open source. I don't love AI keyboards that quietly ship every word I type to someone else's server. So I forked the best open-source Android keyboard and added the two AI features I actually wanted — done the way I'd want them done: my key, my model, no middleman, nothing logged by default.
 
 No subscription. No account. No telemetry. Just a keyboard.
 
 <br>
 
-## ✨ What it does
+## 🎙️ Feature 1 — Voice-to-Text
 
-🎙️ **Voice to text, in any language**
-Long-press Return, tap the mic, speak. Perfect for writing in languages where typing is slow or your accent makes the system keyboard guess wrong.
+**For when you'd rather talk than type — but still want to send text.**
 
-✍️ **Text fixer & improver**
-Wrote something messy in your second language? Select it, hit fix, and the model rewrites it — typos gone, grammar tidy, tone intact.
+You're in a meeting and a co-worker pings you. You're walking down the street. You're somewhere a voice note would feel rude or out of place. Long-press Return, tap the mic, speak — your words land in the chat as polished text. The recipient gets a normal message; you didn't have to thumb-type a paragraph.
 
-🌍 **Bring your own model**
-Whisper, GPT, Claude, Gemini, Llama — whatever OpenRouter offers. Swap models the moment a better one ships.
+- Pick any speech model OpenRouter offers (Whisper, Gemini, etc.)
+- Add a custom prompt or vocabulary so it nails names and jargon
+- Audio is deleted from the device the moment it's sent
 
-🔒 **Zero data retention by default**
-WisprBoard asks OpenRouter to use only [zero-data-retention endpoints](https://openrouter.ai/docs/use-cases/zero-data-retention) when your model supports them. Your audio and text aren't logged or stored. You can turn this off, but it's on out of the box.
+<br>
 
-🪶 **Everything HeliBoard does**
-Built on the excellent [HeliBoard](https://github.com/Helium314/HeliBoard) — multilingual layouts, glide typing, suggestions, themes. WisprBoard adds AI on top without taking anything away.
+## ✍️ Feature 2 — AI Text Fix
+
+**For when you're writing in a language that isn't yours — or just typed too fast.**
+
+You're chatting with someone in English, Italian, German, whatever isn't your strongest. You hammered out a rough draft. Select it, long-press Return, hit Fix — it comes back as a clean, well-formatted message in the same language. Typos gone. Grammar tidy. Tone intact.
+
+- Works in every language your model supports
+- Use it for typos, clumsy phrasing, or shifting tone (formal ↔ casual)
+- Blocked in password fields; flashes a confirmation before anything leaves your device
+
+<br>
+
+## 🔒 Both features, one promise: Zero Data Retention
+
+Voice and Text Fix both run through OpenRouter — and WisprBoard asks OpenRouter for **zero-data-retention endpoints by default**. When your model offers a [ZDR route](https://openrouter.ai/docs/use-cases/zero-data-retention), your audio and text aren't logged, stored, or used for training. If a model doesn't have one, WisprBoard tells you and falls back so things still work — and you can turn the strict setting off if you'd rather.
+
+Your OpenRouter key is encrypted with the Android Keystore, excluded from cloud backups, and never written to logs. AI is opt-in: both features stay off until you paste a key in.
 
 <br>
 
@@ -64,17 +69,11 @@ If you don't want AI features, stay on HeliBoard — it's wonderful as-is.
 
 <br>
 
-## 🛡️ Privacy, plainly
+## 🛡️ The honest privacy footnote
 
-I built this because I love open source and I don't trust closed AI keyboards with my words. Here's the honest version:
+WisprBoard has no backend, no analytics, no tracking. But once your audio or selected text reaches OpenRouter and the model provider, their policies apply. [Read OpenRouter's policy](https://openrouter.ai/privacy) before pointing this at anything sensitive.
 
-- **No backend.** WisprBoard talks straight to OpenRouter. There's no WisprBoard server in between.
-- **No telemetry, no analytics, no tracking.** Ever.
-- **Your key stays yours.** Encrypted via Android Keystore, excluded from cloud backups, never written to logs.
-- **AI is opt-in.** Both features are off until you paste a key.
-- **ZDR by default.** Voice and text travel only through endpoints that don't log them, when the model offers it. If it doesn't, WisprBoard tells you and falls back so things still work.
-
-What WisprBoard *can't* promise: once your audio reaches OpenRouter and the model provider, their policies apply. [Read OpenRouter's policy](https://openrouter.ai/privacy) before pointing this at sensitive content.
+Plus, of course: **everything HeliBoard already does** — multilingual layouts, glide typing, suggestions, themes — built on the excellent [HeliBoard](https://github.com/Helium314/HeliBoard). If you don't want AI features, stay there; it's wonderful as-is.
 
 <br>
 
