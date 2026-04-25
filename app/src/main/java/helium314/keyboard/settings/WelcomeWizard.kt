@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.provider.Settings
+import android.provider.Settings as AndroidSettings
+import android.widget.Toast
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,6 +37,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,14 +52,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.permissions.PermissionsUtil
+import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.JniUtils
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.UncachedInputMethodManagerUtils
+import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
+import helium314.keyboard.latin.voice.SecretStore
+import helium314.keyboard.settings.dialogs.ConfirmationDialog
+import helium314.keyboard.settings.dialogs.TextInputDialog
 
 @Composable
 fun WelcomeWizard(
@@ -64,9 +76,17 @@ fun WelcomeWizard(
 ) {
     val ctx = LocalContext.current
     val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    var openRouterSkipped by rememberSaveable { mutableStateOf(false) }
+    fun isOpenRouterReady(): Boolean {
+        val prefs = ctx.prefs()
+        return SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY).isNotBlank()
+                && prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED)
+                && PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO)
+    }
     fun determineStep(): Int = when {
         !UncachedInputMethodManagerUtils.isThisImeEnabled(ctx, imm) -> 0
         !UncachedInputMethodManagerUtils.isThisImeCurrent(ctx, imm) -> 2
+        isOpenRouterReady() || openRouterSkipped -> 4
         else -> 3
     }
     var step by rememberSaveable { mutableIntStateOf(determineStep()) }
@@ -110,9 +130,9 @@ fun WelcomeWizard(
     @Composable
     fun ColumnScope.Step(step: Int, title: String, instruction: String, actionText: String, icon: Painter, action: () -> Unit) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("1", color = if (step == 1) titleColor else textColorDim)
-            Text("2", color = if (step == 2) titleColor else textColorDim)
-            Text("3", color = if (step == 3) titleColor else textColorDim)
+            (1..4).forEach {
+                Text(it.toString(), color = if (step == it) titleColor else textColorDim)
+            }
         }
         Column(Modifier
             .background(color = stepBackgroundColor)
@@ -149,7 +169,7 @@ fun WelcomeWizard(
                         painterResource(R.drawable.ic_setup_key)
                     ) {
                         val intent = Intent()
-                        intent.action = Settings.ACTION_INPUT_METHOD_SETTINGS
+                        intent.action = AndroidSettings.ACTION_INPUT_METHOD_SETTINGS
                         intent.addCategory(Intent.CATEGORY_DEFAULT)
                         launcher.launch(intent)
                     }
@@ -177,7 +197,22 @@ fun WelcomeWizard(
                         )
                         Text(stringResource(R.string.setup_step3_action), Modifier.weight(1f))
                     }
-                } else { // step 3
+                } else if (step == 3) {
+                    OpenRouterSetupStep(
+                        stepBackgroundColor = stepBackgroundColor,
+                        textColor = textColor,
+                        titleColor = titleColor,
+                        onConfigured = { step = 4 },
+                        onSkip = {
+                            openRouterSkipped = true
+                            step = 4
+                        },
+                        onOpenVoiceSettings = {
+                            close()
+                            SettingsDestination.navigateTo(SettingsDestination.Voice)
+                        },
+                    )
+                } else { // step 4
                     Step(
                         step,
                         stringResource(R.string.setup_step3_title),
@@ -232,6 +267,155 @@ fun WelcomeWizard(
                     }
             }
         }
+    }
+}
+
+@Composable
+private fun OpenRouterSetupStep(
+    stepBackgroundColor: Color,
+    textColor: Color,
+    titleColor: Color,
+    onConfigured: () -> Unit,
+    onSkip: () -> Unit,
+    onOpenVoiceSettings: () -> Unit,
+) {
+    val ctx = LocalContext.current
+    val prefs = ctx.prefs()
+    var showApiKeyDialog by rememberSaveable { mutableStateOf(false) }
+    var showMicRationale by rememberSaveable { mutableStateOf(false) }
+    var apiKeySet by remember {
+        mutableStateOf(SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY).isNotBlank())
+    }
+    var micGranted by remember {
+        mutableStateOf(PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO))
+    }
+    var voiceEnabled by remember {
+        mutableStateOf(prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED))
+    }
+    val secureStorageMessage = stringResource(R.string.voice_error_secure_storage_unavailable)
+    val permissionDeniedMessage = stringResource(R.string.voice_error_no_permission)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        micGranted = granted
+        if (granted) {
+            prefs.edit { putBoolean(Settings.PREF_VOICE_INPUT_ENABLED, true) }
+            voiceEnabled = true
+            if (apiKeySet) onConfigured()
+        } else {
+            Toast.makeText(ctx, permissionDeniedMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (showApiKeyDialog) {
+        TextInputDialog(
+            onDismissRequest = { showApiKeyDialog = false },
+            onConfirmed = {
+                val key = it.trim()
+                SecretStore.setApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, key)
+                apiKeySet = key.isNotBlank()
+                showApiKeyDialog = false
+                if (key.isNotBlank() && micGranted && voiceEnabled) onConfigured()
+            },
+            initialText = SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY),
+            title = { Text(stringResource(R.string.openrouter_api_key)) },
+            singleLine = true,
+            isPassword = true,
+        )
+    }
+    if (showMicRationale) {
+        ConfirmationDialog(
+            onDismissRequest = { showMicRationale = false },
+            onConfirmed = {
+                showMicRationale = false
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            },
+            title = { Text(stringResource(R.string.voice_mic_rationale_title)) },
+            content = { Text(stringResource(R.string.voice_mic_rationale_message)) },
+            confirmButtonText = stringResource(R.string.voice_mic_rationale_confirm),
+        )
+    }
+
+    @Composable
+    fun ActionRow(actionText: String, icon: Painter, action: () -> Unit) {
+        Row(
+            Modifier.clickable { action() }
+                .background(color = stepBackgroundColor)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, Modifier.padding(end = 6.dp).size(32.dp), tint = textColor)
+            Text(actionText, Modifier.weight(1f))
+        }
+    }
+
+    Column {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            (1..4).forEach {
+                Text(it.toString(), color = if (it == 3) titleColor else textColor.copy(alpha = 0.5f))
+            }
+        }
+        Column(
+            Modifier
+                .background(color = stepBackgroundColor)
+                .padding(16.dp)
+        ) {
+            Text(stringResource(R.string.setup_openrouter_title))
+            Text(
+                stringResource(R.string.setup_openrouter_instruction),
+                style = MaterialTheme.typography.bodyLarge.merge(color = textColor)
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(
+                    R.string.setup_openrouter_status,
+                    if (apiKeySet) stringResource(R.string.setup_status_done) else stringResource(R.string.setup_status_missing),
+                    if (micGranted) stringResource(R.string.setup_status_done) else stringResource(R.string.setup_status_missing),
+                    if (voiceEnabled) stringResource(R.string.setup_status_done) else stringResource(R.string.setup_status_missing),
+                ),
+                style = MaterialTheme.typography.bodyMedium.merge(color = textColor)
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        ActionRow(
+            if (apiKeySet) stringResource(R.string.setup_openrouter_update_key) else stringResource(R.string.setup_openrouter_add_key),
+            painterResource(R.drawable.ic_settings_preferences)
+        ) {
+            if (!SecretStore.isSecureStorageAvailable(ctx)) {
+                Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
+            } else {
+                showApiKeyDialog = true
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        ActionRow(
+            if (micGranted && voiceEnabled) stringResource(R.string.setup_openrouter_voice_ready) else stringResource(R.string.setup_openrouter_enable_voice),
+            painterResource(R.drawable.sym_keyboard_voice_rounded)
+        ) {
+            if (!SecretStore.isSecureStorageAvailable(ctx)) {
+                Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
+                return@ActionRow
+            }
+            if (micGranted) {
+                prefs.edit { putBoolean(Settings.PREF_VOICE_INPUT_ENABLED, true) }
+                voiceEnabled = true
+                if (apiKeySet) onConfigured()
+            } else {
+                showMicRationale = true
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        ActionRow(
+            stringResource(R.string.setup_openrouter_voice_settings),
+            painterResource(R.drawable.ic_settings_default),
+            onOpenVoiceSettings
+        )
+        Spacer(Modifier.height(4.dp))
+        ActionRow(
+            stringResource(R.string.setup_openrouter_skip),
+            painterResource(R.drawable.ic_setup_check),
+            onSkip
+        )
     }
 }
 
