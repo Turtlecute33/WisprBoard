@@ -56,7 +56,7 @@ Your OpenRouter key is encrypted with the Android Keystore, excluded from cloud 
 
 <br>
 
-## 🆚 WisprBoard vs HeliBoard
+## WisprBoard vs HeliBoard
 
 |                                         | HeliBoard | WisprBoard |
 | --------------------------------------- | :-------: | :--------: |
@@ -110,7 +110,7 @@ WisprBoard stands on the shoulders of giants:
 
 <br>
 
-## 📜 License
+## License
 
 [GPL v3](/LICENSE). AOSP-derived portions are also available under [Apache 2.0](LICENSE-Apache-2.0).
 
