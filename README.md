@@ -1,18 +1,55 @@
+<div align="center">
+
+<img src="fastlane/metadata/android/en-US/images/icon.png" alt="WisprBoard" width="140" />
+
 # WisprBoard
 
-An Android keyboard that transcribes your voice and fixes your text. Pick any model on [OpenRouter](https://openrouter.ai/) and point the keyboard at it.
+### Speak any language. Fix any typo. Keep your data yours.
 
-[<img src="https://user-images.githubusercontent.com/663460/26973090-f8fdc986-4d14-11e7-995a-e7c5e79ed925.png" alt="Get APK from GitHub" height="70">](https://github.com/Turtlecute33/WisprBoard/releases/latest)
+An open-source Android keyboard with AI voice-to-text and a one-tap text fixer — powered by [OpenRouter](https://openrouter.ai/), with **zero data retention on by default**.
 
-## Why this exists
+[<img src="https://user-images.githubusercontent.com/663460/26973090-f8fdc986-4d14-11e7-995a-e7c5e79ed925.png" alt="Get APK from GitHub" height="64">](https://github.com/Turtlecute33/WisprBoard/releases/latest)
 
-I used Wispr Flow. It was slow, clunky, locked behind an account, and the transcription quality didn't match the price. I wanted a plain Android keyboard with a mic button and a "fix this" button, both wired to OpenRouter with my own key. Pick a better model, get better results. Swap it whenever something new ships. No Wispr-branded cloud. No subscription. No desktop app to babysit.
+<br>
 
-It isn't local. It isn't private in the offline sense. Your audio and selected text go to OpenRouter, because that's where transcription and rewriting happen. The difference from Wispr Flow: you pick the model, you own the key, and no WisprBoard server sits in between.
+<img src="fastlane/metadata/android/en-US/images/featureGraphic.png" alt="WisprBoard banner" width="100%" />
 
-WisprBoard is a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard), which is a great open-source keyboard without voice or text fix. WisprBoard adds those two things.
+</div>
 
-## WisprBoard vs HeliBoard
+<br>
+
+## Why WisprBoard?
+
+Ever tried writing a long message in a language you only half-speak? Or hunted for that one word your fingers can't find on a tiny screen?
+
+**Talk instead. Let AI clean it up.**
+
+WisprBoard is the keyboard I wished existed: a normal Android keyboard with two extra buttons — a **mic** that transcribes your voice, and a **fix** button that rewrites whatever you just typed. Both run through your own [OpenRouter](https://openrouter.ai/) key, so you pick the model, you control the cost, and nothing routes through a server we own.
+
+No subscription. No account. No telemetry. Just a keyboard.
+
+<br>
+
+## ✨ What it does
+
+🎙️ **Voice to text, in any language**
+Long-press Return, tap the mic, speak. Perfect for writing in languages where typing is slow or your accent makes the system keyboard guess wrong.
+
+✍️ **Text fixer & improver**
+Wrote something messy in your second language? Select it, hit fix, and the model rewrites it — typos gone, grammar tidy, tone intact.
+
+🌍 **Bring your own model**
+Whisper, GPT, Claude, Gemini, Llama — whatever OpenRouter offers. Swap models the moment a better one ships.
+
+🔒 **Zero data retention by default**
+WisprBoard asks OpenRouter to use only [zero-data-retention endpoints](https://openrouter.ai/docs/use-cases/zero-data-retention) when your model supports them. Your audio and text aren't logged or stored. You can turn this off, but it's on out of the box.
+
+🪶 **Everything HeliBoard does**
+Built on the excellent [HeliBoard](https://github.com/Helium314/HeliBoard) — multilingual layouts, glide typing, suggestions, themes. WisprBoard adds AI on top without taking anything away.
+
+<br>
+
+## 🆚 WisprBoard vs HeliBoard
 
 |                                         | HeliBoard | WisprBoard |
 | --------------------------------------- | :-------: | :--------: |
@@ -20,37 +57,39 @@ WisprBoard is a fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard), whic
 | Installs alongside HeliBoard            |     —     |     ✅      |
 | Voice-to-text via OpenRouter            |     —     |     ✅      |
 | Text Fix (rewrite selected text)        |     —     |     ✅      |
-| API key stored encrypted on-device      |     —     |     ✅      |
+| Zero Data Retention enforced by default |     —     |     ✅      |
+| API key encrypted on-device             |     —     |     ✅      |
 
-If you don't want AI features, stay on HeliBoard.
+If you don't want AI features, stay on HeliBoard — it's wonderful as-is.
 
-## Voice
+<br>
 
-Long-press **Return**, tap the mic, speak, release. Audio uploads over HTTPS to [OpenRouter](https://openrouter.ai/) with your API key. The transcript lands in the field. The local recording gets deleted.
+## 🛡️ Privacy, plainly
 
-Pick any speech model OpenRouter offers. Set a custom prompt or dictionary. Swap models whenever something better ships.
+I built this because I love open source and I don't trust closed AI keyboards with my words. Here's the honest version:
 
-## Text Fix
+- **No backend.** WisprBoard talks straight to OpenRouter. There's no WisprBoard server in between.
+- **No telemetry, no analytics, no tracking.** Ever.
+- **Your key stays yours.** Encrypted via Android Keystore, excluded from cloud backups, never written to logs.
+- **AI is opt-in.** Both features are off until you paste a key.
+- **ZDR by default.** Voice and text travel only through endpoints that don't log them, when the model offers it. If it doesn't, WisprBoard tells you and falls back so things still work.
 
-Select the text, long-press **Return**, the model rewrites it in place. Same setup as voice: your key, your model, your prompt. The feature is blocked in password fields, and a one-tap confirmation flashes before anything leaves the device.
+What WisprBoard *can't* promise: once your audio reaches OpenRouter and the model provider, their policies apply. [Read OpenRouter's policy](https://openrouter.ai/privacy) before pointing this at sensitive content.
 
-Use it for typos, clumsy phrasing, wrong tone.
+<br>
 
-## About privacy
+## 🚀 Get started
 
-Voice and Text Fix send data to OpenRouter. That's how they work. WisprBoard has no backend, no analytics, no telemetry, but OpenRouter and the model you pick will see your audio and selected text. Their logging depends on the model. [Check their policy](https://openrouter.ai/privacy) before pointing this at sensitive content.
+1. **Download** the APK from [Releases](https://github.com/Turtlecute33/WisprBoard/releases/latest).
+2. **Enable** WisprBoard in *Settings → System → Keyboards*.
+3. **Add a key** from [openrouter.ai/keys](https://openrouter.ai/keys) into *WisprBoard Settings → Voice Input*.
+4. **Long-press Return** → tap the mic → start talking.
 
-Your API key is encrypted with the Android Keystore, excluded from cloud backup and device transfer, and never written to logs. Both AI features are opt-in and off until you add a key.
+That's it. WisprBoard installs side-by-side with HeliBoard, so you can keep both.
 
-## Install
+<br>
 
-1. Grab the APK from [Releases](https://github.com/Turtlecute33/WisprBoard/releases/latest). Each release ships `SHA256SUMS.txt` if you want to verify it.
-2. Enable WisprBoard in **Settings → System → Keyboard**.
-3. For voice: create a key at [openrouter.ai/keys](https://openrouter.ai/keys), paste it into **WisprBoard Settings → Voice Input**, long-press Return, tap the mic.
-
-WisprBoard uses its own app ID, so it installs next to HeliBoard instead of replacing it.
-
-## Build from source
+## 🛠️ Build from source
 
 ```bash
 git clone https://github.com/Turtlecute33/WisprBoard.git
@@ -60,19 +99,30 @@ cd WisprBoard
 
 Needs JDK 17, Android SDK 35, NDK `28.0.13004108`. APK lands in `app/build/outputs/apk/debug/`.
 
-## Contributing
+<br>
 
-Issues and PRs welcome. A few rules inherited from upstream:
+## 💛 Open source, top to bottom
 
-- The input path (`InputLogic`, `PointerTracker`, `RichInputConnection`, dictionary facilitator) is fragile. New behavior should be opt-in.
+WisprBoard stands on the shoulders of giants:
+
+- [**HeliBoard**](https://github.com/Helium314/HeliBoard) — the keyboard this fork is built on.
+- [**OpenBoard**](https://github.com/openboard-team/openboard) and [**AOSP LatinIME**](https://android.googlesource.com/platform/packages/inputmethods/LatinIME/) — the foundation of both.
+- Original icon by [Fabian OvrWrt](https://github.com/FabianOvrWrt) and [The Eclectic Dyslexic](https://github.com/the-eclectic-dyslexic).
+
+Issues and PRs are welcome. A few rules inherited from upstream:
+
+- The input path is fragile and perf-sensitive. New behavior should be opt-in.
 - One purpose per PR.
 - No new internet permissions, no proprietary blobs, no telemetry.
-- Translations live on Weblate upstream. Don't edit them here. New English strings are fine.
+- Translations live on Weblate upstream — please don't edit them here.
 
-## License
+<br>
+
+## 📜 License
 
 [GPL v3](/LICENSE). AOSP-derived portions are also available under [Apache 2.0](LICENSE-Apache-2.0).
 
-## Credits
-
-Built on [HeliBoard](https://github.com/HeliBorg/HeliBoard), [OpenBoard](https://github.com/openboard-team/openboard), and [AOSP LatinIME](https://android.googlesource.com/platform/packages/inputmethods/LatinIME/). Original icon by [Fabian OvrWrt](https://github.com/FabianOvrWrt) and [The Eclectic Dyslexic](https://github.com/the-eclectic-dyslexic).
+<div align="center">
+<br>
+<sub>Made with care for everyone who writes in more than one language.</sub>
+</div>
