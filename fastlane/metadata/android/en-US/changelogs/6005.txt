@@ -1,0 +1,2 @@
+Fixes:
+- Replaced the launcher icon with a clean minimal line icon based on the desktop reference.
