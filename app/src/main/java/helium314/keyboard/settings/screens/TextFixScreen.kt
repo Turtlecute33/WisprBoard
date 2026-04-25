@@ -78,9 +78,6 @@ fun createTextFixSettings(context: Context) = listOf(
         )
         ListPreference(setting, items, Defaults.PREF_TEXT_FIX_MODEL)
     },
-    Setting(context, Settings.PREF_OPENROUTER_ZDR_ENABLED, R.string.openrouter_zdr_enabled, R.string.openrouter_zdr_enabled_summary) {
-        SwitchPreference(it, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
-    },
     Setting(context, Settings.PREF_TEXT_FIX_MODEL_CUSTOM, R.string.text_fix_model_custom, R.string.text_fix_model_custom_summary) {
         TextInputPreference(it, Defaults.PREF_TEXT_FIX_MODEL_CUSTOM)
     },

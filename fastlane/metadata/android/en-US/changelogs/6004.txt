@@ -1,0 +1,2 @@
+* fix a settings crash caused by duplicate OpenRouter ZDR preference registration
+* replace launcher artwork with a minimal keyboard key and microphone icon
