@@ -99,7 +99,11 @@ class OpenRouterClient(
         while (attempt < MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
             try {
-                return if (provider == AiProvider.PAYPERQ) performPayPerQTranscription(audioFile) else performRequest(audioFile, enforceZdr)
+                return if (provider == AiProvider.PAYPERQ && "/" !in model) {
+                    performPayPerQTranscription(audioFile)
+                } else {
+                    performRequest(audioFile, enforceZdr)
+                }
             } catch (e: OpenRouterException) {
                 if (provider == AiProvider.OPENROUTER && enforceZdr && e.isZdrRouteUnavailable()) {
                     if (BuildConfig.DEBUG) Log.w(TAG, "ZDR route unavailable for $model; retrying without ZDR")

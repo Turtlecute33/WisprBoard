@@ -1,0 +1,3 @@
+* Update Voice Model choices with stronger audio-to-text options for OpenRouter and PayPerQ
+* Show pricing directly in the voice model picker
+* Route PayPerQ multimodal audio models through chat audio requests

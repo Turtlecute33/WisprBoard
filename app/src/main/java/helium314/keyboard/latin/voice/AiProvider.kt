@@ -25,7 +25,7 @@ internal fun AiProvider.defaultApiKey(): String = when (this) {
 
 internal fun resolveProviderModel(provider: AiProvider, selectedModel: String, customModel: String, fallback: String): String? {
     val resolved = resolveVoiceModel(selectedModel, customModel) ?: return null
-    if (provider == AiProvider.PAYPERQ && selectedModel != "custom" && "/" in resolved) {
+    if (provider == AiProvider.PAYPERQ && selectedModel != "custom" && resolved.startsWith("google/")) {
         return fallback
     }
     return resolved

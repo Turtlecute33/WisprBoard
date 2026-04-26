@@ -218,7 +218,7 @@ class VoiceInputManager(
         val useZdr = provider == AiProvider.OPENROUTER &&
             prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
 
-        val model = resolveProviderModel(provider, selectedModel, customModel, fallback = "nova-3")
+        val model = resolveProviderModel(provider, selectedModel, customModel, fallback = "mistralai/voxtral-small-24b-2507")
         if (model == null) {
             state = State.IDLE
             callbacks.onFinished()
