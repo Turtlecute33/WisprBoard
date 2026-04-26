@@ -1,0 +1,3 @@
+* Update Text Fix model choices for OpenRouter and PayPerQ
+* Default Text Fix to Claude Haiku 4.5 on OpenRouter and Private Gemma4 31B on PayPerQ
+* Use OpenRouter data-collection-deny routing for zero data retention requests
