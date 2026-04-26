@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  All app traffic must use TLS. The keyboard only ever talks to OpenRouter,
+  All app traffic must use TLS. The keyboard only ever talks to the selected AI provider,
   and it is always HTTPS - no cleartext is acceptable.
 -->
 <network-security-config>

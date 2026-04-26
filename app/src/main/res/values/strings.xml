@@ -1097,9 +1097,14 @@ New dictionary:
     <!-- Voice Input -->
     <string name="voice_input_title">Voice Input</string>
     <string name="voice_input_enabled">Enable Voice Input</string>
-    <string name="voice_input_enabled_summary">After adding your OpenRouter API key, enable this and long-press Return to record and transcribe</string>
+    <string name="voice_input_enabled_summary">After adding a provider API key, enable this and long-press Return to record and transcribe</string>
+    <string name="ai_provider">AI Provider</string>
+    <string name="ai_provider_openrouter">OpenRouter</string>
+    <string name="ai_provider_payperq">PayPerQ</string>
     <string name="openrouter_api_key">OpenRouter API Key</string>
     <string name="openrouter_api_key_summary">Required before long-pressing Return to use voice input with your OpenRouter account</string>
+    <string name="payperq_api_key">PayPerQ API Key</string>
+    <string name="payperq_api_key_summary">Required before using voice input or Text Fix with your PayPerQ account</string>
     <string name="openrouter_zdr_enabled">Use zero data retention</string>
     <string name="openrouter_zdr_enabled_summary">Ask OpenRouter to use only zero data retention endpoints when the selected model supports them. If no ZDR route is available, WisprBoard retries normally so voice and Text Fix still work.</string>
     <string name="voice_model">Voice Model</string>
@@ -1113,7 +1118,7 @@ New dictionary:
     <string name="voice_expected_languages_summary">Optional hint for which languages you might speak, separated by commas or new lines. The model will transcribe in the detected language and will not translate. Example: English or English, Italian</string>
     <string name="voice_recording">Recording…</string>
     <string name="voice_transcribing">Transcribing…</string>
-    <string name="voice_error_no_api_key">Set OpenRouter API key in settings</string>
+    <string name="voice_error_no_api_key">Set provider API key in settings</string>
     <string name="voice_error_no_model">Choose a voice model in settings</string>
     <string name="voice_error_no_audio">No audio captured</string>
     <string name="voice_error_too_short">Recording too short</string>
@@ -1124,7 +1129,7 @@ New dictionary:
     <string name="voice_error_transcription_failed">Transcription failed</string>
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
     <string name="voice_mic_rationale_title">Microphone access</string>
-    <string name="voice_mic_rationale_message">WisprBoard records audio only while you hold the voice button. The recording is sent over HTTPS to OpenRouter for transcription using the API key you supply; it is not proxied by any WisprBoard server. You can revoke microphone access at any time from Android\'s app settings.</string>
+    <string name="voice_mic_rationale_message">WisprBoard records audio only while you hold the voice button. The recording is sent over HTTPS to your selected AI provider for transcription using the API key you supply; it is not proxied by any WisprBoard server. You can revoke microphone access at any time from Android\'s app settings.</string>
     <string name="voice_mic_rationale_confirm">Allow microphone</string>
     <string name="voice_custom_model">Custom</string>
     <string name="voice_max_duration">Maximum recording length</string>
@@ -1175,7 +1180,7 @@ New dictionary:
     <!-- Text Fix -->
     <string name="settings_screen_text_fix">Text Fix</string>
     <string name="text_fix_enabled">Enable Text Fix</string>
-    <string name="text_fix_enabled_summary">After adding your OpenRouter API key, enable this. Select text and long-press Return to fix it.</string>
+    <string name="text_fix_enabled_summary">After adding a provider API key, enable this. Select text and long-press Return to fix it.</string>
     <string name="text_fix_model">Text Fix Model</string>
     <string name="text_fix_model_custom">Custom Model ID</string>
     <string name="text_fix_model_custom_summary">Only used when Text Fix Model is set to Custom</string>
@@ -1190,6 +1195,6 @@ New dictionary:
     <string name="text_fix_error_unsupported_field">Text Fix is unavailable in this field</string>
     <string name="text_fix_error_empty">The model returned no text</string>
     <string name="text_fix_error_failed">Text fix failed</string>
-    <string name="voice_consent_prompt">Tap again to confirm — audio will be sent to OpenRouter with your API key.</string>
-    <string name="text_fix_consent_prompt">Tap again to confirm — your selected text will be sent to OpenRouter with your API key.</string>
+    <string name="voice_consent_prompt">Tap again to confirm — audio will be sent to your selected AI provider with your API key.</string>
+    <string name="text_fix_consent_prompt">Tap again to confirm — your selected text will be sent to your selected AI provider with your API key.</string>
 </resources>

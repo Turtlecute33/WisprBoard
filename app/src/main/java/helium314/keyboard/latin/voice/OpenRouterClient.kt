@@ -8,6 +8,7 @@ import helium314.keyboard.latin.utils.Log
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.DataOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.InterruptedIOException
@@ -18,6 +19,7 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
 
 /**
  * Sends audio to OpenRouter's chat completions API for transcription.
@@ -28,6 +30,7 @@ class OpenRouterClient(
     private val model: String,
     private val systemPrompt: String,
     private val runtimeInstruction: String?,
+    private val provider: AiProvider = AiProvider.OPENROUTER,
     private val useZeroDataRetention: Boolean = false,
     private val connectTimeoutMs: Int = DEFAULT_CONNECT_TIMEOUT_MS,
     private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
@@ -40,6 +43,10 @@ class OpenRouterClient(
         private const val ENDPOINT = "$API_BASE/chat/completions"
         const val KEY_ENDPOINT = "$API_BASE/key"
         const val ZDR_ENDPOINT = "$API_BASE/endpoints/zdr"
+        const val PAYPERQ_API_BASE = "https://api.ppq.ai"
+        const val PAYPERQ_CHAT_ENDPOINT = "$PAYPERQ_API_BASE/chat/completions"
+        const val PAYPERQ_TRANSCRIPTION_ENDPOINT = "$PAYPERQ_API_BASE/v1/audio/transcriptions"
+        const val PAYPERQ_AUDIO_MODELS_ENDPOINT = "$PAYPERQ_API_BASE/v1/audio/models"
         /** Template: call [modelEndpointUrl] to fill in the model id safely. */
         fun modelEndpointUrl(author: String, slug: String): String = "$API_BASE/models/$author/$slug/endpoints"
         private const val STABLE_AUDIO_INSTRUCTION = "Process the attached audio input according to the system instructions. Return only the final answer."
@@ -92,9 +99,9 @@ class OpenRouterClient(
         while (attempt < MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
             try {
-                return performRequest(audioFile, enforceZdr)
+                return if (provider == AiProvider.PAYPERQ) performPayPerQTranscription(audioFile) else performRequest(audioFile, enforceZdr)
             } catch (e: OpenRouterException) {
-                if (enforceZdr && e.isZdrRouteUnavailable()) {
+                if (provider == AiProvider.OPENROUTER && enforceZdr && e.isZdrRouteUnavailable()) {
                     if (BuildConfig.DEBUG) Log.w(TAG, "ZDR route unavailable for $model; retrying without ZDR")
                     enforceZdr = false
                     lastError = e
@@ -144,7 +151,7 @@ class OpenRouterClient(
             try {
                 return performTextRequest(userText, enforceZdr)
             } catch (e: OpenRouterException) {
-                if (enforceZdr && e.isZdrRouteUnavailable()) {
+                if (provider == AiProvider.OPENROUTER && enforceZdr && e.isZdrRouteUnavailable()) {
                     if (BuildConfig.DEBUG) Log.w(TAG, "ZDR route unavailable for $model; retrying without ZDR")
                     enforceZdr = false
                     lastError = e
@@ -185,7 +192,7 @@ class OpenRouterClient(
             putProviderPreferences(this, enforceZdr)
         }.toString().toByteArray(Charsets.UTF_8)
 
-        val connection = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
+        val connection = (URL(chatEndpoint()).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
             setRequestProperty("Content-Type", "application/json")
@@ -235,7 +242,7 @@ class OpenRouterClient(
     }
 
     private fun putProviderPreferences(body: JSONObject, enforceZdr: Boolean) {
-        if (!enforceZdr) return
+        if (!enforceZdr || provider != AiProvider.OPENROUTER) return
         body.put("provider", JSONObject().apply { put("zdr", true) })
     }
 
@@ -243,7 +250,7 @@ class OpenRouterClient(
         val textContent = JSONObject().apply {
             put("type", "text")
             put("text", systemPrompt)
-            if (shouldAttachPromptCacheHint(model)) {
+            if (provider == AiProvider.OPENROUTER && shouldAttachPromptCacheHint(model)) {
                 put("cache_control", JSONObject().apply { put("type", "ephemeral") })
             }
         }
@@ -280,7 +287,7 @@ class OpenRouterClient(
 
     private fun performRequest(audioFile: File, enforceZdr: Boolean): String {
         val (prefix, suffix) = buildRequestEnvelope(enforceZdr)
-        val connection = (URL(ENDPOINT).openConnection() as HttpURLConnection).apply {
+        val connection = (URL(chatEndpoint()).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
             setRequestProperty("Content-Type", "application/json")
@@ -318,6 +325,76 @@ class OpenRouterClient(
         }
     }
 
+    private fun chatEndpoint(): String = when (provider) {
+        AiProvider.OPENROUTER -> ENDPOINT
+        AiProvider.PAYPERQ -> PAYPERQ_CHAT_ENDPOINT
+    }
+
+    private fun performPayPerQTranscription(audioFile: File): String {
+        val boundary = "WisprBoard-${UUID.randomUUID()}"
+        val connection = (URL(PAYPERQ_TRANSCRIPTION_ENDPOINT).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            setRequestProperty("Authorization", "Bearer $apiKey")
+            setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
+            doOutput = true
+            setChunkedStreamingMode(0)
+        }
+        activeConnection = connection
+        try {
+            DataOutputStream(connection.outputStream).use { out ->
+                writeMultipartField(out, boundary, "model", model)
+                writeMultipartField(out, boundary, "response_format", "json")
+                val prompt = listOfNotNull(
+                    systemPrompt.takeIf { it.isNotBlank() },
+                    runtimeInstruction?.takeIf { it.isNotBlank() },
+                ).joinToString("\n")
+                if (prompt.isNotBlank()) writeMultipartField(out, boundary, "prompt", prompt)
+                writeMultipartFile(out, boundary, "file", audioFile, "audio/wav")
+                out.writeBytes("--$boundary--\r\n")
+                out.flush()
+            }
+
+            val responseCode = connection.responseCode
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                val errorBody = readErrorBodyCapped(connection.errorStream)
+                if (BuildConfig.DEBUG) Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
+                val retryAfterMs = parseRetryAfterMs(connection.getHeaderField("Retry-After"))
+                throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs, errorBody)
+            }
+
+            val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
+            return parseTranscriptionContent(responseBody)
+        } finally {
+            activeConnection = null
+            connection.disconnect()
+        }
+    }
+
+    private fun writeMultipartField(out: DataOutputStream, boundary: String, name: String, value: String) {
+        out.writeBytes("--$boundary\r\n")
+        out.writeBytes("Content-Disposition: form-data; name=\"$name\"\r\n\r\n")
+        out.write(value.toByteArray(Charsets.UTF_8))
+        out.writeBytes("\r\n")
+    }
+
+    private fun writeMultipartFile(out: DataOutputStream, boundary: String, name: String, file: File, contentType: String) {
+        out.writeBytes("--$boundary\r\n")
+        out.writeBytes("Content-Disposition: form-data; name=\"$name\"; filename=\"audio.wav\"\r\n")
+        out.writeBytes("Content-Type: $contentType\r\n\r\n")
+        FileInputStream(file).use { input ->
+            val buffer = ByteArray(8 * 1024)
+            while (true) {
+                if (Thread.currentThread().isInterrupted) throw InterruptedException()
+                val read = input.read(buffer)
+                if (read == -1) break
+                out.write(buffer, 0, read)
+            }
+        }
+        out.writeBytes("\r\n")
+    }
+
     private fun parseContent(responseBody: String): String {
         val json = try {
             JSONObject(responseBody)
@@ -338,6 +415,18 @@ class OpenRouterClient(
             throw OpenRouterException("API response missing content")
         }
         return content
+    }
+
+    private fun parseTranscriptionContent(responseBody: String): String {
+        val json = try {
+            JSONObject(responseBody)
+        } catch (e: JSONException) {
+            return responseBody.trim().takeIf { it.isNotEmpty() }
+                ?: throw OpenRouterException("Malformed API response")
+        }
+        val text = json.optString("text").trim()
+        if (text.isEmpty()) throw OpenRouterException("API response missing content")
+        return text
     }
 
     private fun logCacheUsage(json: JSONObject) {

@@ -180,6 +180,7 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
 // here as defense-in-depth against pre-migration or future pref leaks.
 private val SENSITIVE_BACKUP_KEYS = setOf(
     Settings.PREF_OPENROUTER_API_KEY,
+    Settings.PREF_PAYPERQ_API_KEY,
     LEGACY_PINNED_CLIPS_KEY,
 )
 

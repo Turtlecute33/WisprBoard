@@ -16,7 +16,9 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
+import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.SecretStore
+import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.dialogs.TextInputDialog
@@ -38,14 +40,17 @@ fun TextFixScreen(
         Defaults.PREF_TEXT_FIX_ENABLED
     )
     val model by rememberStringPreferenceState(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
+    val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
+    val provider = AiProvider.fromPref(providerPref)
 
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = stringResource(R.string.settings_screen_text_fix),
         settings = listOf(
             Settings.PREF_TEXT_FIX_ENABLED,
-            if (enabled) Settings.PREF_OPENROUTER_API_KEY else null,
-            if (enabled) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
+            if (enabled) Settings.PREF_AI_PROVIDER else null,
+            if (enabled) provider.apiKeyPrefKey() else null,
+            if (enabled && provider == AiProvider.OPENROUTER) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
             if (enabled) Settings.PREF_TEXT_FIX_MODEL else null,
             if (enabled && model == "custom") Settings.PREF_TEXT_FIX_MODEL_CUSTOM else null,
             if (enabled) Settings.PREF_TEXT_FIX_PROMPT else null,
@@ -70,12 +75,21 @@ fun createTextFixSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_TEXT_FIX_MODEL, R.string.text_fix_model) { setting ->
         val ctx = LocalContext.current
-        val items = listOf(
-            "google/gemini-2.5-flash-lite" to "google/gemini-2.5-flash-lite",
-            "google/gemini-3-flash-preview" to "google/gemini-3-flash-preview",
-            "anthropic/claude-haiku-4-5" to "anthropic/claude-haiku-4-5",
-            ctx.getString(R.string.voice_custom_model) to "custom",
-        )
+        val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
+        val items = when (AiProvider.fromPref(providerPref)) {
+            AiProvider.OPENROUTER -> listOf(
+                "google/gemini-2.5-flash-lite" to "google/gemini-2.5-flash-lite",
+                "google/gemini-3-flash-preview" to "google/gemini-3-flash-preview",
+                "anthropic/claude-haiku-4-5" to "anthropic/claude-haiku-4-5",
+                ctx.getString(R.string.voice_custom_model) to "custom",
+            )
+            AiProvider.PAYPERQ -> listOf(
+                "gpt-5" to "gpt-5",
+                "claude-sonnet-4-5" to "claude-sonnet-4-5",
+                "gemini-3-pro-preview" to "gemini-3-pro-preview",
+                ctx.getString(R.string.voice_custom_model) to "custom",
+            )
+        }
         ListPreference(setting, items, Defaults.PREF_TEXT_FIX_MODEL)
     },
     Setting(context, Settings.PREF_TEXT_FIX_MODEL_CUSTOM, R.string.text_fix_model_custom, R.string.text_fix_model_custom_summary) {

@@ -118,7 +118,8 @@ class TextFixManager(
             Toast.makeText(context, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
-        val apiKey = SecretStore.getApiKey(context, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
+        val provider = AiProvider.fromPref(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
+        val apiKey = SecretStore.getApiKey(context, provider.apiKeyPrefKey(), provider.defaultApiKey())
         if (apiKey.isBlank()) {
             Toast.makeText(context, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
             return
@@ -148,14 +149,15 @@ class TextFixManager(
 
         val selectedModel = prefs.getString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL) ?: Defaults.PREF_TEXT_FIX_MODEL
         val customModel = prefs.getString(Settings.PREF_TEXT_FIX_MODEL_CUSTOM, Defaults.PREF_TEXT_FIX_MODEL_CUSTOM) ?: ""
-        val model = resolveVoiceModel(selectedModel, customModel)
+        val model = resolveProviderModel(provider, selectedModel, customModel, fallback = "gpt-5")
         if (model == null) {
             Toast.makeText(context, R.string.voice_error_no_model, Toast.LENGTH_SHORT).show()
             return
         }
         val prompt = (prefs.getString(Settings.PREF_TEXT_FIX_PROMPT, Defaults.PREF_TEXT_FIX_PROMPT) ?: Defaults.PREF_TEXT_FIX_PROMPT)
             .trim().ifEmpty { Defaults.PREF_TEXT_FIX_PROMPT }
-        val useZdr = prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
+        val useZdr = provider == AiProvider.OPENROUTER &&
+            prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
 
         state = State.WORKING
         callbacks.onWorking()
@@ -165,6 +167,7 @@ class TextFixManager(
             model = model,
             systemPrompt = prompt,
             runtimeInstruction = null,
+            provider = provider,
             useZeroDataRetention = useZdr,
         )
         val token = activeToken + 1

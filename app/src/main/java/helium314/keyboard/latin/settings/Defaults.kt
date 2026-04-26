@@ -179,8 +179,10 @@ object Defaults {
     const val PREF_USER_ALL_COLORS = ""
     const val PREF_SAVE_SUBTYPE_PER_APP = false
     const val PREF_VOICE_INPUT_ENABLED = false
+    const val PREF_AI_PROVIDER = "openrouter"
     const val PREF_OPENROUTER_API_KEY = ""
     const val PREF_OPENROUTER_ZDR_ENABLED = true
+    const val PREF_PAYPERQ_API_KEY = ""
     const val PREF_VOICE_MODEL = "google/gemini-3-flash-preview"
     const val PREF_VOICE_MODEL_CUSTOM = ""
     const val PREF_VOICE_TRANSCRIPTION_PROMPT = "Transcribe this audio exactly as spoken. Output only the transcription, nothing else."

@@ -68,8 +68,10 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_LAYOUT_PREFIX = "layout_";
 
     public static final String PREF_VOICE_INPUT_ENABLED = "voice_input_enabled";
+    public static final String PREF_AI_PROVIDER = "ai_provider";
     public static final String PREF_OPENROUTER_API_KEY = "openrouter_api_key";
     public static final String PREF_OPENROUTER_ZDR_ENABLED = "openrouter_zdr_enabled";
+    public static final String PREF_PAYPERQ_API_KEY = "payperq_api_key";
     public static final String PREF_VOICE_MODEL = "voice_model";
     public static final String PREF_VOICE_MODEL_CUSTOM = "voice_model_custom";
     public static final String PREF_VOICE_TRANSCRIPTION_PROMPT = "voice_transcription_prompt";

@@ -93,7 +93,8 @@ class VoiceInputManager(
             return
         }
 
-        val apiKey = SecretStore.getApiKey(context, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
+        val provider = AiProvider.fromPref(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
+        val apiKey = SecretStore.getApiKey(context, provider.apiKeyPrefKey(), provider.defaultApiKey())
         if (apiKey.isBlank()) {
             Toast.makeText(context, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
             return
@@ -196,7 +197,8 @@ class VoiceInputManager(
         callbacks.onTranscribing()
 
         val prefs = context.prefs()
-        val apiKey = SecretStore.getApiKey(context, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
+        val provider = AiProvider.fromPref(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
+        val apiKey = SecretStore.getApiKey(context, provider.apiKeyPrefKey(), provider.defaultApiKey())
         val selectedModel = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL) ?: Defaults.PREF_VOICE_MODEL
         val customModel = prefs.getString(Settings.PREF_VOICE_MODEL_CUSTOM, Defaults.PREF_VOICE_MODEL_CUSTOM) ?: ""
         val savedPrompt = prefs.getString(
@@ -213,9 +215,10 @@ class VoiceInputManager(
         ) ?: Defaults.PREF_VOICE_EXPECTED_LANGUAGES
         val languageHintEnabled = prefs.getBoolean(Settings.PREF_VOICE_LANGUAGE_HINT, Defaults.PREF_VOICE_LANGUAGE_HINT)
         val spaceHeuristicEnabled = prefs.getBoolean(Settings.PREF_VOICE_SPACE_HEURISTIC, Defaults.PREF_VOICE_SPACE_HEURISTIC)
-        val useZdr = prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
+        val useZdr = provider == AiProvider.OPENROUTER &&
+            prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
 
-        val model = resolveVoiceModel(selectedModel, customModel)
+        val model = resolveProviderModel(provider, selectedModel, customModel, fallback = "nova-3")
         if (model == null) {
             state = State.IDLE
             callbacks.onFinished()
@@ -231,6 +234,7 @@ class VoiceInputManager(
             model = model,
             systemPrompt = prompt.systemPrompt,
             runtimeInstruction = prompt.runtimeInstruction,
+            provider = provider,
             useZeroDataRetention = useZdr,
         )
         val requestToken = activeTranscriptionToken + 1

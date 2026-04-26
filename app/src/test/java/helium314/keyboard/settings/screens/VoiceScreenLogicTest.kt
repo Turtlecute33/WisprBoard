@@ -2,6 +2,7 @@
 package helium314.keyboard.settings.screens
 
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.voice.AiProvider
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -41,6 +42,20 @@ class VoiceScreenLogicTest {
         assertTrue(Settings.PREF_VOICE_EXPECTED_LANGUAGES in regularModelItems)
         assertFalse(Settings.PREF_VOICE_MODEL_CUSTOM in regularModelItems)
         assertTrue(Settings.PREF_VOICE_MODEL_CUSTOM in customModelItems)
+    }
+
+    @Test
+    fun voiceItemsUsePayPerQKeyAndHideOpenRouterZdrWhenPayPerQSelected() {
+        val items = buildVoiceScreenItems(
+            voiceInputEnabled = true,
+            voiceModel = "nova-3",
+            provider = AiProvider.PAYPERQ,
+        )
+
+        assertTrue(Settings.PREF_AI_PROVIDER in items)
+        assertTrue(Settings.PREF_PAYPERQ_API_KEY in items)
+        assertFalse(Settings.PREF_OPENROUTER_API_KEY in items)
+        assertFalse(Settings.PREF_OPENROUTER_ZDR_ENABLED in items)
     }
 
     @Test

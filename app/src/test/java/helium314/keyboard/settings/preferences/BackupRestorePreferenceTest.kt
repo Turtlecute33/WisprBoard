@@ -14,6 +14,7 @@ class BackupRestorePreferenceTest {
             settingsToJsonString(
                 mapOf(
                     Settings.PREF_OPENROUTER_API_KEY to "secret",
+                    Settings.PREF_PAYPERQ_API_KEY to "secret-too",
                     "pinned_clips" to """[{"content":"should not persist"}]""",
                     "safe_string" to "value",
                     "safe_boolean" to true,
@@ -22,6 +23,7 @@ class BackupRestorePreferenceTest {
         )
 
         assertFalse(snapshot.strings.containsKey(Settings.PREF_OPENROUTER_API_KEY))
+        assertFalse(snapshot.strings.containsKey(Settings.PREF_PAYPERQ_API_KEY))
         assertFalse(snapshot.strings.containsKey("pinned_clips"))
         assertEquals("value", snapshot.strings["safe_string"])
         assertEquals(true, snapshot.booleans["safe_boolean"])

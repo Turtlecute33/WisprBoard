@@ -29,11 +29,14 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
+import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.OpenRouterClient
 import helium314.keyboard.latin.voice.parseVoiceDictionaryTerms
 import helium314.keyboard.latin.voice.parseExpectedLanguages
 import helium314.keyboard.latin.voice.resolveVoiceModel
 import helium314.keyboard.latin.voice.SecretStore
+import helium314.keyboard.latin.voice.apiKeyPrefKey
+import helium314.keyboard.latin.voice.defaultApiKey
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
@@ -61,6 +64,7 @@ fun VoiceScreen(
         Defaults.PREF_VOICE_INPUT_ENABLED
     )
     val voiceModel by rememberStringPreferenceState(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+    val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
     val voiceAutoStop by rememberBooleanPreferenceState(
         Settings.PREF_VOICE_AUTO_STOP_SILENCE,
         Defaults.PREF_VOICE_AUTO_STOP_SILENCE
@@ -72,6 +76,7 @@ fun VoiceScreen(
         settings = buildVoiceScreenItems(
             voiceInputEnabled = voiceInputEnabled,
             voiceModel = voiceModel,
+            provider = AiProvider.fromPref(providerPref),
             voiceAutoStop = voiceAutoStop,
         )
     )
@@ -80,11 +85,13 @@ fun VoiceScreen(
 internal fun buildVoiceScreenItems(
     voiceInputEnabled: Boolean,
     voiceModel: String,
+    provider: AiProvider = AiProvider.OPENROUTER,
     voiceAutoStop: Boolean = Defaults.PREF_VOICE_AUTO_STOP_SILENCE,
 ): List<Any?> = listOf(
     Settings.PREF_VOICE_INPUT_ENABLED,
-    if (voiceInputEnabled) Settings.PREF_OPENROUTER_API_KEY else null,
-    if (voiceInputEnabled) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
+    if (voiceInputEnabled) Settings.PREF_AI_PROVIDER else null,
+    if (voiceInputEnabled) provider.apiKeyPrefKey() else null,
+    if (voiceInputEnabled && provider == AiProvider.OPENROUTER) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_TEST_KEY else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_MODEL else null,
     if (voiceInputEnabled && voiceModel == "custom") Settings.PREF_VOICE_MODEL_CUSTOM else null,
@@ -157,18 +164,52 @@ fun createVoiceSettings(context: Context) = listOf(
         )
     },
     Setting(context, Settings.PREF_OPENROUTER_API_KEY, R.string.openrouter_api_key, R.string.openrouter_api_key_summary) {
-        VoiceApiKeyPreference(it)
+        VoiceApiKeyPreference(it, AiProvider.OPENROUTER)
+    },
+    Setting(context, Settings.PREF_PAYPERQ_API_KEY, R.string.payperq_api_key, R.string.payperq_api_key_summary) {
+        VoiceApiKeyPreference(it, AiProvider.PAYPERQ)
+    },
+    Setting(context, Settings.PREF_AI_PROVIDER, R.string.ai_provider) { setting ->
+        val ctx = LocalContext.current
+        val prefs = ctx.prefs()
+        val items = listOf(
+            ctx.getString(R.string.ai_provider_openrouter) to AiProvider.OPENROUTER.prefValue,
+            ctx.getString(R.string.ai_provider_payperq) to AiProvider.PAYPERQ.prefValue,
+        )
+        ListPreference(setting, items, Defaults.PREF_AI_PROVIDER) { value ->
+            val provider = AiProvider.fromPref(value)
+            prefs.edit {
+                when (provider) {
+                    AiProvider.OPENROUTER -> {
+                        putString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+                        putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
+                    }
+                    AiProvider.PAYPERQ -> {
+                        putString(Settings.PREF_VOICE_MODEL, "nova-3")
+                        putString(Settings.PREF_TEXT_FIX_MODEL, "gpt-5")
+                    }
+                }
+            }
+        }
     },
     Setting(context, Settings.PREF_OPENROUTER_ZDR_ENABLED, R.string.openrouter_zdr_enabled, R.string.openrouter_zdr_enabled_summary) {
         SwitchPreference(it, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
     },
     Setting(context, Settings.PREF_VOICE_MODEL, R.string.voice_model) { setting ->
         val ctx = LocalContext.current
-        val items = listOf(
-            "google/gemini-3-flash-preview" to "google/gemini-3-flash-preview",
-            "google/gemini-2.0-flash-001" to "google/gemini-2.0-flash-001",
-            ctx.getString(R.string.voice_custom_model) to "custom",
-        )
+        val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
+        val items = when (AiProvider.fromPref(providerPref)) {
+            AiProvider.OPENROUTER -> listOf(
+                "google/gemini-3-flash-preview" to "google/gemini-3-flash-preview",
+                "google/gemini-2.0-flash-001" to "google/gemini-2.0-flash-001",
+                ctx.getString(R.string.voice_custom_model) to "custom",
+            )
+            AiProvider.PAYPERQ -> listOf(
+                "nova-3" to "nova-3",
+                "nova-2" to "nova-2",
+                ctx.getString(R.string.voice_custom_model) to "custom",
+            )
+        }
         ListPreference(setting, items, Defaults.PREF_VOICE_MODEL)
     },
     Setting(context, Settings.PREF_VOICE_MODEL_CUSTOM, R.string.voice_model_custom, R.string.voice_model_custom_summary) {
@@ -245,10 +286,10 @@ fun createVoiceSettings(context: Context) = listOf(
 )
 
 @Composable
-private fun VoiceApiKeyPreference(setting: Setting) {
+private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
     val ctx = LocalContext.current
     var showDialog by rememberSaveable { mutableStateOf(false) }
-    var stored by remember { mutableStateOf(SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)) }
+    var stored by remember { mutableStateOf(SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey())) }
     Preference(
         name = setting.title,
         onClick = {
@@ -264,7 +305,7 @@ private fun VoiceApiKeyPreference(setting: Setting) {
         TextInputDialog(
             onDismissRequest = { showDialog = false },
             onConfirmed = {
-                SecretStore.setApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, it.trim())
+                SecretStore.setApiKey(ctx, provider.apiKeyPrefKey(), it.trim())
                 stored = it.trim()
             },
             initialText = stored,
@@ -417,7 +458,8 @@ private fun VoiceTestKeyPreference(setting: Setting) {
                 Toast.makeText(ctx, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
                 return@Preference
             }
-            val apiKey = SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY)
+            val provider = AiProvider.fromPref(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
+            val apiKey = SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey())
             if (apiKey.isBlank()) {
                 Toast.makeText(ctx, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
                 return@Preference
@@ -429,10 +471,11 @@ private fun VoiceTestKeyPreference(setting: Setting) {
                 Toast.makeText(ctx, R.string.voice_error_no_model, Toast.LENGTH_SHORT).show()
                 return@Preference
             }
-            val useZdr = prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
+            val useZdr = provider == AiProvider.OPENROUTER &&
+                prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
             busy = true
             scope.launch {
-                val result = withContext(Dispatchers.IO) { probeApiKey(apiKey, model, useZdr) }
+                val result = withContext(Dispatchers.IO) { probeApiKey(provider, apiKey, model, useZdr) }
                 val msgRes = when (result) {
                     TestResult.OK -> R.string.voice_test_key_success
                     TestResult.OK_ZDR_UNAVAILABLE -> R.string.voice_test_key_success_zdr_unavailable
@@ -449,7 +492,8 @@ private fun VoiceTestKeyPreference(setting: Setting) {
 
 private enum class TestResult { OK, OK_ZDR_UNAVAILABLE, INVALID, INVALID_MODEL, NETWORK }
 
-private fun probeApiKey(apiKey: String, model: String, useZdr: Boolean): TestResult {
+private fun probeApiKey(provider: AiProvider, apiKey: String, model: String, useZdr: Boolean): TestResult {
+    if (provider == AiProvider.PAYPERQ) return probePayPerQApiKey(apiKey, model)
     val keyConn = (java.net.URL(OpenRouterClient.KEY_ENDPOINT).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
@@ -466,6 +510,27 @@ private fun probeApiKey(apiKey: String, model: String, useZdr: Boolean): TestRes
         TestResult.NETWORK
     } finally {
         keyConn.disconnect()
+    }
+}
+
+private fun probePayPerQApiKey(apiKey: String, model: String): TestResult {
+    if (model.isBlank()) return TestResult.INVALID_MODEL
+    val conn = (java.net.URL(OpenRouterClient.PAYPERQ_AUDIO_MODELS_ENDPOINT).openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        setRequestProperty("Authorization", "Bearer $apiKey")
+        connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
+        readTimeout = 10_000
+    }
+    return try {
+        when (conn.responseCode) {
+            200 -> TestResult.OK
+            401, 403 -> TestResult.INVALID
+            else -> TestResult.NETWORK
+        }
+    } catch (_: Exception) {
+        TestResult.NETWORK
+    } finally {
+        conn.disconnect()
     }
 }
 
