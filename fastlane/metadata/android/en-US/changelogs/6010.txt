@@ -1,0 +1,4 @@
+* Default OpenRouter Text Fix to GPT-5.4 Nano
+* Refresh OpenRouter Text Fix choices with GPT-5.4 Mini, Gemini 3 Flash Preview, and DeepSeek V4 Pro
+* Refresh PayPerQ Text Fix Gemini fallback to Gemini 3.1 Flash-Lite Preview
+* Default PayPerQ Voice Input to Voxtral Small 24B

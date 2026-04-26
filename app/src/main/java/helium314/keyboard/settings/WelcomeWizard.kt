@@ -321,7 +321,7 @@ private fun AiProviderSetupStep(
                     putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
                 }
                 AiProvider.PAYPERQ -> {
-                    putString(Settings.PREF_VOICE_MODEL, "nova-3")
+                    putString(Settings.PREF_VOICE_MODEL, "mistralai/voxtral-small-24b-2507")
                     putString(Settings.PREF_TEXT_FIX_MODEL, "private/gemma4-31b")
                 }
             }

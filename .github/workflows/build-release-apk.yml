@@ -137,6 +137,17 @@ jobs:
           generate_release_notes: true
           make_latest: true
 
+      - name: Upload APK to existing GitHub Release
+        if: ${{ steps.release_check.outputs.exists == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.version.outputs.name }}
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/SHA256SUMS.txt
+          overwrite_files: true
+          make_latest: true
+
       - name: Clean up keystore
         if: always()
         run: rm -f app/keystore.jks

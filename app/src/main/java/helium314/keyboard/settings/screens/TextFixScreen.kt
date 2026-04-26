@@ -76,18 +76,18 @@ fun createTextFixSettings(context: Context) = listOf(
         val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
         val items = when (AiProvider.fromPref(providerPref)) {
             AiProvider.OPENROUTER -> listOf(
-                "Claude Haiku 4.5 (Default, Cheap, ZDR + Cache)" to "anthropic/claude-haiku-4.5",
-                "GPT-5 Nano (Cheap, ZDR + Cache)" to "openai/gpt-5-nano",
-                "Gemini 2.5 Flash Lite (Cheap, ZDR + Cache)" to "google/gemini-2.5-flash-lite",
-                "Claude Sonnet 4.6 (Medium, ZDR + Cache)" to "anthropic/claude-sonnet-4.6",
-                "GPT-5 Mini (Medium, ZDR + Cache)" to "openai/gpt-5-mini",
+                "GPT-5.4 Nano (Default, Cheap, ZDR + Cache)" to "openai/gpt-5.4-nano",
+                "GPT-5.4 Mini (Medium, ZDR + Cache)" to "openai/gpt-5.4-mini",
+                "Gemini 3 Flash Preview (Medium, ZDR + Cache)" to "google/gemini-3-flash-preview",
+                "DeepSeek V4 Pro (Medium, ZDR)" to "deepseek/deepseek-v4-pro",
+                "Claude Haiku 4.5 (Cheap, ZDR + Cache)" to "anthropic/claude-haiku-4.5",
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )
             AiProvider.PAYPERQ -> listOf(
                 "Private Gemma4 31B (Default, Cheap, TEE)" to "private/gemma4-31b",
                 "Private GLM 5.1 (Medium, TEE)" to "private/glm-5-1",
                 "Private Kimi K2 6 (Expensive, TEE)" to "private/kimi-k2-6",
-                "Gemini 2.5 Flash Lite (Cheap, no-store)" to "google/gemini-2.5-flash-lite",
+                "Gemini 3.1 Flash-Lite Preview (Cheap, no-store)" to "google/gemini-3.1-flash-lite-preview",
                 "Mistral Small 3 (Cheap, EU no-store)" to "mistralai/mistral-small-3",
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )

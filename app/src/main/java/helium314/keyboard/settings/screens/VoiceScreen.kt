@@ -185,7 +185,7 @@ fun createVoiceSettings(context: Context) = listOf(
                         putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
                     }
                     AiProvider.PAYPERQ -> {
-                        putString(Settings.PREF_VOICE_MODEL, "nova-3")
+                        putString(Settings.PREF_VOICE_MODEL, "mistralai/voxtral-small-24b-2507")
                         putString(Settings.PREF_TEXT_FIX_MODEL, "private/gemma4-31b")
                     }
                 }
@@ -208,7 +208,7 @@ fun createVoiceSettings(context: Context) = listOf(
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )
             AiProvider.PAYPERQ -> listOf(
-                "Voxtral Small 24B (Recommended, Cheap)" to "mistralai/voxtral-small-24b-2507",
+                "Voxtral Small 24B (Default, Cheap)" to "mistralai/voxtral-small-24b-2507",
                 "GPT Audio Mini (Medium)" to "openai/gpt-audio-mini",
                 "MiMo V2 Omni (Medium)" to "xiaomi/mimo-v2-omni",
                 "GPT-4o Audio Preview (Expensive)" to "openai/gpt-4o-audio-preview",
