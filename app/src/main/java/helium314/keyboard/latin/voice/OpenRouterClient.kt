@@ -247,7 +247,7 @@ class OpenRouterClient(
 
     private fun putProviderPreferences(body: JSONObject, enforceZdr: Boolean) {
         if (!enforceZdr || provider != AiProvider.OPENROUTER) return
-        body.put("provider", JSONObject().apply { put("zdr", true) })
+        body.put("provider", JSONObject().apply { put("data_collection", "deny") })
     }
 
     private fun buildSystemMessage(): JSONObject {

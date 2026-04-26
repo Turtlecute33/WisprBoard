@@ -186,7 +186,7 @@ fun createVoiceSettings(context: Context) = listOf(
                     }
                     AiProvider.PAYPERQ -> {
                         putString(Settings.PREF_VOICE_MODEL, "nova-3")
-                        putString(Settings.PREF_TEXT_FIX_MODEL, "gpt-5")
+                        putString(Settings.PREF_TEXT_FIX_MODEL, "private/gemma4-31b")
                     }
                 }
             }

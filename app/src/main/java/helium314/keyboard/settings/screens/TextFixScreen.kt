@@ -21,10 +21,8 @@ import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
-import helium314.keyboard.settings.dialogs.TextInputDialog
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.ListPreference
-import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import helium314.keyboard.settings.preferences.rememberBooleanPreferenceState
@@ -78,15 +76,19 @@ fun createTextFixSettings(context: Context) = listOf(
         val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
         val items = when (AiProvider.fromPref(providerPref)) {
             AiProvider.OPENROUTER -> listOf(
-                "google/gemini-2.5-flash-lite" to "google/gemini-2.5-flash-lite",
-                "google/gemini-3-flash-preview" to "google/gemini-3-flash-preview",
-                "anthropic/claude-haiku-4-5" to "anthropic/claude-haiku-4-5",
+                "Claude Haiku 4.5 (Default, Cheap, ZDR + Cache)" to "anthropic/claude-haiku-4.5",
+                "GPT-5 Nano (Cheap, ZDR + Cache)" to "openai/gpt-5-nano",
+                "Gemini 2.5 Flash Lite (Cheap, ZDR + Cache)" to "google/gemini-2.5-flash-lite",
+                "Claude Sonnet 4.6 (Medium, ZDR + Cache)" to "anthropic/claude-sonnet-4.6",
+                "GPT-5 Mini (Medium, ZDR + Cache)" to "openai/gpt-5-mini",
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )
             AiProvider.PAYPERQ -> listOf(
-                "gpt-5" to "gpt-5",
-                "claude-sonnet-4-5" to "claude-sonnet-4-5",
-                "gemini-3-pro-preview" to "gemini-3-pro-preview",
+                "Private Gemma4 31B (Default, Cheap, TEE)" to "private/gemma4-31b",
+                "Private GLM 5.1 (Medium, TEE)" to "private/glm-5-1",
+                "Private Kimi K2 6 (Expensive, TEE)" to "private/kimi-k2-6",
+                "Gemini 2.5 Flash Lite (Cheap, no-store)" to "google/gemini-2.5-flash-lite",
+                "Mistral Small 3 (Cheap, EU no-store)" to "mistralai/mistral-small-3",
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )
         }

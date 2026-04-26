@@ -8,6 +8,7 @@ Gemfile
 build
 app/build
 app/release
+artifacts/
 app/.cxx
 app/.attach_*
 fastlane/Appfile

@@ -149,7 +149,7 @@ class TextFixManager(
 
         val selectedModel = prefs.getString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL) ?: Defaults.PREF_TEXT_FIX_MODEL
         val customModel = prefs.getString(Settings.PREF_TEXT_FIX_MODEL_CUSTOM, Defaults.PREF_TEXT_FIX_MODEL_CUSTOM) ?: ""
-        val model = resolveProviderModel(provider, selectedModel, customModel, fallback = "gpt-5")
+        val model = resolveProviderModel(selectedModel, customModel)
         if (model == null) {
             Toast.makeText(context, R.string.voice_error_no_model, Toast.LENGTH_SHORT).show()
             return
