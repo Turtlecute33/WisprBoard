@@ -200,19 +200,19 @@ fun createVoiceSettings(context: Context) = listOf(
         val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
         val items = when (AiProvider.fromPref(providerPref)) {
             AiProvider.OPENROUTER -> listOf(
-                "Voxtral Small 24B (best value, cheap, $0.10/M in, $0.30/M out, $100/M audio-seconds)" to "mistralai/voxtral-small-24b-2507",
-                "Gemini 2.5 Flash Lite (cheap, ~$0.10/M in, $0.40/M out)" to "google/gemini-2.5-flash-lite",
-                "Gemini 2.5 Flash (balanced, $0.30/M in, $2.50/M out)" to "google/gemini-2.5-flash",
-                "GPT-4o Audio Preview (quality, expensive, $2.50/M in, $10/M out, $40/$80 audio)" to "openai/gpt-4o-audio-preview",
-                "GPT Audio (quality, expensive, $2.50/M in, $10/M out, $32/$64 audio)" to "openai/gpt-audio",
+                "Voxtral Small 24B (Recommended, Cheap)" to "mistralai/voxtral-small-24b-2507",
+                "Gemini 2.5 Flash Lite (Cheap)" to "google/gemini-2.5-flash-lite",
+                "Gemini 2.5 Flash (Medium)" to "google/gemini-2.5-flash",
+                "GPT-4o Audio Preview (Expensive)" to "openai/gpt-4o-audio-preview",
+                "GPT Audio (Expensive)" to "openai/gpt-audio",
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )
             AiProvider.PAYPERQ -> listOf(
-                "Voxtral Small 24B (best value, cheap, $0.105/M in, $0.315/M out)" to "mistralai/voxtral-small-24b-2507",
-                "GPT Audio Mini (balanced, medium, $0.63/M in, $2.52/M out)" to "openai/gpt-audio-mini",
-                "MiMo V2 Omni (medium, pricing varies)" to "xiaomi/mimo-v2-omni",
-                "GPT-4o Audio Preview (quality, expensive, $2.625/M in, $10.50/M out)" to "openai/gpt-4o-audio-preview",
-                "GPT Audio (quality, expensive, $2.625/M in, $10.50/M out)" to "openai/gpt-audio",
+                "Voxtral Small 24B (Recommended, Cheap)" to "mistralai/voxtral-small-24b-2507",
+                "GPT Audio Mini (Medium)" to "openai/gpt-audio-mini",
+                "MiMo V2 Omni (Medium)" to "xiaomi/mimo-v2-omni",
+                "GPT-4o Audio Preview (Expensive)" to "openai/gpt-4o-audio-preview",
+                "GPT Audio (Expensive)" to "openai/gpt-audio",
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )
         }
