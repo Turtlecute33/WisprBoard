@@ -175,7 +175,7 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
     }
 }
 
-// Keys that must never be written to a backup archive. The OpenRouter API key lives in an
+// Keys that must never be written to a backup archive. Provider API keys live in an
 // encrypted shared-prefs bucket and is scrubbed from plain prefs by SecretStore, but we filter
 // here as defense-in-depth against pre-migration or future pref leaks.
 private val SENSITIVE_BACKUP_KEYS = setOf(

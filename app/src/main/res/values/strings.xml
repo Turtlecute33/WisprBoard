@@ -1165,17 +1165,18 @@ New dictionary:
     <string name="voice_prompt_preset_translate_en_text">Transcribe this audio and translate it into natural English. Output only the English translation, nothing else.</string>
     <string name="voice_prompt_preset_overwrite_title">Replace prompt?</string>
     <string name="voice_prompt_preset_overwrite_message">This will overwrite your customized prompt with the selected preset.</string>
-    <string name="setup_openrouter_title">Set up OpenRouter voice</string>
-    <string name="setup_openrouter_instruction">Add your OpenRouter API key and allow microphone access now, or skip and configure it later from Voice settings. Zero data retention is enabled by default and will be used when the selected model supports it.</string>
-    <string name="setup_openrouter_status">API key: %1$s\nMicrophone: %2$s\nVoice input: %3$s</string>
+    <string name="setup_ai_provider_title">Set up AI voice</string>
+    <string name="setup_ai_provider_instruction">Choose OpenRouter or PayPerQ, add the matching API key, and allow microphone access now. You can skip and configure this later from Voice settings.</string>
+    <string name="setup_ai_provider_status">Provider: %1$s\nAPI key: %2$s\nMicrophone: %3$s\nVoice input: %4$s</string>
     <string name="setup_status_done">done</string>
     <string name="setup_status_missing">missing</string>
-    <string name="setup_openrouter_add_key">Add OpenRouter API key</string>
-    <string name="setup_openrouter_update_key">Update OpenRouter API key</string>
-    <string name="setup_openrouter_enable_voice">Allow microphone and enable voice</string>
-    <string name="setup_openrouter_voice_ready">Voice input is ready</string>
-    <string name="setup_openrouter_voice_settings">Open full Voice settings</string>
-    <string name="setup_openrouter_skip">Skip for now</string>
+    <string name="setup_ai_provider_select">Provider: %1$s</string>
+    <string name="setup_ai_provider_add_key">Add %1$s API key</string>
+    <string name="setup_ai_provider_update_key">Update %1$s API key</string>
+    <string name="setup_ai_provider_enable_voice">Allow microphone and enable voice</string>
+    <string name="setup_ai_provider_voice_ready">Voice input is ready</string>
+    <string name="setup_ai_provider_voice_settings">Open full Voice settings</string>
+    <string name="setup_ai_provider_skip">Skip for now</string>
 
     <!-- Text Fix -->
     <string name="settings_screen_text_fix">Text Fix</string>

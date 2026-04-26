@@ -22,7 +22,7 @@ import java.util.TimeZone
 import java.util.UUID
 
 /**
- * Sends audio to OpenRouter's chat completions API for transcription.
+ * Sends AI requests to the selected provider.
  * Must be called from a background thread.
  */
 class OpenRouterClient(

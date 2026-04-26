@@ -18,7 +18,7 @@ import java.io.File
 import java.util.Locale
 
 /**
- * Orchestrates voice recording, transcription via OpenRouter, and text insertion.
+ * Orchestrates voice recording, transcription via the selected AI provider, and text insertion.
  * All state transitions happen on the main thread.
  */
 class VoiceInputManager(
@@ -53,7 +53,7 @@ class VoiceInputManager(
         /** Optional surrounding-text snapshot; used to decide whether to insert spaces. */
         fun getSpacingContext(): SpacingContext? = null
         /**
-         * Called when the user must acknowledge the "data is sent to OpenRouter" consent
+         * Called when the user must acknowledge the "data is sent to the AI provider" consent
          * before the first recording. Implementation should show a brief in-keyboard prompt.
          */
         fun requestConsent() {}
@@ -106,7 +106,7 @@ class VoiceInputManager(
         }
 
         // First-use consent gate: user must tap twice within consentWindowMs to acknowledge
-        // that audio leaves the device en route to OpenRouter. Persisted once granted.
+        // that audio leaves the device en route to the selected AI provider. Persisted once granted.
         if (!prefs.getBoolean(Settings.PREF_VOICE_CONSENT_GIVEN, Defaults.PREF_VOICE_CONSENT_GIVEN)) {
             val now = System.currentTimeMillis()
             if (pendingConsentDeadline == 0L || now > pendingConsentDeadline) {

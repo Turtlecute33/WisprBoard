@@ -9,7 +9,7 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 
 /**
- * Stores sensitive values (currently: the OpenRouter API key) in an EncryptedSharedPreferences
+ * Stores sensitive values (currently: AI provider API keys) in an EncryptedSharedPreferences
  * bucket when the device supports it (API 23+).
  *
  * Migrates any plaintext value in the normal prefs file into the encrypted store on first use.

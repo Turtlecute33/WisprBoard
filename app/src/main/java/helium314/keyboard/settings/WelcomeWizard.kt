@@ -65,8 +65,12 @@ import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.UncachedInputMethodManagerUtils
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
+import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.SecretStore
+import helium314.keyboard.latin.voice.apiKeyPrefKey
+import helium314.keyboard.latin.voice.defaultApiKey
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
+import helium314.keyboard.settings.dialogs.ListPickerDialog
 import helium314.keyboard.settings.dialogs.TextInputDialog
 
 @Composable
@@ -76,17 +80,18 @@ fun WelcomeWizard(
 ) {
     val ctx = LocalContext.current
     val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-    var openRouterSkipped by rememberSaveable { mutableStateOf(false) }
-    fun isOpenRouterReady(): Boolean {
+    var aiSetupSkipped by rememberSaveable { mutableStateOf(false) }
+    fun isAiProviderReady(): Boolean {
         val prefs = ctx.prefs()
-        return SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY).isNotBlank()
+        val provider = AiProvider.fromPref(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
+        return SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).isNotBlank()
                 && prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED)
                 && PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO)
     }
     fun determineStep(): Int = when {
         !UncachedInputMethodManagerUtils.isThisImeEnabled(ctx, imm) -> 0
         !UncachedInputMethodManagerUtils.isThisImeCurrent(ctx, imm) -> 2
-        isOpenRouterReady() || openRouterSkipped -> 4
+        isAiProviderReady() || aiSetupSkipped -> 4
         else -> 3
     }
     var step by rememberSaveable { mutableIntStateOf(determineStep()) }
@@ -198,13 +203,13 @@ fun WelcomeWizard(
                         Text(stringResource(R.string.setup_step3_action), Modifier.weight(1f))
                     }
                 } else if (step == 3) {
-                    OpenRouterSetupStep(
+                    AiProviderSetupStep(
                         stepBackgroundColor = stepBackgroundColor,
                         textColor = textColor,
                         titleColor = titleColor,
                         onConfigured = { step = 4 },
                         onSkip = {
-                            openRouterSkipped = true
+                            aiSetupSkipped = true
                             step = 4
                         },
                         onOpenVoiceSettings = {
@@ -271,7 +276,7 @@ fun WelcomeWizard(
 }
 
 @Composable
-private fun OpenRouterSetupStep(
+private fun AiProviderSetupStep(
     stepBackgroundColor: Color,
     textColor: Color,
     titleColor: Color,
@@ -282,9 +287,14 @@ private fun OpenRouterSetupStep(
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
     var showApiKeyDialog by rememberSaveable { mutableStateOf(false) }
+    var showProviderDialog by rememberSaveable { mutableStateOf(false) }
     var showMicRationale by rememberSaveable { mutableStateOf(false) }
+    var providerPref by rememberSaveable {
+        mutableStateOf(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER) ?: Defaults.PREF_AI_PROVIDER)
+    }
+    val selectedProvider = AiProvider.fromPref(providerPref)
     var apiKeySet by remember {
-        mutableStateOf(SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY).isNotBlank())
+        mutableStateOf(SecretStore.getApiKey(ctx, selectedProvider.apiKeyPrefKey(), selectedProvider.defaultApiKey()).isNotBlank())
     }
     var micGranted by remember {
         mutableStateOf(PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO))
@@ -294,6 +304,30 @@ private fun OpenRouterSetupStep(
     }
     val secureStorageMessage = stringResource(R.string.voice_error_secure_storage_unavailable)
     val permissionDeniedMessage = stringResource(R.string.voice_error_no_permission)
+    fun providerName(provider: AiProvider): String = when (provider) {
+        AiProvider.OPENROUTER -> ctx.getString(R.string.ai_provider_openrouter)
+        AiProvider.PAYPERQ -> ctx.getString(R.string.ai_provider_payperq)
+    }
+    fun refreshApiKeyState(provider: AiProvider = selectedProvider) {
+        apiKeySet = SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).isNotBlank()
+    }
+    fun selectProvider(provider: AiProvider) {
+        providerPref = provider.prefValue
+        prefs.edit {
+            putString(Settings.PREF_AI_PROVIDER, provider.prefValue)
+            when (provider) {
+                AiProvider.OPENROUTER -> {
+                    putString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+                    putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
+                }
+                AiProvider.PAYPERQ -> {
+                    putString(Settings.PREF_VOICE_MODEL, "nova-3")
+                    putString(Settings.PREF_TEXT_FIX_MODEL, "gpt-5")
+                }
+            }
+        }
+        refreshApiKeyState(provider)
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -312,15 +346,36 @@ private fun OpenRouterSetupStep(
             onDismissRequest = { showApiKeyDialog = false },
             onConfirmed = {
                 val key = it.trim()
-                SecretStore.setApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, key)
+                SecretStore.setApiKey(ctx, selectedProvider.apiKeyPrefKey(), key)
                 apiKeySet = key.isNotBlank()
                 showApiKeyDialog = false
                 if (key.isNotBlank() && micGranted && voiceEnabled) onConfigured()
             },
-            initialText = SecretStore.getApiKey(ctx, Settings.PREF_OPENROUTER_API_KEY, Defaults.PREF_OPENROUTER_API_KEY),
-            title = { Text(stringResource(R.string.openrouter_api_key)) },
+            initialText = SecretStore.getApiKey(ctx, selectedProvider.apiKeyPrefKey(), selectedProvider.defaultApiKey()),
+            title = {
+                Text(
+                    if (selectedProvider == AiProvider.PAYPERQ) {
+                        stringResource(R.string.payperq_api_key)
+                    } else {
+                        stringResource(R.string.openrouter_api_key)
+                    }
+                )
+            },
             singleLine = true,
             isPassword = true,
+        )
+    }
+    if (showProviderDialog) {
+        ListPickerDialog(
+            onDismissRequest = { showProviderDialog = false },
+            items = listOf(AiProvider.OPENROUTER, AiProvider.PAYPERQ),
+            onItemSelected = {
+                selectProvider(it)
+                showProviderDialog = false
+            },
+            selectedItem = selectedProvider,
+            title = { Text(stringResource(R.string.ai_provider)) },
+            getItemName = { providerName(it) },
         )
     }
     if (showMicRationale) {
@@ -360,15 +415,16 @@ private fun OpenRouterSetupStep(
                 .background(color = stepBackgroundColor)
                 .padding(16.dp)
         ) {
-            Text(stringResource(R.string.setup_openrouter_title))
+            Text(stringResource(R.string.setup_ai_provider_title))
             Text(
-                stringResource(R.string.setup_openrouter_instruction),
+                stringResource(R.string.setup_ai_provider_instruction),
                 style = MaterialTheme.typography.bodyLarge.merge(color = textColor)
             )
             Spacer(Modifier.height(12.dp))
             Text(
                 stringResource(
-                    R.string.setup_openrouter_status,
+                    R.string.setup_ai_provider_status,
+                    providerName(selectedProvider),
                     if (apiKeySet) stringResource(R.string.setup_status_done) else stringResource(R.string.setup_status_missing),
                     if (micGranted) stringResource(R.string.setup_status_done) else stringResource(R.string.setup_status_missing),
                     if (voiceEnabled) stringResource(R.string.setup_status_done) else stringResource(R.string.setup_status_missing),
@@ -378,7 +434,18 @@ private fun OpenRouterSetupStep(
         }
         Spacer(Modifier.height(4.dp))
         ActionRow(
-            if (apiKeySet) stringResource(R.string.setup_openrouter_update_key) else stringResource(R.string.setup_openrouter_add_key),
+            stringResource(R.string.setup_ai_provider_select, providerName(selectedProvider)),
+            painterResource(R.drawable.ic_settings_preferences)
+        ) {
+            showProviderDialog = true
+        }
+        Spacer(Modifier.height(4.dp))
+        ActionRow(
+            if (apiKeySet) {
+                stringResource(R.string.setup_ai_provider_update_key, providerName(selectedProvider))
+            } else {
+                stringResource(R.string.setup_ai_provider_add_key, providerName(selectedProvider))
+            },
             painterResource(R.drawable.ic_settings_preferences)
         ) {
             if (!SecretStore.isSecureStorageAvailable(ctx)) {
@@ -389,7 +456,7 @@ private fun OpenRouterSetupStep(
         }
         Spacer(Modifier.height(4.dp))
         ActionRow(
-            if (micGranted && voiceEnabled) stringResource(R.string.setup_openrouter_voice_ready) else stringResource(R.string.setup_openrouter_enable_voice),
+            if (micGranted && voiceEnabled) stringResource(R.string.setup_ai_provider_voice_ready) else stringResource(R.string.setup_ai_provider_enable_voice),
             painterResource(R.drawable.sym_keyboard_voice_rounded)
         ) {
             if (!SecretStore.isSecureStorageAvailable(ctx)) {
@@ -406,13 +473,13 @@ private fun OpenRouterSetupStep(
         }
         Spacer(Modifier.height(4.dp))
         ActionRow(
-            stringResource(R.string.setup_openrouter_voice_settings),
+            stringResource(R.string.setup_ai_provider_voice_settings),
             painterResource(R.drawable.ic_settings_default),
             onOpenVoiceSettings
         )
         Spacer(Modifier.height(4.dp))
         ActionRow(
-            stringResource(R.string.setup_openrouter_skip),
+            stringResource(R.string.setup_ai_provider_skip),
             painterResource(R.drawable.ic_setup_check),
             onSkip
         )

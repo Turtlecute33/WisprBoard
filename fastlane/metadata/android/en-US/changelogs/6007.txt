@@ -1,0 +1,3 @@
+* Add PayPerQ as an AI provider for Voice Input and Text Fix
+* Update onboarding to choose OpenRouter or PayPerQ and store the matching API key
+* Keep OpenRouter zero-data-retention controls scoped to OpenRouter only

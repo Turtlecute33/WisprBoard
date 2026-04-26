@@ -6,7 +6,7 @@
 
 ### An open-source keyboard with AI superpowers, built for people who care about privacy.
 
-An open-source Android keyboard with **AI Voice-to-Text** and **AI Text Fix**. Both run through your own [OpenRouter](https://openrouter.ai/) key, with **zero data retention on by default**.
+An open-source Android keyboard with **AI Voice-to-Text** and **AI Text Fix**. Bring your own [OpenRouter](https://openrouter.ai/) or [PayPerQ](https://ppq.ai/) key; OpenRouter users can keep **zero data retention on by default**.
 
 [<img src="https://user-images.githubusercontent.com/663460/26973090-f8fdc986-4d14-11e7-995a-e7c5e79ed925.png" alt="Get APK from GitHub" height="64">](https://github.com/Turtlecute33/WisprBoard/releases/latest)
 
@@ -18,7 +18,7 @@ An open-source Android keyboard with **AI Voice-to-Text** and **AI Text Fix**. B
 
 I tried Wispr Flow, the trendy dictation app everyone talks about. The Android version is rough: slow, account-locked, and with a very clunky and low-quality user experience. I wanted the same idea (talk, get clean text) but with a better UX and more customization.
 
-So I forked [HeliBoard](https://github.com/Helium314/HeliBoard) and added two AI buttons. You bring an OpenRouter key (more providers supported in the future) and you can choose your preferred speech model. WisprBoard asks for zero-data-retention endpoints by default, so nothing about you is logged or trained on. I also polished and optimized other minor flaws and bugs of the HeliBoard codebase, offering a smoother experience and more secure and private backup and restore handling.
+So I forked [HeliBoard](https://github.com/Helium314/HeliBoard) and added two AI buttons. You choose OpenRouter or PayPerQ, paste your own API key, and pick the speech or text model you want. WisprBoard asks OpenRouter for zero-data-retention endpoints by default, so nothing about you is logged or trained on when that route is available. I also polished and optimized other minor flaws and bugs of the HeliBoard codebase, offering a smoother experience and more secure and private backup and restore handling.
 
 No subscription. No account. No telemetry. Just a keyboard.
 
@@ -30,7 +30,7 @@ No subscription. No account. No telemetry. Just a keyboard.
 
 You're walking down the street. You're somewhere a voice note would be rude or out of place. Long-press Return, tap the mic, speak. Your words land in the chat as polished text. The recipient gets a normal message. You didn't thumb-type a paragraph.
 
-- Pick any speech model OpenRouter offers (Whisper, Gemini, etc.)
+- Pick OpenRouter chat audio models or PayPerQ speech models such as Nova
 - Add a custom prompt or vocabulary so it nails names and jargon
 - The local recording is deleted the moment it's sent
 
@@ -50,9 +50,9 @@ You're chatting in English, Italian, German, whatever isn't your strongest. You 
 
 ## Zero Data Retention
 
-Voice and Text Fix both go through OpenRouter (default), and WisprBoard asks OpenRouter for **zero-data-retention endpoints by default**. When your model offers a [ZDR route](https://openrouter.ai/docs/use-cases/zero-data-retention), your audio and text aren't logged, stored, or used for training. If a model doesn't offer one, WisprBoard tells you and falls back so things still work. You can turn the strict setting off if you'd rather.
+OpenRouter is the default provider, and WisprBoard asks OpenRouter for **zero-data-retention endpoints by default**. When your model offers a [ZDR route](https://openrouter.ai/docs/use-cases/zero-data-retention), your audio and text aren't logged, stored, or used for training. If a model doesn't offer one, WisprBoard tells you and falls back so things still work. You can turn the strict setting off if you'd rather.
 
-Your OpenRouter key is encrypted with the Android Keystore, excluded from cloud backups, and never written to logs. AI is opt-in: both features stay off until you paste a key in.
+PayPerQ support uses PayPerQ's own API endpoints and policies. Your provider API keys are encrypted with the Android Keystore, excluded from cloud backups, and never written to logs. AI is opt-in: both features stay off until you paste a key in.
 
 <br>
 
@@ -62,7 +62,7 @@ Your OpenRouter key is encrypted with the Android Keystore, excluded from cloud 
 | --------------------------------------- | :-------: | :--------: |
 | Everything HeliBoard does               |     ✅     |     ✅      |
 | Installs alongside HeliBoard            |     —     |     ✅      |
-| Voice-to-text via OpenRouter            |     —     |     ✅      |
+| Voice-to-text via OpenRouter or PayPerQ |     —     |     ✅      |
 | Text Fix (rewrite selected text)        |     —     |     ✅      |
 | Zero Data Retention enforced by default |     —     |     ✅      |
 | API key encrypted on-device             |     —     |     ✅      |
@@ -73,7 +73,7 @@ If you don't want AI features, stay on HeliBoard. It's wonderful as-is.
 
 ## Privacy footnote
 
-WisprBoard has no backend, no analytics, no tracking. Once your audio or selected text reaches OpenRouter and the model provider, their policies apply. [Read OpenRouter's policy](https://openrouter.ai/privacy) before pointing this at anything sensitive.
+WisprBoard has no backend, no analytics, no tracking. Once your audio or selected text reaches OpenRouter, PayPerQ, or the underlying model provider, their policies apply. Read [OpenRouter's policy](https://openrouter.ai/privacy) and [PayPerQ's terms](https://ppq.ai/terms) before pointing this at anything sensitive.
 
 
 <br>
@@ -82,7 +82,7 @@ WisprBoard has no backend, no analytics, no tracking. Once your audio or selecte
 
 1. **Download** the APK from [Releases](https://github.com/Turtlecute33/WisprBoard/releases/latest).
 2. **Enable** WisprBoard in *Settings → System → Keyboards*.
-3. **Add a key** from [openrouter.ai/keys](https://openrouter.ai/keys) into *WisprBoard Settings → Voice Input*.
+3. **Choose a provider** in *WisprBoard Settings → Voice Input*, then add an OpenRouter or PayPerQ API key.
 4. **Long-press Return**, tap the mic, start talking.
 
 WisprBoard installs side-by-side with HeliBoard, so you can keep both.

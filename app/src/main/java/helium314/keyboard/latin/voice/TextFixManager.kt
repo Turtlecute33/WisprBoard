@@ -17,7 +17,7 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 
 /**
- * Orchestrates text-fix requests to OpenRouter. Reads the user's selected text via a callback,
+ * Orchestrates text-fix requests to the selected AI provider. Reads the user's selected text via a callback,
  * validates preconditions, runs the HTTP call on a background thread, and posts the proposed
  * replacement back on the main thread. Stateless across requests — a new fix starts fresh.
  */
@@ -85,7 +85,7 @@ class TextFixManager(
         fun onResult(originalText: String, proposedText: String)
         fun onError(message: String)
         /**
-         * Called when the user must acknowledge the "data is sent to OpenRouter" consent
+         * Called when the user must acknowledge the "data is sent to the AI provider" consent
          * before the first text-fix request.
          */
         fun requestConsent() {}
