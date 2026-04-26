@@ -84,11 +84,11 @@ fun createTextFixSettings(context: Context) = listOf(
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )
             AiProvider.PAYPERQ -> listOf(
-                "Private Gemma4 31B (Default, Cheap, TEE)" to "private/gemma4-31b",
-                "Private GLM 5.1 (Medium, TEE)" to "private/glm-5-1",
-                "Private Kimi K2 6 (Expensive, TEE)" to "private/kimi-k2-6",
-                "Gemini 3.1 Flash-Lite Preview (Cheap, no-store)" to "google/gemini-3.1-flash-lite-preview",
-                "Mistral Small 3 (Cheap, EU no-store)" to "mistralai/mistral-small-3",
+                "GPT-5.4 Nano (Default, Cheap)" to "openai/gpt-5.4-nano",
+                "GPT-5.4 Mini (Medium)" to "openai/gpt-5.4-mini",
+                "Gemini 3 Flash Preview (Medium)" to "google/gemini-3-flash-preview",
+                "DeepSeek V4 Pro (Medium)" to "deepseek/deepseek-v4-pro",
+                "Claude Haiku 4.5 (Cheap)" to "anthropic/claude-haiku-4.5",
                 ctx.getString(R.string.voice_custom_model) to "custom",
             )
         }
