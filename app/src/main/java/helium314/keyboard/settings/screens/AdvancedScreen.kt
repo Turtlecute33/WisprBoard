@@ -223,7 +223,7 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
             name = setting.title,
             key = setting.key,
             default = 0,
-            range = 21f..35f,
+            range = 21f..36f,
             description = {
                 "Android " + when(it) {
                     21 -> "5.0"
@@ -241,6 +241,7 @@ fun createAdvancedSettings(context: Context) = listOfNotNull(
                     33 -> "13"
                     34 -> "14"
                     35 -> "15"
+                    36 -> "16"
                     else -> "version unknown"
                 }
             },
