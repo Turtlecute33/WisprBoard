@@ -30,7 +30,7 @@ class VoiceInputManager(
         private const val MAX_TRANSCRIPTION_LENGTH = 10_000
         private const val AUDIO_CACHE_SUBDIR = "voice_audio"
         private const val MIN_RECORDING_DURATION_MS = 500L
-        private const val MIN_SPEECH_MEAN_AMPLITUDE = 150.0
+        private const val MIN_SPEECH_MEAN_AMPLITUDE = 80.0
     }
 
     enum class State { IDLE, RECORDING, TRANSCRIBING }
