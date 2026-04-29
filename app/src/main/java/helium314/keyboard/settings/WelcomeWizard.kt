@@ -78,6 +78,7 @@ import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.latin.voice.defaultApiKey
+import helium314.keyboard.latin.voice.parseExpectedLanguages
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.ListPickerDialog
 import helium314.keyboard.settings.dialogs.TextInputDialog
@@ -93,9 +94,10 @@ fun WelcomeWizard(
     val switchStep = 2
     val providerStep = 3
     val apiKeyStep = 4
-    val voiceStep = 5
-    val doneStep = 6
-    val totalSetupSteps = 6
+    val languageStep = 5
+    val voiceStep = 6
+    val doneStep = 7
+    val totalSetupSteps = 7
     val ctx = LocalContext.current
     val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
     var aiSetupSkipped by rememberSaveable { mutableStateOf(false) }
@@ -351,6 +353,7 @@ fun WelcomeWizard(
                 } else if (step in providerStep..voiceStep) {
                     AiProviderSetupStep(
                         step = step,
+                        voiceStep = voiceStep,
                         stepBackgroundColor = stepBackgroundColor,
                         infoContainerColor = infoContainerColor,
                         infoContentColor = infoContentColor,
@@ -361,13 +364,15 @@ fun WelcomeWizard(
                         primaryAction = { actionText, icon, action -> PrimaryAction(actionText, icon, action) },
                         secondaryAction = { actionText, icon, action -> SecondaryAction(actionText, icon, action) },
                         onProviderConfigured = { step = apiKeyStep },
-                        onApiKeyConfigured = { step = voiceStep },
+                        onApiKeyConfigured = { step = languageStep },
+                        onLanguageConfigured = { step = voiceStep },
                         onVoiceConfigured = { step = doneStep },
                         onSkip = {
                             if (step == voiceStep) aiSetupSkipped = true
                             step = when (step) {
                                 providerStep -> apiKeyStep
-                                apiKeyStep -> voiceStep
+                                apiKeyStep -> languageStep
+                                languageStep -> voiceStep
                                 else -> doneStep
                             }
                         },
@@ -430,6 +435,7 @@ fun WelcomeWizard(
 @Composable
 private fun AiProviderSetupStep(
     step: Int,
+    voiceStep: Int,
     stepBackgroundColor: Color,
     infoContainerColor: Color,
     infoContentColor: Color,
@@ -441,6 +447,7 @@ private fun AiProviderSetupStep(
     secondaryAction: @Composable (String, Painter?, () -> Unit) -> Unit,
     onProviderConfigured: () -> Unit,
     onApiKeyConfigured: () -> Unit,
+    onLanguageConfigured: () -> Unit,
     onVoiceConfigured: () -> Unit,
     onSkip: () -> Unit,
     onOpenVoiceSettings: () -> Unit,
@@ -449,6 +456,7 @@ private fun AiProviderSetupStep(
     val prefs = ctx.prefs()
     var showApiKeyDialog by rememberSaveable { mutableStateOf(false) }
     var showProviderDialog by rememberSaveable { mutableStateOf(false) }
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var showMicRationale by rememberSaveable { mutableStateOf(false) }
     var providerPref by rememberSaveable {
         mutableStateOf(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER) ?: Defaults.PREF_AI_PROVIDER)
@@ -463,6 +471,15 @@ private fun AiProviderSetupStep(
     var voiceEnabled by remember {
         mutableStateOf(prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED))
     }
+    var expectedLanguagesRaw by rememberSaveable {
+        mutableStateOf(
+            prefs.getString(
+                Settings.PREF_VOICE_EXPECTED_LANGUAGES,
+                Defaults.PREF_VOICE_EXPECTED_LANGUAGES
+            ) ?: Defaults.PREF_VOICE_EXPECTED_LANGUAGES
+        )
+    }
+    val expectedLanguages = parseExpectedLanguages(expectedLanguagesRaw).joinToString(", ")
     val secureStorageMessage = stringResource(R.string.voice_error_secure_storage_unavailable)
     val permissionDeniedMessage = stringResource(R.string.voice_error_no_permission)
     fun providerName(provider: AiProvider): String = when (provider) {
@@ -539,6 +556,23 @@ private fun AiProviderSetupStep(
             getItemName = { providerName(it) },
         )
     }
+    if (showLanguageDialog) {
+        TextInputDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            onConfirmed = { value ->
+                val languages = parseExpectedLanguages(value).joinToString(", ")
+                prefs.edit { putString(Settings.PREF_VOICE_EXPECTED_LANGUAGES, languages) }
+                expectedLanguagesRaw = languages
+                showLanguageDialog = false
+                onLanguageConfigured()
+            },
+            initialText = expectedLanguagesRaw,
+            title = { Text(stringResource(R.string.voice_expected_languages)) },
+            description = { Text(stringResource(R.string.voice_expected_languages_summary)) },
+            singleLine = false,
+            checkTextValid = { true },
+        )
+    }
     if (showMicRationale) {
         ConfirmationDialog(
             onDismissRequest = { showMicRationale = false },
@@ -570,7 +604,7 @@ private fun AiProviderSetupStep(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         painterResource(
-                            if (step == 5) R.drawable.sym_keyboard_voice_rounded else R.drawable.ic_settings_preferences
+                            if (step == voiceStep) R.drawable.sym_keyboard_voice_rounded else R.drawable.ic_settings_preferences
                         ),
                         null,
                         Modifier.size(30.dp)
@@ -649,6 +683,39 @@ private fun AiProviderSetupStep(
                             onApiKeyConfigured
                         )
                     }
+                }
+                5 -> {
+                    Text(
+                        stringResource(R.string.setup_ai_provider_language_title),
+                        style = MaterialTheme.typography.headlineSmall.merge(color = titleColor)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.setup_ai_provider_language_instruction),
+                        style = MaterialTheme.typography.bodyLarge.merge(color = textColor)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        if (expectedLanguages.isBlank()) {
+                            stringResource(R.string.setup_ai_provider_language_not_set)
+                        } else {
+                            stringResource(R.string.setup_ai_provider_language_status, expectedLanguages)
+                        },
+                        style = MaterialTheme.typography.bodyMedium.merge(color = textColorDim)
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    primaryAction(
+                        stringResource(R.string.setup_ai_provider_language_action),
+                        painterResource(R.drawable.ic_settings_preferences)
+                    ) {
+                        showLanguageDialog = true
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    secondaryAction(
+                        stringResource(R.string.setup_continue_action),
+                        painterResource(R.drawable.ic_setup_check),
+                        onLanguageConfigured
+                    )
                 }
                 else -> {
                     Text(

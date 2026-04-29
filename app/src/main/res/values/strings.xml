@@ -1183,6 +1183,11 @@ New dictionary:
     <string name="setup_ai_provider_key_status">API key: %1$s</string>
     <string name="setup_ai_provider_add_key">Add %1$s API key</string>
     <string name="setup_ai_provider_update_key">Update %1$s API key</string>
+    <string name="setup_ai_provider_language_title">Add speech languages</string>
+    <string name="setup_ai_provider_language_instruction">Recommended for audio-to-text: tell the model which languages you usually speak, such as English, Italian, or English, Italian. It will still detect the spoken language and will not translate.</string>
+    <string name="setup_ai_provider_language_status">Expected languages: %1$s</string>
+    <string name="setup_ai_provider_language_not_set">Expected languages: not set</string>
+    <string name="setup_ai_provider_language_action">Set speech languages</string>
     <string name="setup_ai_provider_voice_title">Enable voice input</string>
     <string name="setup_ai_provider_voice_instruction">Allow microphone access and turn on Voice Input so the keyboard can record your speech when you tap the voice key.</string>
     <string name="setup_ai_provider_voice_status">Microphone: %1$s\nVoice input: %2$s</string>
