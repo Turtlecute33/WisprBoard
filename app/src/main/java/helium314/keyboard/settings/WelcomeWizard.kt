@@ -4,6 +4,9 @@ package helium314.keyboard.settings
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings as AndroidSettings
 import android.widget.Toast
 import android.view.inputmethod.InputMethodManager
@@ -120,6 +123,21 @@ fun WelcomeWizard(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    DisposableEffect(ctx, imm) {
+        val inputMethodObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                step = determineStep()
+            }
+        }
+        ctx.contentResolver.registerContentObserver(
+            AndroidSettings.Secure.getUriFor(AndroidSettings.Secure.DEFAULT_INPUT_METHOD),
+            false,
+            inputMethodObserver
+        )
+        onDispose {
+            ctx.contentResolver.unregisterContentObserver(inputMethodObserver)
         }
     }
     LaunchedEffect(step) {
@@ -312,7 +330,9 @@ fun WelcomeWizard(
                         instruction = stringResource(R.string.setup_step2_instruction, appName),
                         icon = painterResource(R.drawable.ic_setup_select),
                         primaryText = stringResource(R.string.setup_step2_action),
-                        primaryAction = imm::showInputMethodPicker
+                        primaryAction = imm::showInputMethodPicker,
+                        secondaryText = stringResource(R.string.setup_continue_action),
+                        secondaryAction = { step = determineStep() }
                     )
                 } else if (step in providerStep..voiceStep) {
                     AiProviderSetupStep(
