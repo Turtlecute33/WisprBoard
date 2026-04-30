@@ -148,7 +148,9 @@ sealed interface KeyData : AbstractKeyData {
         }
 
         private fun getActionKeyPopupKeys(params: KeyboardParams): SimplePopups? =
-            getActionKeyPopupKeyString(params.mId)?.let { createActionPopupKeys(it, params) }
+            getActionKeyPopupKeyString(params.mId)?.let { createActionPopupKeys(it, params) }?.takeIf { sp ->
+                sp.popupKeys?.any { !it.startsWith("!") } == true
+            }
 
         private fun getActionKeyPopupKeyString(keyboardId: KeyboardId): String? {
             val action = keyboardId.imeAction()
@@ -276,14 +278,18 @@ sealed interface KeyData : AbstractKeyData {
             popupKeys.addAll(ordered)
             popupKeys.addAll(tail)
 
-            val delta = ordered.size - originalCount
-            if (delta != 0) {
-                val i = popupKeys.indexOfFirst { it.startsWith(Key.POPUP_KEYS_FIXED_COLUMN_ORDER) }
-                if (i > -1) {
-                    val n = popupKeys[i].substringAfter(Key.POPUP_KEYS_FIXED_COLUMN_ORDER).toIntOrNull()
-                    if (n != null)
-                        popupKeys[i] = popupKeys[i].replace(n.toString(), (n + delta).toString())
-                }
+            // Recompute the column count from the actual surviving entries instead of patching
+            // the old number with a delta — the latter goes wrong (or to zero) when the user
+            // disables several entries via the reorder dialog and the popup keyboard then
+            // crashes in PopupKeysKeyboard.setParameters because numKeys/numColumns hit zero.
+            val keyCount = popupKeys.count { !it.startsWith("!") }
+            val fcoIdx = popupKeys.indexOfFirst { it.startsWith(Key.POPUP_KEYS_FIXED_COLUMN_ORDER) }
+            if (keyCount == 0) {
+                // Nothing to show; strip the meta tokens so the popup either falls back to a
+                // sensible default or simply doesn't open instead of rendering an empty grid.
+                popupKeys.removeAll { it.startsWith("!") }
+            } else if (fcoIdx > -1) {
+                popupKeys[fcoIdx] = "${Key.POPUP_KEYS_FIXED_COLUMN_ORDER}$keyCount"
             }
         }
 

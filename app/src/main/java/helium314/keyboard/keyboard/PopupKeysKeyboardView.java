@@ -260,11 +260,10 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
             updatePressKeyGraphics(newKey);
             invalidateKey(newKey);
         }
-        // Fire a single delicate pulse on every boundary crossing — entering a button or
-        // leaving one (newKey or oldKey, but not the no-op case above). Independent of the
-        // global vibrate-on-keypress toggle since callers gate this on their own pref.
+        // Fire a delicate pulse only when the finger enters a new button. Leaving to empty
+        // space is silent so the user feels one tick per hovered button, not two.
         final SettingsValues sv = Settings.getInstance().getCurrent();
-        if (sv != null && sv.mPopupDragHaptic && (newKey != null || oldKey != null)) {
+        if (sv != null && sv.mPopupDragHaptic && newKey != null) {
             AudioAndHapticFeedbackManager.getInstance().vibrateTick();
         }
         return newKey;
