@@ -2,17 +2,13 @@
 package helium314.keyboard.settings.preferences
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import helium314.keyboard.latin.utils.Log
-import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
-import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.dialogs.SliderDialog
 import androidx.core.content.edit
 
@@ -32,12 +28,18 @@ fun <T: Number> SliderPreference(
 ) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
-    val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
-    if ((b?.value ?: 0) < 0)
-        Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
-    val initialValue = if (default is Int || default is Float)
-        getPrefOfType(prefs, key, default)
-    else throw IllegalArgumentException("only float and int are supported")
+    // Subscribe only to this slider's key so unrelated preference writes don't recompose us.
+    val initialValue: T = when (default) {
+        is Int -> {
+            @Suppress("UNCHECKED_CAST")
+            rememberIntPreferenceState(key, default).value as T
+        }
+        is Float -> {
+            @Suppress("UNCHECKED_CAST")
+            rememberFloatPreferenceState(key, default).value as T
+        }
+        else -> throw IllegalArgumentException("only float and int are supported")
+    }
 
     var showDialog by rememberSaveable { mutableStateOf(false) }
     Preference(
