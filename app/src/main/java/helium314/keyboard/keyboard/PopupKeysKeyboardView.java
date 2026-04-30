@@ -14,7 +14,6 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.Gravity;
-import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -25,10 +24,12 @@ import helium314.keyboard.accessibility.PopupKeysKeyboardAccessibilityDelegate;
 import helium314.keyboard.keyboard.emoji.EmojiViewCallback;
 import helium314.keyboard.keyboard.internal.KeyDrawParams;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
+import helium314.keyboard.latin.AudioAndHapticFeedbackManager;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.settings.Settings;
+import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.common.CoordinateUtils;
 
 /**
@@ -259,12 +260,12 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
             updatePressKeyGraphics(newKey);
             invalidateKey(newKey);
             // Independent of the global vibrate-on-keypress toggle so the user can navigate the
-            // popup row by feel even when keypress vibration is otherwise disabled. Bypasses the
-            // OS-level haptic toggles for the same reason.
-            if (Settings.getInstance().getCurrent().mPopupDragHaptic) {
-                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK,
-                        HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
-                                | HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
+            // popup row by feel even when keypress vibration is otherwise disabled. Goes through
+            // the vibrator directly with a user-tunable duration so the tick is consistent across
+            // OEMs (CLOCK_TICK is remapped or muted on some skins).
+            final SettingsValues sv = Settings.getInstance().getCurrent();
+            if (sv != null && sv.mPopupDragHaptic && sv.mPopupDragHapticDuration > 0) {
+                AudioAndHapticFeedbackManager.getInstance().vibrate(sv.mPopupDragHapticDuration);
             }
         }
         return newKey;

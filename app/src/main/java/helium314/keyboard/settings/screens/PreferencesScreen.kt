@@ -42,6 +42,10 @@ fun PreferencesScreen(
         Settings.PREF_ENABLE_CLIPBOARD_HISTORY,
         Defaults.PREF_ENABLE_CLIPBOARD_HISTORY
     )
+    val popupDragHaptic by rememberBooleanPreferenceState(
+        Settings.PREF_POPUP_DRAG_HAPTIC,
+        Defaults.PREF_POPUP_DRAG_HAPTIC
+    )
     val items = listOf(
         R.string.settings_category_input,
         Settings.PREF_SHOW_HINTS,
@@ -60,6 +64,8 @@ fun PreferencesScreen(
             Settings.PREF_VIBRATE_IN_DND_MODE else null,
         if (AudioAndHapticFeedbackManager.getInstance().hasVibrator())
             Settings.PREF_POPUP_DRAG_HAPTIC else null,
+        if (AudioAndHapticFeedbackManager.getInstance().hasVibrator() && popupDragHaptic)
+            Settings.PREF_POPUP_DRAG_HAPTIC_DURATION else null,
         Settings.PREF_SOUND_ON,
         if (soundOn)
             Settings.PREF_KEYPRESS_SOUND_VOLUME else null,
@@ -103,7 +109,7 @@ fun createPreferencesSettings(context: Context) = listOf(
         ReorderSwitchPreference(it, Defaults.PREF_POPUP_KEYS_ORDER)
     },
     Setting(context, Settings.PREF_ACTION_POPUP_ORDER, R.string.action_popup_order, R.string.action_popup_order_summary) {
-        ReorderSwitchPreference(it, Defaults.PREF_ACTION_POPUP_ORDER)
+        ReorderSwitchPreference(it, Defaults.PREF_ACTION_POPUP_ORDER, stringResource(R.string.action_popup_order_dialog_help))
     },
     Setting(
         context, Settings.PREF_SHOW_TLD_POPUP_KEYS, R.string.show_tld_popup_keys,
@@ -125,6 +131,16 @@ fun createPreferencesSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_POPUP_DRAG_HAPTIC, R.string.popup_drag_haptic, R.string.popup_drag_haptic_summary) {
         SwitchPreference(it, Defaults.PREF_POPUP_DRAG_HAPTIC)
+    },
+    Setting(context, Settings.PREF_POPUP_DRAG_HAPTIC_DURATION, R.string.popup_drag_haptic_duration) { setting ->
+        SliderPreference(
+            name = setting.title,
+            key = setting.key,
+            default = Defaults.PREF_POPUP_DRAG_HAPTIC_DURATION,
+            description = { stringResource(R.string.abbreviation_unit_milliseconds, it.toString()) },
+            range = 0f..40f,
+            onValueChanged = { it?.let { AudioAndHapticFeedbackManager.getInstance().vibrate(it.toLong()) } }
+        )
     },
     Setting(context, Settings.PREF_SOUND_ON, R.string.sound_on_keypress) {
         SwitchPreference(it, Defaults.PREF_SOUND_ON)

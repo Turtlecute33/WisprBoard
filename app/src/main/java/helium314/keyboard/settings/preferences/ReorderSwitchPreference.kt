@@ -25,7 +25,7 @@ import helium314.keyboard.settings.screens.GetIcon
 import androidx.core.content.edit
 
 @Composable
-fun ReorderSwitchPreference(setting: Setting, default: String) {
+fun ReorderSwitchPreference(setting: Setting, default: String, dialogDescription: String? = null) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     Preference(
         name = setting.title,
@@ -50,6 +50,7 @@ fun ReorderSwitchPreference(setting: Setting, default: String) {
             neutralButtonText = if (prefs.contains(setting.key)) stringResource(R.string.button_default) else null,
             items = items,
             title = { Text(setting.title) },
+            description = dialogDescription,
             displayItem = { item ->
                 var checked by rememberSaveable { mutableStateOf(item.state) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
