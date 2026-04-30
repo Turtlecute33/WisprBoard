@@ -219,20 +219,72 @@ sealed interface KeyData : AbstractKeyData {
             }
             if (params.mId.mElementId == KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW)
                 popupKeys.remove("!icon/clipboard_action_key|!code/key_clipboard")
-            // Insert the optional second text-fix button right after the primary one when enabled.
-            if (Settings.getInstance().current.mTextFix2Enabled) {
-                val tfIndex = popupKeys.indexOfFirst { it == "!icon/text_fix_key|!code/key_text_fix" }
-                if (tfIndex >= 0) {
-                    popupKeys.add(tfIndex + 1, "!icon/text_fix_2_key|!code/key_text_fix_2")
-                    val i = popupKeys.indexOfFirst { it.startsWith(Key.POPUP_KEYS_FIXED_COLUMN_ORDER) }
-                    if (i > -1) {
-                        val n = popupKeys[i].substringAfter(Key.POPUP_KEYS_FIXED_COLUMN_ORDER).toIntOrNull()
-                        if (n != null)
-                            popupKeys[i] = popupKeys[i].replace(n.toString(), (n + 1).toString())
-                    }
+            applyActionPopupOrder(popupKeys)
+            return SimplePopups(popupKeys)
+        }
+
+        // Reorderable entries inside the long-press-Return popup (clipboard / voice / emoji /
+        // text fix variants). The first item in each pair is the canonical "name" stored in the
+        // user-facing reorder pref (matches the icon name); the second is the popup entry string.
+        private val ORDERABLE_ACTION_POPUPS = listOf(
+            "clipboard_action_key" to "!icon/clipboard_action_key|!code/key_clipboard",
+            "shortcut_key" to "!icon/shortcut_key|!code/key_voice_input",
+            "emoji_action_key" to "!icon/emoji_action_key|!code/key_emoji",
+            "text_fix_key" to "!icon/text_fix_key|!code/key_text_fix",
+            "text_fix_2_key" to "!icon/text_fix_2_key|!code/key_text_fix_2",
+        )
+
+        private fun applyActionPopupOrder(popupKeys: MutableList<String>) {
+            val nameToEntry = ORDERABLE_ACTION_POPUPS.toMap()
+            val entries = nameToEntry.values.toSet()
+            // Snapshot the orderable subset that survived the prior filtering passes.
+            val present = popupKeys.filter { it in entries }.toMutableList()
+            // Pull in the optional second text-fix entry only when its pref is on AND the
+            // primary text-fix slot is present (otherwise the variant has nothing to anchor to).
+            if (Settings.getInstance().current.mTextFix2Enabled
+                && "!icon/text_fix_key|!code/key_text_fix" in present) {
+                val tf2 = "!icon/text_fix_2_key|!code/key_text_fix_2"
+                if (tf2 !in present) present.add(tf2)
+            }
+            if (present.isEmpty()) return
+            val originalCount = popupKeys.count { it in entries }
+
+            val orderPref = Settings.getInstance().current.mActionPopupOrder ?: ""
+            val seen = mutableSetOf<String>()
+            val ordered = mutableListOf<String>()
+            for (token in orderPref.split(';')) {
+                val parts = token.split(',')
+                if (parts.size != 2) continue
+                val entry = nameToEntry[parts[0]] ?: continue
+                if (entry !in present || entry in seen) continue
+                if (parts[1].toBooleanStrictOrNull() == false) {
+                    seen.add(entry) // user-disabled — drop it from output
+                    continue
+                }
+                seen.add(entry)
+                ordered.add(entry)
+            }
+            // Append entries the pref doesn't yet know about (fresh installs picking up new keys).
+            for (entry in present) if (entry !in seen) ordered.add(entry)
+
+            val firstIdx = popupKeys.indexOfFirst { it in entries }
+            if (firstIdx < 0) return
+            val before = popupKeys.subList(0, firstIdx).toList()
+            val tail = popupKeys.subList(firstIdx, popupKeys.size).filter { it !in entries }
+            popupKeys.clear()
+            popupKeys.addAll(before)
+            popupKeys.addAll(ordered)
+            popupKeys.addAll(tail)
+
+            val delta = ordered.size - originalCount
+            if (delta != 0) {
+                val i = popupKeys.indexOfFirst { it.startsWith(Key.POPUP_KEYS_FIXED_COLUMN_ORDER) }
+                if (i > -1) {
+                    val n = popupKeys[i].substringAfter(Key.POPUP_KEYS_FIXED_COLUMN_ORDER).toIntOrNull()
+                    if (n != null)
+                        popupKeys[i] = popupKeys[i].replace(n.toString(), (n + delta).toString())
                 }
             }
-            return SimplePopups(popupKeys)
         }
 
         fun String.replaceIconWithLabelIfNoDrawable(params: KeyboardParams): String {

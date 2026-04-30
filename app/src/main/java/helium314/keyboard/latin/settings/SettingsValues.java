@@ -71,6 +71,7 @@ public class SettingsValues {
     public final boolean mShowTldPopupKeys;
     public final boolean mTextFix2Enabled;
     public final boolean mPopupDragHaptic;
+    public final String mActionPopupOrder;
     public final boolean mSpaceForLangChange;
     public final boolean mShowsEmojiKey;
     public final boolean mVarToolbarDirection;
@@ -200,6 +201,7 @@ public class SettingsValues {
         mShowTldPopupKeys = prefs.getBoolean(Settings.PREF_SHOW_TLD_POPUP_KEYS, Defaults.PREF_SHOW_TLD_POPUP_KEYS);
         mTextFix2Enabled = prefs.getBoolean(Settings.PREF_TEXT_FIX_2_ENABLED, Defaults.PREF_TEXT_FIX_2_ENABLED);
         mPopupDragHaptic = prefs.getBoolean(Settings.PREF_POPUP_DRAG_HAPTIC, Defaults.PREF_POPUP_DRAG_HAPTIC);
+        mActionPopupOrder = prefs.getString(Settings.PREF_ACTION_POPUP_ORDER, Defaults.PREF_ACTION_POPUP_ORDER);
         mSpaceForLangChange = prefs.getBoolean(Settings.PREF_SPACE_TO_CHANGE_LANG, Defaults.PREF_SPACE_TO_CHANGE_LANG);
         mShowsEmojiKey = prefs.getBoolean(Settings.PREF_SHOW_EMOJI_KEY, Defaults.PREF_SHOW_EMOJI_KEY);
         mVarToolbarDirection = mToolbarMode != ToolbarMode.HIDDEN && prefs.getBoolean(Settings.PREF_VARIABLE_TOOLBAR_DIRECTION, Defaults.PREF_VARIABLE_TOOLBAR_DIRECTION);

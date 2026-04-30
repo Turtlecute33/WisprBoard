@@ -48,6 +48,7 @@ fun PreferencesScreen(
         if (showHints)
             Settings.PREF_POPUP_KEYS_LABELS_ORDER else null,
         Settings.PREF_POPUP_KEYS_ORDER,
+        Settings.PREF_ACTION_POPUP_ORDER,
         Settings.PREF_SHOW_POPUP_HINTS,
         Settings.PREF_SHOW_TLD_POPUP_KEYS,
         Settings.PREF_POPUP_ON,
@@ -100,6 +101,9 @@ fun createPreferencesSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_POPUP_KEYS_ORDER, R.string.popup_order) {
         ReorderSwitchPreference(it, Defaults.PREF_POPUP_KEYS_ORDER)
+    },
+    Setting(context, Settings.PREF_ACTION_POPUP_ORDER, R.string.action_popup_order, R.string.action_popup_order_summary) {
+        ReorderSwitchPreference(it, Defaults.PREF_ACTION_POPUP_ORDER)
     },
     Setting(
         context, Settings.PREF_SHOW_TLD_POPUP_KEYS, R.string.show_tld_popup_keys,

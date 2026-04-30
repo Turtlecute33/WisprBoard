@@ -203,4 +203,5 @@ object Defaults {
     const val PREF_TEXT_FIX_2_ENABLED = false
     const val PREF_TEXT_FIX_2_PROMPT = "You are a writing assistant. Rewrite the following text to be clearer and more concise while preserving the original meaning, tone, and language. Output only the rewritten text, with no preamble, quotes, or explanation."
     const val PREF_POPUP_DRAG_HAPTIC = false
+    const val PREF_ACTION_POPUP_ORDER = "clipboard_action_key,true;emoji_action_key,true;shortcut_key,true;text_fix_key,true;text_fix_2_key,true"
 }
