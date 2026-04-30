@@ -42,8 +42,8 @@ android {
         applicationId = "helium314.keyboard.wisprboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 6111
-        versionName = "6.1.11"
+        versionCode = 6112
+        versionName = "6.1.12"
         buildConfigField("boolean", "ALLOW_USER_SUPPLIED_JNI", "false")
         buildConfigField("boolean", "ENABLE_GESTURE_DATA_GATHERING", "false")
         manifestPlaceholders["gestureDataProviderEnabled"] = "false"

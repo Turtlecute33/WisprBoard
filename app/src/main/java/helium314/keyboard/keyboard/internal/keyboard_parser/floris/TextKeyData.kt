@@ -255,7 +255,6 @@ sealed interface KeyData : AbstractKeyData {
                 if (tf2 !in present) present.add(tf2)
             }
             if (present.isEmpty()) return
-            val originalCount = popupKeys.count { it in entries }
 
             val orderPref = Settings.getInstance().current.mActionPopupOrder ?: ""
             val seen = mutableSetOf<String>()
