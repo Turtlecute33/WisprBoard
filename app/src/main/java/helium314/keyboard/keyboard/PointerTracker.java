@@ -269,8 +269,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     }
 
     // Returns true if keyboard has been changed by this callback.
-    private boolean callListenerOnPressAndCheckKeyboardLayoutChange(@NonNull final Key key,
-            final int repeatCount, final int x, final int y) {
+    private boolean callListenerOnPressAndCheckKeyboardLayoutChange(@NonNull final Key key, final int repeatCount) {
         // While gesture input is going on, this method should be a no-operation. But when gesture
         // input has been canceled, <code>sInGesture</code> and <code>mIsDetectingGesture</code>
         // are set to false. To keep this method is a no-operation,
@@ -291,9 +290,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return false;
         }
         if (key.isEnabled()) {
-            final HapticEvent hapticEvent = isTouchInsideVisibleKey(key, x, y)
-                    ? (repeatCount == 0 ? HapticEvent.KEY_PRESS : HapticEvent.KEY_REPEAT)
-                    : HapticEvent.NO_HAPTICS;
+            final HapticEvent hapticEvent = repeatCount == 0 ? HapticEvent.KEY_PRESS : HapticEvent.KEY_REPEAT;
             sListener.onPressKey(key.getCode(), repeatCount, getActivePointerTrackerCount() == 1, hapticEvent);
             final boolean keyboardLayoutHasBeenChanged = mKeyboardLayoutHasBeenChanged;
             mKeyboardLayoutHasBeenChanged = false;
@@ -301,13 +298,6 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             return keyboardLayoutHasBeenChanged;
         }
         return false;
-    }
-
-    private boolean isTouchInsideVisibleKey(@NonNull final Key key, final int x, final int y) {
-        final int touchX = mKeyDetector.getTouchX(x);
-        final int touchY = mKeyDetector.getTouchY(y);
-        return touchX >= key.getDrawX() && touchX < key.getDrawX() + key.getDrawWidth()
-                && touchY >= key.getY() && touchY < key.getY() + key.getHeight();
     }
 
     // Note that we need primaryCode argument because the keyboard may in shifted state and the
@@ -727,7 +717,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             // {@link #setKeyboard}. In those cases, we should update key according to the new
             // keyboard layout.
             // Also height difference between keyboards needs to be considered.
-            if (callListenerOnPressAndCheckKeyboardLayoutChange(key, 0, x, y)) {
+            if (callListenerOnPressAndCheckKeyboardLayoutChange(key, 0)) {
                 final int yOffset = keyboardChangeOccupiedHeightDifference;
                 keyboardChangeOccupiedHeightDifference = 0;
                 CoordinateUtils.set(mDownCoordinates, x, y + yOffset);
@@ -839,7 +829,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         // at {@link #setKeyboard}. In those cases, we should update key according
         // to the new keyboard layout.
         Key key = newKey;
-        if (callListenerOnPressAndCheckKeyboardLayoutChange(key, 0, x, y)) {
+        if (callListenerOnPressAndCheckKeyboardLayoutChange(key, 0)) {
             key = onMoveKey(x, y);
         }
         onMoveToNewKey(key, x, y);
@@ -1313,7 +1303,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         mIsDetectingGesture = false;
         final int nextRepeatCount = repeatCount + 1;
         startKeyRepeatTimer(nextRepeatCount);
-        callListenerOnPressAndCheckKeyboardLayoutChange(key, repeatCount, mKeyX, mKeyY);
+        callListenerOnPressAndCheckKeyboardLayoutChange(key, repeatCount);
         callListenerOnCodeInput(key, code, mKeyX, mKeyY, SystemClock.uptimeMillis(), true);
     }
 

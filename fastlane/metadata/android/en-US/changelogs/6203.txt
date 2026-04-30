@@ -1,0 +1,1 @@
+Restores stable 6.2.0-style key haptics and removes long-press haptic feedback.

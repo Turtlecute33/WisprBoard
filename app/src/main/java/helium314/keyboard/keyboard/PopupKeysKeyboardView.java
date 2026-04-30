@@ -24,12 +24,9 @@ import helium314.keyboard.accessibility.PopupKeysKeyboardAccessibilityDelegate;
 import helium314.keyboard.keyboard.emoji.EmojiViewCallback;
 import helium314.keyboard.keyboard.internal.KeyDrawParams;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
-import helium314.keyboard.latin.AudioAndHapticFeedbackManager;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.common.Constants;
-import helium314.keyboard.latin.settings.Settings;
-import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.common.CoordinateUtils;
 
 /**
@@ -247,8 +244,7 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
 
     private Key detectKey(int x, int y, final boolean allowHaptic) {
         final Key oldKey = mCurrentKey;
-        final Key detectedKey = mKeyDetector.detectHitKey(x, y);
-        final Key newKey = isInsideDrawnKey(detectedKey, x, y) ? detectedKey : null;
+        final Key newKey = mKeyDetector.detectHitKey(x, y);
         if (newKey == oldKey) {
             return newKey;
         }
@@ -261,23 +257,7 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
             updatePressKeyGraphics(newKey);
             invalidateKey(newKey);
         }
-        // Fire only when entering a drawn popup button. Leaving a button or moving through the
-        // detector's slide allowance outside the drawn button must be silent.
-        final SettingsValues sv = Settings.getInstance().getCurrent();
-        if (allowHaptic && sv != null && sv.mPopupDragHaptic && newKey != null) {
-            AudioAndHapticFeedbackManager.getInstance().vibrateTick();
-        }
         return newKey;
-    }
-
-    private boolean isInsideDrawnKey(final Key key, final int x, final int y) {
-        if (key == null) {
-            return false;
-        }
-        final int touchX = mKeyDetector.getTouchX(x);
-        final int touchY = mKeyDetector.getTouchY(y);
-        return touchX >= key.getDrawX() && touchX < key.getDrawX() + key.getDrawWidth()
-                && touchY >= key.getY() && touchY < key.getY() + key.getHeight();
     }
 
     private void updateReleaseKeyGraphics(final Key key) {

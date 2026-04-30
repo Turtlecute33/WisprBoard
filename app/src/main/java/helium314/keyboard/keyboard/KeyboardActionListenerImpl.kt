@@ -55,8 +55,6 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
 
     override fun onLongPressKey(primaryCode: Int) {
         metaOnLongPressKey(primaryCode)
-        if (primaryCode == Constants.CODE_ENTER) return
-        performHapticFeedback(HapticEvent.KEY_LONG_PRESS)
     }
 
     override fun onReleaseKey(primaryCode: Int, withSliding: Boolean) {
