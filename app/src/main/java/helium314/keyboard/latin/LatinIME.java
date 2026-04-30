@@ -1628,7 +1628,13 @@ public class LatinIME extends InputMethodService implements
         }
         if (KeyCode.TEXT_FIX == event.getKeyCode()) {
             if (mTextFixManager != null && mTextFixManager.getState() == TextFixManager.State.IDLE) {
-                mTextFixManager.startTextFix();
+                mTextFixManager.startTextFix(TextFixManager.Variant.PRIMARY);
+            }
+            return;
+        }
+        if (KeyCode.TEXT_FIX_2 == event.getKeyCode()) {
+            if (mTextFixManager != null && mTextFixManager.getState() == TextFixManager.State.IDLE) {
+                mTextFixManager.startTextFix(TextFixManager.Variant.SECONDARY);
             }
             return;
         }

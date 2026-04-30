@@ -37,6 +37,10 @@ fun TextFixScreen(
         Settings.PREF_TEXT_FIX_ENABLED,
         Defaults.PREF_TEXT_FIX_ENABLED
     )
+    val secondEnabled by rememberBooleanPreferenceState(
+        Settings.PREF_TEXT_FIX_2_ENABLED,
+        Defaults.PREF_TEXT_FIX_2_ENABLED
+    )
     val model by rememberStringPreferenceState(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
     val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
     val provider = AiProvider.fromPref(providerPref)
@@ -52,6 +56,8 @@ fun TextFixScreen(
             if (enabled) Settings.PREF_TEXT_FIX_MODEL else null,
             if (enabled && model == "custom") Settings.PREF_TEXT_FIX_MODEL_CUSTOM else null,
             if (enabled) Settings.PREF_TEXT_FIX_PROMPT else null,
+            Settings.PREF_TEXT_FIX_2_ENABLED,
+            if (secondEnabled) Settings.PREF_TEXT_FIX_2_PROMPT else null,
         )
     )
 }
@@ -105,6 +111,20 @@ fun createTextFixSettings(context: Context) = listOf(
             singleLine = false,
             neutralButtonText = stringResource(R.string.button_default),
             onNeutral = { prefs.edit { remove(Settings.PREF_TEXT_FIX_PROMPT) } },
+            checkTextValid = { text -> text.isNotBlank() }
+        )
+    },
+    Setting(context, Settings.PREF_TEXT_FIX_2_ENABLED, R.string.text_fix_2_enabled, R.string.text_fix_2_enabled_summary) {
+        SwitchPreference(it, Defaults.PREF_TEXT_FIX_2_ENABLED)
+    },
+    Setting(context, Settings.PREF_TEXT_FIX_2_PROMPT, R.string.text_fix_2_prompt, R.string.text_fix_2_prompt_summary) {
+        val prefs = LocalContext.current.prefs()
+        TextInputPreference(
+            setting = it,
+            default = Defaults.PREF_TEXT_FIX_2_PROMPT,
+            singleLine = false,
+            neutralButtonText = stringResource(R.string.button_default),
+            onNeutral = { prefs.edit { remove(Settings.PREF_TEXT_FIX_2_PROMPT) } },
             checkTextValid = { text -> text.isNotBlank() }
         )
     },

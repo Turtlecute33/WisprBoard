@@ -84,6 +84,11 @@ class TextFixManager(
 
     enum class State { IDLE, WORKING }
 
+    enum class Variant(val enabledPref: String, val enabledDefault: Boolean, val promptPref: String, val promptDefault: String) {
+        PRIMARY(Settings.PREF_TEXT_FIX_ENABLED, Defaults.PREF_TEXT_FIX_ENABLED, Settings.PREF_TEXT_FIX_PROMPT, Defaults.PREF_TEXT_FIX_PROMPT),
+        SECONDARY(Settings.PREF_TEXT_FIX_2_ENABLED, Defaults.PREF_TEXT_FIX_2_ENABLED, Settings.PREF_TEXT_FIX_2_PROMPT, Defaults.PREF_TEXT_FIX_2_PROMPT),
+    }
+
     interface Callbacks {
         @StringRes
         fun getBlockedErrorResId(): Int?
@@ -112,11 +117,11 @@ class TextFixManager(
     fun getState() = state
 
     @Synchronized
-    fun startTextFix() {
+    fun startTextFix(variant: Variant = Variant.PRIMARY) {
         if (state != State.IDLE) return
         val prefs = context.prefs()
 
-        if (!prefs.getBoolean(Settings.PREF_TEXT_FIX_ENABLED, Defaults.PREF_TEXT_FIX_ENABLED)) {
+        if (!prefs.getBoolean(variant.enabledPref, variant.enabledDefault)) {
             Toast.makeText(context, R.string.text_fix_error_not_enabled, Toast.LENGTH_SHORT).show()
             return
         }
@@ -164,8 +169,8 @@ class TextFixManager(
             Toast.makeText(context, R.string.voice_error_no_model, Toast.LENGTH_SHORT).show()
             return
         }
-        val prompt = (prefs.getString(Settings.PREF_TEXT_FIX_PROMPT, Defaults.PREF_TEXT_FIX_PROMPT) ?: Defaults.PREF_TEXT_FIX_PROMPT)
-            .trim().ifEmpty { Defaults.PREF_TEXT_FIX_PROMPT }
+        val prompt = (prefs.getString(variant.promptPref, variant.promptDefault) ?: variant.promptDefault)
+            .trim().ifEmpty { variant.promptDefault }
         val useZdr = provider == AiProvider.OPENROUTER &&
             prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
 

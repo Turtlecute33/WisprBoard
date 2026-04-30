@@ -81,6 +81,7 @@ class KeyboardIconsSet private constructor() {
         const val NAME_TOOLBAR_KEY = "toolbar_key"
         const val NAME_BIN = "bin"
         const val NAME_TEXT_FIX_KEY = "text_fix_key"
+        const val NAME_TEXT_FIX_2_KEY = "text_fix_2_key"
 
         // names used in the past, and we can't just delete them because they might still be in use in some layouts
         // (also some of them are in use for internal layouts, but there we could just remove them...)
@@ -123,6 +124,7 @@ class KeyboardIconsSet private constructor() {
             NAME_TOOLBAR_KEY to                 R.drawable.ic_arrow_right,
             NAME_BIN to                         R.drawable.ic_bin,
             NAME_TEXT_FIX_KEY to                R.drawable.ic_text_fix,
+            NAME_TEXT_FIX_2_KEY to              R.drawable.ic_text_fix_2,
         ).apply {
             ToolbarKey.entries.forEach {
                 put(it.name.lowercase(Locale.US), when (it) {
@@ -185,6 +187,7 @@ class KeyboardIconsSet private constructor() {
             NAME_TOOLBAR_KEY to                 R.drawable.ic_arrow_right,
             NAME_BIN to                         R.drawable.ic_bin,
             NAME_TEXT_FIX_KEY to                R.drawable.ic_text_fix,
+            NAME_TEXT_FIX_2_KEY to              R.drawable.ic_text_fix_2,
         ).apply {
             ToolbarKey.entries.forEach {
                 put(it.name.lowercase(Locale.US), when (it) {
@@ -247,6 +250,7 @@ class KeyboardIconsSet private constructor() {
             NAME_TOOLBAR_KEY to                 R.drawable.ic_arrow_right_rounded,
             NAME_BIN to                         R.drawable.ic_bin_rounded,
             NAME_TEXT_FIX_KEY to                R.drawable.ic_text_fix,
+            NAME_TEXT_FIX_2_KEY to              R.drawable.ic_text_fix_2,
         ).apply {
             ToolbarKey.entries.forEach {
                 put(it.name.lowercase(Locale.US), when (it) {

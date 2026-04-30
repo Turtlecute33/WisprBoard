@@ -219,6 +219,19 @@ sealed interface KeyData : AbstractKeyData {
             }
             if (params.mId.mElementId == KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW)
                 popupKeys.remove("!icon/clipboard_action_key|!code/key_clipboard")
+            // Insert the optional second text-fix button right after the primary one when enabled.
+            if (Settings.getInstance().current.mTextFix2Enabled) {
+                val tfIndex = popupKeys.indexOfFirst { it == "!icon/text_fix_key|!code/key_text_fix" }
+                if (tfIndex >= 0) {
+                    popupKeys.add(tfIndex + 1, "!icon/text_fix_2_key|!code/key_text_fix_2")
+                    val i = popupKeys.indexOfFirst { it.startsWith(Key.POPUP_KEYS_FIXED_COLUMN_ORDER) }
+                    if (i > -1) {
+                        val n = popupKeys[i].substringAfter(Key.POPUP_KEYS_FIXED_COLUMN_ORDER).toIntOrNull()
+                        if (n != null)
+                            popupKeys[i] = popupKeys[i].replace(n.toString(), (n + 1).toString())
+                    }
+                }
+            }
             return SimplePopups(popupKeys)
         }
 
