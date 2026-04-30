@@ -263,7 +263,7 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         // Fire only for drag-hover transitions over popup buttons. Opening the popup via
         // long-press calls this with haptics disabled, and leaving to empty space is silent.
         final SettingsValues sv = Settings.getInstance().getCurrent();
-        if (allowHaptic && sv != null && sv.mPopupDragHaptic && newKey != null) {
+        if (allowHaptic && sv != null && sv.mPopupDragHaptic && oldKey != null && newKey != null) {
             AudioAndHapticFeedbackManager.getInstance().vibrateTick();
         }
         return newKey;

@@ -1,0 +1,1 @@
+Fix long-press Return popup haptics so feedback happens only when moving onto another popup button, not when opening or leaving the popup.
