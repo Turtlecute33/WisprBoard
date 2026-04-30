@@ -247,7 +247,8 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
 
     private Key detectKey(int x, int y, final boolean allowHaptic) {
         final Key oldKey = mCurrentKey;
-        final Key newKey = mKeyDetector.detectHitKey(x, y);
+        final Key detectedKey = mKeyDetector.detectHitKey(x, y);
+        final Key newKey = isInsideDrawnKey(detectedKey, x, y) ? detectedKey : null;
         if (newKey == oldKey) {
             return newKey;
         }
@@ -260,15 +261,23 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
             updatePressKeyGraphics(newKey);
             invalidateKey(newKey);
         }
-        // Fire only for drag-hover transitions that are actually inside the newly selected
-        // popup button. PopupKeysDetector has a slide allowance outside key bounds; without
-        // this hitbox check, leaving one button near another can still feel like a release tick.
+        // Fire only when entering a drawn popup button. Leaving a button or moving through the
+        // detector's slide allowance outside the drawn button must be silent.
         final SettingsValues sv = Settings.getInstance().getCurrent();
-        if (allowHaptic && sv != null && sv.mPopupDragHaptic && oldKey != null && newKey != null
-                && newKey.isOnKey(mKeyDetector.getTouchX(x), mKeyDetector.getTouchY(y))) {
+        if (allowHaptic && sv != null && sv.mPopupDragHaptic && newKey != null) {
             AudioAndHapticFeedbackManager.getInstance().vibrateTick();
         }
         return newKey;
+    }
+
+    private boolean isInsideDrawnKey(final Key key, final int x, final int y) {
+        if (key == null) {
+            return false;
+        }
+        final int touchX = mKeyDetector.getTouchX(x);
+        final int touchY = mKeyDetector.getTouchY(y);
+        return touchX >= key.getDrawX() && touchX < key.getDrawX() + key.getDrawWidth()
+                && touchY >= key.getY() && touchY < key.getY() + key.getHeight();
     }
 
     private void updateReleaseKeyGraphics(final Key key) {

@@ -1,0 +1,1 @@
+Refines haptic feedback so hovering onto a visible key vibrates, while sliding away from keys stays silent.

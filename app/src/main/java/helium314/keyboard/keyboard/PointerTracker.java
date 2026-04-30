@@ -306,7 +306,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     private boolean isTouchInsideVisibleKey(@NonNull final Key key, final int x, final int y) {
         final int touchX = mKeyDetector.getTouchX(x);
         final int touchY = mKeyDetector.getTouchY(y);
-        return touchX >= key.getX() && touchX < key.getX() + key.getWidth()
+        return touchX >= key.getDrawX() && touchX < key.getDrawX() + key.getDrawWidth()
                 && touchY >= key.getY() && touchY < key.getY() + key.getHeight();
     }
 
