@@ -8,6 +8,8 @@ package helium314.keyboard.latin;
 
 import android.content.Context;
 import android.media.AudioManager;
+import android.os.Build;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -62,6 +64,32 @@ public final class AudioAndHapticFeedbackManager {
 
     public boolean hasVibrator() {
         return mVibrator != null && mVibrator.hasVibrator();
+    }
+
+    /**
+     * A very light single-pulse tick — used for subtle "I crossed something" feedback
+     * (e.g. dragging across popup buttons). Bypasses the app's vibrate-on-keypress toggle
+     * because callers gate this on their own pref. Picks the most delicate primitive the
+     * platform offers so it doesn't feel like a buzz.
+     */
+    public void vibrateTick() {
+        if (mVibrator == null || !mVibrator.hasVibrator()) return;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // EFFECT_TICK is the OS-defined "scroll-tick"-style pulse: shorter and
+                // weaker than EFFECT_CLICK, single pulse, no buzz on stock Android.
+                mVibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK));
+                return;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Pre-Q: best we can do is a very short low-amplitude one-shot.
+                mVibrator.vibrate(VibrationEffect.createOneShot(8L, 40));
+                return;
+            }
+        } catch (final Exception ignore) {
+            // Some OEM vibrators reject specific effects — fall through to legacy.
+        }
+        mVibrator.vibrate(8L);
     }
 
     public void vibrate(final long milliseconds) {

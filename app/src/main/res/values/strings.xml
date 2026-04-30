@@ -1221,8 +1221,7 @@ New dictionary:
     <string name="text_fix_2_prompt">Second Fix Prompt</string>
     <string name="text_fix_2_prompt_summary">Instruction sent for the second text fix variation</string>
     <string name="popup_drag_haptic">Haptic feedback on popup drag</string>
-    <string name="popup_drag_haptic_summary">Light tick when sliding across popup buttons (e.g. long-press Return). Independent from keypress vibration.</string>
-    <string name="popup_drag_haptic_duration">Popup drag tick duration</string>
+    <string name="popup_drag_haptic_summary">Subtle tick when sliding across popup buttons (e.g. long-press Return). Independent from keypress vibration.</string>
     <string name="action_popup_order">Long-press Return buttons</string>
     <string name="action_popup_order_summary">Reorder or hide the buttons (clipboard, voice, text fix…) shown when long-pressing Return</string>
     <string name="action_popup_order_dialog_help">Long-press the drag handle on the left of a row to reorder. Use the switch on the right to hide a button.</string>

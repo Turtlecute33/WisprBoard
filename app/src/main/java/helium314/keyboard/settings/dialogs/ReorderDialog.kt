@@ -3,7 +3,6 @@ package helium314.keyboard.settings.dialogs
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -61,19 +60,20 @@ fun <T: Any> ReorderDialog(
         modifier = modifier,
         title = title,
         content = {
-            Column {
-            if (description != null) {
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-            }
             LazyColumn(
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
+                if (description != null) {
+                    item(key = "__reorder_description__") {
+                        Text(
+                            description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                }
                 items(reorderableItems, key = getKey) { item ->
                     ReorderableItem(
                         state = dragDropState,
@@ -98,7 +98,6 @@ fun <T: Any> ReorderDialog(
                         }
                     }
                 }
-            }
             }
         },
     )

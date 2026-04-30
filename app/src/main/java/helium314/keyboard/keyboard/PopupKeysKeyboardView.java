@@ -259,13 +259,13 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         if (newKey != null) {
             updatePressKeyGraphics(newKey);
             invalidateKey(newKey);
-            // Independent of the global vibrate-on-keypress toggle so the user can navigate the
-            // popup row by feel even when keypress vibration is otherwise disabled. Goes through
-            // the vibrator directly with a user-tunable duration so the tick is consistent across
-            // OEMs (CLOCK_TICK is remapped or muted on some skins).
+            // Subtle scroll-tick pulse so the user can feel button boundaries while dragging,
+            // independent of the global vibrate-on-keypress toggle. Uses VibrationEffect.EFFECT_TICK
+            // when available (delicate single pulse) instead of HapticFeedbackConstants, which
+            // some OEM skins remap to multi-pulse patterns that feel rough.
             final SettingsValues sv = Settings.getInstance().getCurrent();
-            if (sv != null && sv.mPopupDragHaptic && sv.mPopupDragHapticDuration > 0) {
-                AudioAndHapticFeedbackManager.getInstance().vibrate(sv.mPopupDragHapticDuration);
+            if (sv != null && sv.mPopupDragHaptic) {
+                AudioAndHapticFeedbackManager.getInstance().vibrateTick();
             }
         }
         return newKey;
