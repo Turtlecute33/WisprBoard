@@ -18,6 +18,8 @@ import android.view.inputmethod.InputMethodSubtype;
 import androidx.annotation.NonNull;
 import androidx.core.util.TypedValueCompat;
 
+import helium314.keyboard.latin.common.Constants;
+
 import helium314.keyboard.compat.ConfigurationCompatKt;
 import helium314.keyboard.keyboard.KeyboardTheme;
 import helium314.keyboard.keyboard.internal.keyboard_parser.LocaleKeyboardInfosKt;
@@ -201,7 +203,18 @@ public class SettingsValues {
         mShowTldPopupKeys = prefs.getBoolean(Settings.PREF_SHOW_TLD_POPUP_KEYS, Defaults.PREF_SHOW_TLD_POPUP_KEYS);
         mTextFix2Enabled = prefs.getBoolean(Settings.PREF_TEXT_FIX_2_ENABLED, Defaults.PREF_TEXT_FIX_2_ENABLED);
         mPopupDragHaptic = prefs.getBoolean(Settings.PREF_POPUP_DRAG_HAPTIC, Defaults.PREF_POPUP_DRAG_HAPTIC);
-        mActionPopupOrder = prefs.getString(Settings.PREF_ACTION_POPUP_ORDER, Defaults.PREF_ACTION_POPUP_ORDER);
+        // Earlier 6.1.x betas saved this pref with the wrong separators (',' / ';'). Detect such
+        // legacy values and fall back to the default so the reorder dialog isn't fed a single
+        // un-splittable blob.
+        final String savedActionOrder = prefs.getString(Settings.PREF_ACTION_POPUP_ORDER, null);
+        if (savedActionOrder != null
+                && !savedActionOrder.contains(Constants.Separators.ENTRY)
+                && !savedActionOrder.contains(Constants.Separators.KV)) {
+            prefs.edit().remove(Settings.PREF_ACTION_POPUP_ORDER).apply();
+            mActionPopupOrder = Defaults.PREF_ACTION_POPUP_ORDER;
+        } else {
+            mActionPopupOrder = savedActionOrder != null ? savedActionOrder : Defaults.PREF_ACTION_POPUP_ORDER;
+        }
         mSpaceForLangChange = prefs.getBoolean(Settings.PREF_SPACE_TO_CHANGE_LANG, Defaults.PREF_SPACE_TO_CHANGE_LANG);
         mShowsEmojiKey = prefs.getBoolean(Settings.PREF_SHOW_EMOJI_KEY, Defaults.PREF_SHOW_EMOJI_KEY);
         mVarToolbarDirection = mToolbarMode != ToolbarMode.HIDDEN && prefs.getBoolean(Settings.PREF_VARIABLE_TOOLBAR_DIRECTION, Defaults.PREF_VARIABLE_TOOLBAR_DIRECTION);

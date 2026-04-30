@@ -252,8 +252,8 @@ sealed interface KeyData : AbstractKeyData {
             val orderPref = Settings.getInstance().current.mActionPopupOrder ?: ""
             val seen = mutableSetOf<String>()
             val ordered = mutableListOf<String>()
-            for (token in orderPref.split(';')) {
-                val parts = token.split(',')
+            for (token in orderPref.split(helium314.keyboard.latin.common.Constants.Separators.ENTRY)) {
+                val parts = token.split(helium314.keyboard.latin.common.Constants.Separators.KV)
                 if (parts.size != 2) continue
                 val entry = nameToEntry[parts[0]] ?: continue
                 if (entry !in present || entry in seen) continue

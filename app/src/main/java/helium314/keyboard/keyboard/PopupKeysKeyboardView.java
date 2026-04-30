@@ -259,14 +259,13 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         if (newKey != null) {
             updatePressKeyGraphics(newKey);
             invalidateKey(newKey);
-            // Subtle scroll-tick pulse so the user can feel button boundaries while dragging,
-            // independent of the global vibrate-on-keypress toggle. Uses VibrationEffect.EFFECT_TICK
-            // when available (delicate single pulse) instead of HapticFeedbackConstants, which
-            // some OEM skins remap to multi-pulse patterns that feel rough.
-            final SettingsValues sv = Settings.getInstance().getCurrent();
-            if (sv != null && sv.mPopupDragHaptic) {
-                AudioAndHapticFeedbackManager.getInstance().vibrateTick();
-            }
+        }
+        // Fire a single delicate pulse on every boundary crossing — entering a button or
+        // leaving one (newKey or oldKey, but not the no-op case above). Independent of the
+        // global vibrate-on-keypress toggle since callers gate this on their own pref.
+        final SettingsValues sv = Settings.getInstance().getCurrent();
+        if (sv != null && sv.mPopupDragHaptic && (newKey != null || oldKey != null)) {
+            AudioAndHapticFeedbackManager.getInstance().vibrateTick();
         }
         return newKey;
     }
