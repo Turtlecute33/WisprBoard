@@ -260,10 +260,12 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
             updatePressKeyGraphics(newKey);
             invalidateKey(newKey);
         }
-        // Fire only for drag-hover transitions over popup buttons. Opening the popup via
-        // long-press calls this with haptics disabled, and leaving to empty space is silent.
+        // Fire only for drag-hover transitions that are actually inside the newly selected
+        // popup button. PopupKeysDetector has a slide allowance outside key bounds; without
+        // this hitbox check, leaving one button near another can still feel like a release tick.
         final SettingsValues sv = Settings.getInstance().getCurrent();
-        if (allowHaptic && sv != null && sv.mPopupDragHaptic && oldKey != null && newKey != null) {
+        if (allowHaptic && sv != null && sv.mPopupDragHaptic && oldKey != null && newKey != null
+                && newKey.isOnKey(mKeyDetector.getTouchX(x), mKeyDetector.getTouchY(y))) {
             AudioAndHapticFeedbackManager.getInstance().vibrateTick();
         }
         return newKey;
