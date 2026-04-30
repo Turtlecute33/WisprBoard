@@ -149,8 +149,14 @@ sealed interface KeyData : AbstractKeyData {
 
         private fun getActionKeyPopupKeys(params: KeyboardParams): SimplePopups? =
             getActionKeyPopupKeyString(params.mId)?.let { createActionPopupKeys(it, params) }?.takeIf { sp ->
-                sp.popupKeys?.any { !it.startsWith("!") } == true
+                sp.popupKeys?.any { isActionPopupRealKey(it) } == true
             }
+
+        // Real action-popup entries are the !icon/X|!code/Y specs (and !hasLabels! follow-ups
+        // with a "label|spec" form). The meta tokens !fixedColumnOrder!, !autoColumnOrder!,
+        // !needsDividers!, !hasLabels! never contain '|', so the pipe is a safe discriminator
+        // inside this specific popup list.
+        private fun isActionPopupRealKey(entry: String): Boolean = entry.contains('|')
 
         private fun getActionKeyPopupKeyString(keyboardId: KeyboardId): String? {
             val action = keyboardId.imeAction()
@@ -282,12 +288,13 @@ sealed interface KeyData : AbstractKeyData {
             // the old number with a delta — the latter goes wrong (or to zero) when the user
             // disables several entries via the reorder dialog and the popup keyboard then
             // crashes in PopupKeysKeyboard.setParameters because numKeys/numColumns hit zero.
-            val keyCount = popupKeys.count { !it.startsWith("!") }
+            val keyCount = popupKeys.count { isActionPopupRealKey(it) }
             val fcoIdx = popupKeys.indexOfFirst { it.startsWith(Key.POPUP_KEYS_FIXED_COLUMN_ORDER) }
             if (keyCount == 0) {
-                // Nothing to show; strip the meta tokens so the popup either falls back to a
-                // sensible default or simply doesn't open instead of rendering an empty grid.
-                popupKeys.removeAll { it.startsWith("!") }
+                // Nothing to show; strip the meta tokens so getActionKeyPopupKeys can drop
+                // the popup entirely instead of opening an empty grid (which crashes
+                // PopupKeysKeyboard.setParameters).
+                popupKeys.clear()
             } else if (fcoIdx > -1) {
                 popupKeys[fcoIdx] = "${Key.POPUP_KEYS_FIXED_COLUMN_ORDER}$keyCount"
             }
