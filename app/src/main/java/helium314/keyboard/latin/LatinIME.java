@@ -889,6 +889,7 @@ public class LatinIME extends InputMethodService implements
         if (mTextFixManager != null) mTextFixManager.cancel();
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
+        mInputLogic.onDestroy();
         mSettings.onDestroy();
         unregisterReceiver(mRingerModeChangeReceiver);
         unregisterReceiver(mDictionaryPackInstallReceiver);

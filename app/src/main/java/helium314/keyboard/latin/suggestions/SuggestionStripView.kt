@@ -65,8 +65,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.min
 import androidx.core.view.isGone
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @SuppressLint("InflateParams")
@@ -88,6 +92,11 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private val wordViews = ArrayList<TextView>()
     private val debugInfoViews = ArrayList<TextView>()
     private val dividerViews = ArrayList<View>()
+
+    // View-scoped coroutines so updateKeys() callbacks don't outlive the view (avoids leaking
+    // a strong reference to LatinIME via GlobalScope). Recreated on each attach so the view can
+    // be reattached after detach.
+    private var viewScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     init {
         val inflater = LayoutInflater.from(context)
@@ -371,7 +380,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         setToolbarButtonsActivatedStateOnPrefChange(pinnedKeys, key)
         setToolbarButtonsActivatedStateOnPrefChange(toolbar, key)
         if (key == Settings.PREF_ALWAYS_INCOGNITO_MODE)
-            GlobalScope.launch { delay(10); updateKeys() }
+            viewScope.launch { delay(10); updateKeys() }
     }
 
     override fun onVisibilityChanged(view: View, visibility: Int) {
@@ -381,9 +390,15 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             suggestionsStrip.visibility = visibility
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (!viewScope.isActive) viewScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    }
+
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         dismissMoreSuggestionsPanel()
+        viewScope.cancel()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
