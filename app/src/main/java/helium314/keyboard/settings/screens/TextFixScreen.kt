@@ -2,10 +2,13 @@
 package helium314.keyboard.settings.screens
 
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -21,13 +24,13 @@ import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import helium314.keyboard.settings.preferences.rememberBooleanPreferenceState
 import helium314.keyboard.settings.preferences.rememberStringPreferenceState
-import android.widget.Toast
 
 @Composable
 fun TextFixScreen(
@@ -63,15 +66,32 @@ fun TextFixScreen(
 }
 
 fun createTextFixSettings(context: Context) = listOf(
-    Setting(context, Settings.PREF_TEXT_FIX_ENABLED, R.string.text_fix_enabled, R.string.text_fix_enabled_summary) {
+    Setting(context, Settings.PREF_TEXT_FIX_ENABLED, R.string.text_fix_enabled, R.string.text_fix_enabled_summary) { setting ->
         val ctx = LocalContext.current
+        val prefs = ctx.prefs()
         val secureStorageMessage = stringResource(R.string.voice_error_secure_storage_unavailable)
+        val showPrivacyDialog = remember { mutableStateOf(false) }
+        if (showPrivacyDialog.value) {
+            ConfirmationDialog(
+                onDismissRequest = { showPrivacyDialog.value = false },
+                onConfirmed = {
+                    showPrivacyDialog.value = false
+                    prefs.edit { putBoolean(setting.key, true) }
+                },
+                title = { Text(stringResource(R.string.text_fix_enable_privacy_title)) },
+                content = { Text(stringResource(R.string.text_fix_enable_privacy_message)) },
+                confirmButtonText = stringResource(R.string.text_fix_enable_privacy_confirm),
+            )
+        }
         SwitchPreference(
-            it,
+            setting,
             Defaults.PREF_TEXT_FIX_ENABLED,
             allowCheckedChange = { enabling ->
                 if (enabling && !SecretStore.isSecureStorageAvailable(ctx)) {
                     Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
+                    false
+                } else if (enabling) {
+                    showPrivacyDialog.value = true
                     false
                 } else true
             }

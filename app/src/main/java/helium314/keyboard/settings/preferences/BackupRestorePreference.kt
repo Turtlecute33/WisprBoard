@@ -294,6 +294,7 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
     val stageProtectedFilesDir = File(stageRoot, "device_protected")
     var prefsSnapshot: SettingsSnapshot? = null
     var protectedPrefsSnapshot: SettingsSnapshot? = null
+    var restoredFileBytes = 0L
     ZipInputStream(inputStream).use { zip ->
         var entry: ZipEntry? = zip.nextEntry
         while (entry != null) {
@@ -303,11 +304,13 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
                 entryName.startsWith("unprotected/") -> {
                     val adjustedName = entryName.removePrefix("unprotected/")
                     if (isAllowedBackupFile(adjustedName)) {
-                        FileUtils.copyStreamToNewFile(zip, File(stageProtectedFilesDir, adjustedName))
+                        restoredFileBytes += copyRestoreEntryToNewFile(zip, File(stageProtectedFilesDir, adjustedName))
+                        require(restoredFileBytes <= MAX_RESTORE_TOTAL_BYTES) { "Backup file entries exceed total size limit" }
                     }
                 }
                 isAllowedBackupFile(entryName) -> {
-                    FileUtils.copyStreamToNewFile(zip, File(stageFilesDir, entryName))
+                    restoredFileBytes += copyRestoreEntryToNewFile(zip, File(stageFilesDir, entryName))
+                    require(restoredFileBytes <= MAX_RESTORE_TOTAL_BYTES) { "Backup file entries exceed total size limit" }
                 }
                 entryName == PREFS_FILE_NAME -> {
                     prefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
@@ -374,13 +377,46 @@ private fun copyDirectoryContents(source: File, target: File) {
 
 internal fun normalizeBackupEntryName(name: String): String {
     val normalized = name.replace('\\', '/').trimStart('/')
-    require(!normalized.contains("../")) { "Unsafe backup entry: $name" }
+    require(normalized.split('/').none { it == ".." }) { "Unsafe backup entry: $name" }
     return normalized
+}
+
+internal fun copyRestoreEntryToNewFile(input: InputStream, target: File): Long {
+    val parent = target.parentFile ?: throw IllegalArgumentException("Restore target has no parent")
+    if (!parent.exists() && !parent.mkdirs()) {
+        throw IllegalArgumentException("Could not create restore target folder")
+    }
+    try {
+        java.io.FileOutputStream(target).use { output ->
+            return copyRestoreEntry(input, output)
+        }
+    } catch (t: Throwable) {
+        target.delete()
+        throw t
+    }
+}
+
+private fun copyRestoreEntry(input: InputStream, output: OutputStream): Long {
+    val buffer = ByteArray(8 * 1024)
+    var total = 0L
+    while (true) {
+        val read = input.read(buffer)
+        if (read == -1) break
+        total += read
+        if (total > MAX_RESTORE_ENTRY_BYTES) {
+            throw IllegalArgumentException("Backup file entry exceeds size limit")
+        }
+        output.write(buffer, 0, read)
+    }
+    output.flush()
+    return total
 }
 
 // Real preference snapshots are kilobytes; this cap is ~3 orders of magnitude of headroom and
 // guards against a malformed archive that would otherwise OOM on the IO thread.
 private const val MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024
+private const val MAX_RESTORE_ENTRY_BYTES = 32L * 1024L * 1024L
+private const val MAX_RESTORE_TOTAL_BYTES = 64L * 1024L * 1024L
 
 private fun readSnapshotCapped(input: InputStream): String {
     val buf = java.io.ByteArrayOutputStream()

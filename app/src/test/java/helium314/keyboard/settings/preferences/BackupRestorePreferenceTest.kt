@@ -1,6 +1,12 @@
 package helium314.keyboard.settings.preferences
 
 import helium314.keyboard.latin.settings.Settings
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.nio.file.Files
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -42,6 +48,43 @@ class BackupRestorePreferenceTest {
         assertEquals("safe/path.txt", normalizeBackupEntryName("/safe/path.txt"))
         assertFailsWith<IllegalArgumentException> {
             normalizeBackupEntryName("../unsafe.txt")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            normalizeBackupEntryName("safe/../unsafe.txt")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            normalizeBackupEntryName("..")
+        }
+    }
+
+    @Test
+    fun restoreEntryCopyDoesNotCloseZipStream() {
+        val archive = ByteArrayOutputStream().also { bytes ->
+            ZipOutputStream(bytes).use { zip ->
+                zip.putNextEntry(ZipEntry("blacklists/first.txt"))
+                zip.write("first".toByteArray())
+                zip.closeEntry()
+                zip.putNextEntry(ZipEntry("blacklists/second.txt"))
+                zip.write("second".toByteArray())
+                zip.closeEntry()
+            }
+        }.toByteArray()
+        val parentDir = Files.createTempDirectory("restore-test-").toFile()
+
+        try {
+            ZipInputStream(ByteArrayInputStream(archive)).use { zip ->
+                assertEquals("blacklists/first.txt", zip.nextEntry.name)
+                copyRestoreEntryToNewFile(zip, parentDir.resolve("first.txt"))
+                zip.closeEntry()
+
+                assertEquals("blacklists/second.txt", zip.nextEntry.name)
+                copyRestoreEntryToNewFile(zip, parentDir.resolve("second.txt"))
+                zip.closeEntry()
+            }
+            assertEquals("first", parentDir.resolve("first.txt").readText())
+            assertEquals("second", parentDir.resolve("second.txt").readText())
+        } finally {
+            parentDir.deleteRecursively()
         }
     }
 }

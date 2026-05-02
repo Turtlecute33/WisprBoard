@@ -1,0 +1,4 @@
+* Add explicit enable-time privacy confirmations for Voice Input and Text Fix
+* Require OpenRouter zero data retention when enabled, instead of falling back silently
+* Improve Text Fix replacement safety and preserve selected whitespace
+* Harden backup restore and file imports against malformed or oversized input

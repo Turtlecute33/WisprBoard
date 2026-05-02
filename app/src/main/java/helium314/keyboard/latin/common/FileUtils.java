@@ -19,9 +19,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Locale;
-import java.util.concurrent.CountDownLatch;
-
-import helium314.keyboard.latin.utils.ExecutorUtils;
 
 /**
  * A simple class to help with removing directories recursively.
@@ -58,10 +55,7 @@ public class FileUtils {
         return hasDeletedAllFiles;
     }
 
-    /**
-     *  copy data to file on different thread to avoid NetworkOnMainThreadException
-     *  still effectively blocking, as we only use small files which are mostly stored locally
-     */
+    /** Copy data to file. Callers must invoke this off the main thread for remote content URIs. */
     public static void copyContentUriToNewFile(final Uri uri, final Context context, final File outfile) throws IOException {
         copyContentUriToNewFile(uri, context, outfile, -1);
     }
@@ -92,24 +86,7 @@ public class FileUtils {
 
     public static void copyContentUriToNewFile(final Uri uri, final Context context, final File outfile,
             final long maxBytes) throws IOException {
-        final boolean[] allOk = new boolean[] { true };
-        final CountDownLatch wait = new CountDownLatch(1);
-        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute(() -> {
-            try {
-                copyStreamToNewFile(context.getContentResolver().openInputStream(uri), outfile, maxBytes);
-            } catch (IOException e) {
-                allOk[0] = false;
-            } finally {
-                wait.countDown();
-            }
-        });
-        try {
-            wait.await();
-        } catch (InterruptedException e) {
-            allOk[0] = false;
-        }
-        if (!allOk[0])
-            throw new IOException("could not copy from uri");
+        copyStreamToNewFile(context.getContentResolver().openInputStream(uri), outfile, maxBytes);
     }
 
     public static void copyStreamToNewFile(final InputStream in, final File outfile) throws IOException {

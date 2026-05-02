@@ -94,7 +94,7 @@ class OpenRouterClient(
     fun transcribe(audioFile: File): String {
         var lastError: Exception? = null
         var nextDelayOverrideMs: Long = -1L
-        var enforceZdr = useZeroDataRetention
+        val enforceZdr = useZeroDataRetention
         var attempt = 0
         while (attempt < MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
@@ -106,10 +106,12 @@ class OpenRouterClient(
                 }
             } catch (e: OpenRouterException) {
                 if (provider == AiProvider.OPENROUTER && enforceZdr && e.isZdrRouteUnavailable()) {
-                    if (BuildConfig.DEBUG) Log.w(TAG, "ZDR route unavailable for $model; retrying without ZDR")
-                    enforceZdr = false
-                    lastError = e
-                    continue
+                    throw OpenRouterException(
+                        "No zero data retention route is available for this model",
+                        e.statusCode,
+                        e.retryAfterMs,
+                        e.errorBody,
+                    )
                 }
                 if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
                 lastError = e
@@ -148,7 +150,7 @@ class OpenRouterClient(
     fun fixText(userText: String): String {
         var lastError: Exception? = null
         var nextDelayOverrideMs: Long = -1L
-        var enforceZdr = useZeroDataRetention
+        val enforceZdr = useZeroDataRetention
         var attempt = 0
         while (attempt < MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
@@ -156,10 +158,12 @@ class OpenRouterClient(
                 return performTextRequest(userText, enforceZdr)
             } catch (e: OpenRouterException) {
                 if (provider == AiProvider.OPENROUTER && enforceZdr && e.isZdrRouteUnavailable()) {
-                    if (BuildConfig.DEBUG) Log.w(TAG, "ZDR route unavailable for $model; retrying without ZDR")
-                    enforceZdr = false
-                    lastError = e
-                    continue
+                    throw OpenRouterException(
+                        "No zero data retention route is available for this model",
+                        e.statusCode,
+                        e.retryAfterMs,
+                        e.errorBody,
+                    )
                 }
                 if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
                 lastError = e

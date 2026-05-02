@@ -119,9 +119,42 @@ fun createVoiceSettings(context: Context) = listOf(
             mutableStateOf<((Boolean) -> Unit)?>(null)
         }
         var showRationale by remember { mutableStateOf(false) }
+        var showPrivacyDialog by remember { mutableStateOf(false) }
         val permissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted -> pendingPermissionResult.value?.invoke(granted) }
+
+        fun enableAfterPrivacyConfirmation() {
+            if (!SecretStore.isSecureStorageAvailable(ctx)) {
+                Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
+                return
+            }
+            if (PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO)) {
+                prefs.edit { putBoolean(setting.key, true) }
+                return
+            }
+            pendingPermissionResult.value = { granted ->
+                if (granted) {
+                    prefs.edit { putBoolean(setting.key, true) }
+                } else {
+                    Toast.makeText(ctx, permissionDeniedMessage, Toast.LENGTH_SHORT).show()
+                }
+            }
+            showRationale = true
+        }
+
+        if (showPrivacyDialog) {
+            ConfirmationDialog(
+                onDismissRequest = { showPrivacyDialog = false },
+                onConfirmed = {
+                    showPrivacyDialog = false
+                    enableAfterPrivacyConfirmation()
+                },
+                title = { Text(stringResource(R.string.voice_enable_privacy_title)) },
+                content = { Text(stringResource(R.string.voice_enable_privacy_message)) },
+                confirmButtonText = stringResource(R.string.voice_enable_privacy_confirm),
+            )
+        }
 
         if (showRationale) {
             ConfirmationDialog(
@@ -148,19 +181,7 @@ fun createVoiceSettings(context: Context) = listOf(
                     Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
                     return@SwitchPreference false
                 }
-                if (PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO)) {
-                    return@SwitchPreference true
-                }
-                pendingPermissionResult.value = { granted ->
-                    if (granted) {
-                        prefs.edit { putBoolean(setting.key, true) }
-                    } else {
-                        Toast.makeText(ctx, permissionDeniedMessage, Toast.LENGTH_SHORT).show()
-                    }
-                }
-                // Show a rationale BEFORE the system prompt so the user knows what the
-                // microphone will be used for and where the audio travels.
-                showRationale = true
+                showPrivacyDialog = true
                 false
             }
         )
@@ -585,7 +606,7 @@ private fun probeZdrModelSupport(apiKey: String, model: String): Boolean {
     }
     return try {
         if (conn.responseCode != 200) return true
-        val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        val body = readProbeResponseCapped(conn.inputStream)
         val endpoints = JSONObject(body).optJSONArray("data") ?: return true
         for (i in 0 until endpoints.length()) {
             if (endpoints.optJSONObject(i)?.optString("model_id") == model) return true
@@ -597,6 +618,24 @@ private fun probeZdrModelSupport(apiKey: String, model: String): Boolean {
         conn.disconnect()
     }
 }
+
+private fun readProbeResponseCapped(input: java.io.InputStream): String {
+    val out = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(8 * 1024)
+    var total = 0
+    input.use { stream ->
+        while (true) {
+            val read = stream.read(buffer)
+            if (read == -1) break
+            total += read
+            if (total > MAX_PROBE_RESPONSE_BYTES) throw IllegalArgumentException("Probe response too large")
+            out.write(buffer, 0, read)
+        }
+    }
+    return out.toString(Charsets.UTF_8.name())
+}
+
+private const val MAX_PROBE_RESPONSE_BYTES = 512 * 1024
 
 @Preview
 @Composable

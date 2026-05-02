@@ -8,7 +8,6 @@ import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.annotation.StringRes
-import androidx.core.content.edit
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
@@ -98,11 +97,6 @@ class TextFixManager(
         fun onFinished()
         fun onResult(originalText: String, proposedText: String)
         fun onError(message: String)
-        /**
-         * Called when the user must acknowledge the "data is sent to the AI provider" consent
-         * before the first text-fix request.
-         */
-        fun requestConsent() {}
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -111,8 +105,6 @@ class TextFixManager(
     @Volatile private var activeJob: Job? = null
     @Volatile private var activeToken = 0L
     @Volatile private var state = State.IDLE
-    @Volatile private var pendingConsentDeadline: Long = 0L
-    private val consentWindowMs = 10_000L
 
     fun getState() = state
 
@@ -139,28 +131,21 @@ class TextFixManager(
             Toast.makeText(context, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
             return
         }
-        // First-use consent: same two-tap window as voice input.
-        if (!prefs.getBoolean(Settings.PREF_TEXT_FIX_CONSENT_GIVEN, Defaults.PREF_TEXT_FIX_CONSENT_GIVEN)) {
-            val now = System.currentTimeMillis()
-            if (pendingConsentDeadline == 0L || now > pendingConsentDeadline) {
-                pendingConsentDeadline = now + consentWindowMs
-                callbacks.requestConsent()
-                return
-            }
-            pendingConsentDeadline = 0L
-            prefs.edit { putBoolean(Settings.PREF_TEXT_FIX_CONSENT_GIVEN, true) }
-        }
         if (!isNetworkAvailable(context)) {
             Toast.makeText(context, R.string.voice_error_no_network, Toast.LENGTH_SHORT).show()
             return
         }
 
-        val selected = callbacks.getSelectedText()?.toString()?.trim().orEmpty()
-        if (selected.isEmpty()) {
+        val selected = callbacks.getSelectedText()?.toString().orEmpty()
+        if (selected.isBlank()) {
             Toast.makeText(context, R.string.text_fix_error_no_selection, Toast.LENGTH_SHORT).show()
             return
         }
-        val input = if (selected.length > MAX_INPUT_LENGTH) selected.substring(0, MAX_INPUT_LENGTH) else selected
+        if (selected.length > MAX_INPUT_LENGTH) {
+            Toast.makeText(context, R.string.text_fix_error_too_long, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val input = selected
 
         val selectedModel = prefs.getString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL) ?: Defaults.PREF_TEXT_FIX_MODEL
         val customModel = prefs.getString(Settings.PREF_TEXT_FIX_MODEL_CUSTOM, Defaults.PREF_TEXT_FIX_MODEL_CUSTOM) ?: ""
@@ -218,6 +203,12 @@ class TextFixManager(
         activeClient = null
         state = State.IDLE
         callbacks.onFinished()
+    }
+
+    /** Cancel any in-flight work and tear down the background scope. Call from IME onDestroy. */
+    fun release() {
+        cancel()
+        backgroundScope.cancel()
     }
 
     private fun finish(

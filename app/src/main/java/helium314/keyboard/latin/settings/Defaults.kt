@@ -198,12 +198,10 @@ object Defaults {
     const val PREF_VOICE_LANGUAGE_HINT = true
     const val PREF_VOICE_SPACE_HEURISTIC = true
     const val PREF_VOICE_HAPTIC_FEEDBACK = true
-    const val PREF_VOICE_CONSENT_GIVEN = false
     const val PREF_TEXT_FIX_ENABLED = false
     const val PREF_TEXT_FIX_MODEL = "openai/gpt-5.4-mini"
     const val PREF_TEXT_FIX_MODEL_CUSTOM = ""
     const val PREF_TEXT_FIX_PROMPT = "You are a writing assistant. Improve the following text: fix typos, grammar, and punctuation while preserving the original meaning, tone, and language. Output only the improved text, with no preamble, quotes, or explanation."
-    const val PREF_TEXT_FIX_CONSENT_GIVEN = false
     const val PREF_TEXT_FIX_2_ENABLED = false
     const val PREF_TEXT_FIX_2_PROMPT = "You are a writing assistant. Rewrite the following text to be clearer and more concise while preserving the original meaning, tone, and language. Output only the rewritten text, with no preamble, quotes, or explanation."
     const val PREF_POPUP_DRAG_HAPTIC = false

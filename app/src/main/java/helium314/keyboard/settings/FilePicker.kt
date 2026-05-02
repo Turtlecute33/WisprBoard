@@ -29,6 +29,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private const val MAX_LAYOUT_IMPORT_BYTES = 512 * 1024
+
 val layoutIntent = Intent(Intent.ACTION_OPEN_DOCUMENT)
     .addCategory(Intent.CATEGORY_OPENABLE)
     .putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("text/*", "application/octet-stream", "application/json"))
@@ -60,7 +62,9 @@ fun layoutFilePicker(
                         if (index < 0) null
                         else c.getString(index)
                     }
-                    val content = cr.openInputStream(uri)?.use { it.reader().readText() }
+                    val content = cr.openInputStream(uri)?.use { input ->
+                        readTextCapped(input, MAX_LAYOUT_IMPORT_BYTES)
+                    }
                         ?: throw IllegalStateException("could not open layout file")
                     name to content
                 }.getOrNull()
@@ -79,6 +83,20 @@ fun layoutFilePicker(
     if (errorDialog)
         InfoDialog(stringResource(R.string.file_read_error)) { errorDialog = false }
     return loadFilePicker
+}
+
+private fun readTextCapped(input: java.io.InputStream, maxBytes: Int): String {
+    val out = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(8 * 1024)
+    var total = 0
+    while (true) {
+        val read = input.read(buffer)
+        if (read == -1) break
+        total += read
+        if (total > maxBytes) throw IllegalArgumentException("layout file is too large")
+        out.write(buffer, 0, read)
+    }
+    return out.toString(Charsets.UTF_8.name())
 }
 
 @Composable

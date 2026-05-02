@@ -676,11 +676,6 @@ public class LatinIME extends InputMethodService implements
                     return null;
                 }
             }
-
-            @Override
-            public void requestConsent() {
-                Toast.makeText(LatinIME.this, R.string.voice_consent_prompt, Toast.LENGTH_LONG).show();
-            }
         });
 
         mTextFixManager = new TextFixManager(this, new TextFixManager.Callbacks() {
@@ -737,20 +732,27 @@ public class LatinIME extends InputMethodService implements
                 Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
                 if (mSuggestionStripView != null) mSuggestionStripView.hideTextFixOverlay();
             }
-
-            @Override
-            public void requestConsent() {
-                Toast.makeText(LatinIME.this, R.string.text_fix_consent_prompt, Toast.LENGTH_LONG).show();
-            }
         });
     }
 
     private void commitTextFixReplacement() {
+        final String original = mPendingTextFixOriginal;
         final String proposed = mPendingTextFixProposed;
         mPendingTextFixOriginal = null;
         mPendingTextFixProposed = null;
         if (mSuggestionStripView != null) mSuggestionStripView.hideTextFixOverlay();
-        if (proposed != null) {
+        if (proposed != null && original != null) {
+            final CharSequence selected;
+            try {
+                selected = mInputLogic.mConnection.getSelectedText(0);
+            } catch (Exception e) {
+                Toast.makeText(this, R.string.text_fix_error_selection_changed, Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (selected == null || !original.contentEquals(selected)) {
+                Toast.makeText(this, R.string.text_fix_error_selection_changed, Toast.LENGTH_LONG).show();
+                return;
+            }
             // Selection is still live at this point — commitText replaces it.
             mInputLogic.mConnection.commitText(proposed, 1);
         }
@@ -885,8 +887,8 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
-        mVoiceInputManager.cancelRecording();
-        if (mTextFixManager != null) mTextFixManager.cancel();
+        mVoiceInputManager.release();
+        if (mTextFixManager != null) mTextFixManager.release();
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
         mInputLogic.onDestroy();

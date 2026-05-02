@@ -6,7 +6,6 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
-import androidx.core.content.edit
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.permissions.PermissionsUtil
@@ -62,19 +61,12 @@ class VoiceInputManager(
         fun getLocaleHint(): Locale? = null
         /** Optional surrounding-text snapshot; used to decide whether to insert spaces. */
         fun getSpacingContext(): SpacingContext? = null
-        /**
-         * Called when the user must acknowledge the "data is sent to the AI provider" consent
-         * before the first recording. Implementation should show a brief in-keyboard prompt.
-         */
-        fun requestConsent() {}
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var audioRecorder: AudioRecorder = AudioRecorder(outputFile = File(cacheAudioDir(), "rec_placeholder.wav"))
     @Volatile private var state = State.IDLE
-    @Volatile private var pendingConsentDeadline: Long = 0L
-    private val consentWindowMs = 10_000L
     private var currentAudioFile: File? = null
     @Volatile private var transcriptionJob: Job? = null
     @Volatile private var transcriptionClient: OpenRouterClient? = null
@@ -116,20 +108,6 @@ class VoiceInputManager(
         if (!PermissionsUtil.checkAllPermissionsGranted(context, Manifest.permission.RECORD_AUDIO)) {
             Toast.makeText(context, R.string.voice_error_no_permission, Toast.LENGTH_SHORT).show()
             return
-        }
-
-        // First-use consent gate: user must tap twice within consentWindowMs to acknowledge
-        // that audio leaves the device en route to the selected AI provider. Persisted once granted.
-        if (!prefs.getBoolean(Settings.PREF_VOICE_CONSENT_GIVEN, Defaults.PREF_VOICE_CONSENT_GIVEN)) {
-            val now = System.currentTimeMillis()
-            if (pendingConsentDeadline == 0L || now > pendingConsentDeadline) {
-                pendingConsentDeadline = now + consentWindowMs
-                callbacks.requestConsent()
-                return
-            }
-            // Second tap within window: persist consent and fall through to start recording.
-            pendingConsentDeadline = 0L
-            prefs.edit { putBoolean(Settings.PREF_VOICE_CONSENT_GIVEN, true) }
         }
 
         if (!isNetworkAvailable(context)) {
@@ -338,6 +316,12 @@ class VoiceInputManager(
             }
             State.IDLE -> Unit
         }
+    }
+
+    /** Cancel any in-flight work and tear down the background scope. Call from IME onDestroy. */
+    fun release() {
+        cancelRecording()
+        backgroundScope.cancel()
     }
 
     private fun cacheAudioDir(): File {

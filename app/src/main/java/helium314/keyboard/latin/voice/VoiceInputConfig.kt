@@ -6,18 +6,19 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import androidx.annotation.StringRes
+import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import java.util.Locale
+
+private val SANITIZE_OUTPUT_REGEX =
+    Regex("[\\p{Cc}\\u200B\\u200C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFEFF]")
 
 /**
  * Strip control characters (Cc) and a narrow set of bidi/format marks that corrupt host editors,
  * but intentionally preserve U+200D (ZWJ) so emoji sequences survive.
  */
 internal fun sanitizeModelOutput(raw: String, maxLength: Int): String {
-    val cleaned = raw.replace(
-        Regex("[\\p{Cc}\\u200B\\u200C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFEFF]"),
-        ""
-    ).trim()
+    val cleaned = raw.replace(SANITIZE_OUTPUT_REGEX, "").trim()
     if (cleaned.length <= maxLength) return cleaned
     // Avoid splitting a surrogate pair at the truncation boundary.
     var end = maxLength
@@ -56,6 +57,7 @@ private val SENSITIVE_USER_FACING_PATTERNS: List<Pair<Regex, String>> = listOf(
  */
 internal fun safeUserFacingError(context: Context, e: Throwable, @StringRes fallbackResId: Int): String {
     if (e is OpenRouterException) {
+        if (e.statusCode == 429 || e.statusCode == 503) return context.getString(R.string.voice_error_rate_limited)
         val raw = e.message?.takeIf { it.isNotBlank() }
         if (raw != null) {
             return SENSITIVE_USER_FACING_PATTERNS.fold(raw) { acc, (regex, replacement) ->
