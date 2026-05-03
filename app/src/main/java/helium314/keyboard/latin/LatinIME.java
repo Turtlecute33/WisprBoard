@@ -1618,12 +1618,12 @@ public class LatinIME extends InputMethodService implements
     // This method is public for testability of LatinIME, but also in the future it should
     // completely replace #onCodeInput.
     public void onEvent(@NonNull final Event event) {
-        if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
+        if (KeyCode.VOICE_INPUT == event.getKeyCode() || KeyCode.VOICE_STT_INPUT == event.getKeyCode()) {
             if (mVoiceInputManager != null) {
                 if (mVoiceInputManager.getState() == VoiceInputManager.State.RECORDING) {
                     mVoiceInputManager.stopRecording();
                 } else {
-                    mVoiceInputManager.startRecording();
+                    mVoiceInputManager.startRecording(KeyCode.VOICE_STT_INPUT == event.getKeyCode());
                 }
             }
             return;

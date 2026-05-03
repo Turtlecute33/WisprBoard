@@ -189,6 +189,13 @@ object Defaults {
     // valid selection on fresh installs.
     const val PREF_VOICE_MODEL = "mistralai/voxtral-small-24b-2507"
     const val PREF_VOICE_MODEL_CUSTOM = ""
+    const val PREF_VOICE_TRADITIONAL_BUTTON_ENABLED = true
+    const val PREF_VOICE_STT_ENABLED = false
+    const val PREF_VOICE_STT_MODEL = "openai/whisper-large-v3-turbo"
+    const val PREF_VOICE_STT_MODEL_CUSTOM = ""
+    const val PREF_VOICE_STT_PROMPT = "Transcribe this audio exactly as spoken. Output only the transcription, nothing else."
+    const val PREF_VOICE_STT_DICTIONARY = ""
+    const val PREF_VOICE_STT_EXPECTED_LANGUAGES = ""
     const val PREF_VOICE_TRANSCRIPTION_PROMPT = "Transcribe this audio exactly as spoken. Output only the transcription, nothing else."
     const val PREF_VOICE_TRANSCRIPTION_DICTIONARY = ""
     const val PREF_VOICE_EXPECTED_LANGUAGES = ""
@@ -205,5 +212,5 @@ object Defaults {
     const val PREF_TEXT_FIX_2_ENABLED = false
     const val PREF_TEXT_FIX_2_PROMPT = "You are a writing assistant. Rewrite the following text to be clearer and more concise while preserving the original meaning, tone, and language. Output only the rewritten text, with no preamble, quotes, or explanation."
     const val PREF_POPUP_DRAG_HAPTIC = false
-    const val PREF_ACTION_POPUP_ORDER = "clipboard_action_key:true|emoji_action_key:true|shortcut_key:true|text_fix_key:true|text_fix_2_key:true"
+    const val PREF_ACTION_POPUP_ORDER = "clipboard_action_key:true|emoji_action_key:true|shortcut_key:true|stt_action_key:true|text_fix_key:true|text_fix_2_key:true"
 }

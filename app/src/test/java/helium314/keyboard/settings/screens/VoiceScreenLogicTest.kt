@@ -4,6 +4,7 @@ package helium314.keyboard.settings.screens
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.voice.AiProvider
+import helium314.keyboard.latin.voice.supportsOpenRouterSttSlug
 import helium314.keyboard.latin.voice.supportsTextFixSlug
 import helium314.keyboard.latin.voice.supportsVoiceSlug
 import kotlin.test.Test
@@ -48,6 +49,63 @@ class VoiceScreenLogicTest {
     }
 
     @Test
+    fun voiceItemsShowSttModelOnlyWhenDedicatedSttIsEnabled() {
+        val sttOffItems = buildVoiceScreenItems(
+            voiceInputEnabled = true,
+            voiceModel = "mistralai/voxtral-small-24b-2507",
+            provider = AiProvider.OPENROUTER,
+            sttEnabled = false,
+        )
+        val sttOnItems = buildVoiceScreenItems(
+            voiceInputEnabled = true,
+            voiceModel = "mistralai/voxtral-small-24b-2507",
+            provider = AiProvider.OPENROUTER,
+            sttEnabled = true,
+        )
+        val customSttItems = buildVoiceScreenItems(
+            voiceInputEnabled = true,
+            voiceModel = "mistralai/voxtral-small-24b-2507",
+            sttModel = "custom",
+            provider = AiProvider.OPENROUTER,
+            sttEnabled = true,
+        )
+
+        assertTrue(Settings.PREF_VOICE_STT_ENABLED in sttOffItems)
+        assertFalse(Settings.PREF_VOICE_STT_MODEL in sttOffItems)
+        assertFalse(Settings.PREF_VOICE_STT_PROMPT in sttOffItems)
+        assertFalse(Settings.PREF_VOICE_STT_DICTIONARY in sttOffItems)
+        assertFalse(Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES in sttOffItems)
+        assertTrue(Settings.PREF_VOICE_STT_MODEL in sttOnItems)
+        assertTrue(Settings.PREF_VOICE_STT_PROMPT in sttOnItems)
+        assertTrue(Settings.PREF_VOICE_STT_DICTIONARY in sttOnItems)
+        assertTrue(Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES in sttOnItems)
+        assertFalse(Settings.PREF_VOICE_STT_MODEL_CUSTOM in sttOnItems)
+        assertTrue(Settings.PREF_VOICE_STT_MODEL_CUSTOM in customSttItems)
+    }
+
+    @Test
+    fun voiceItemsHideTraditionalSettingsWhenTraditionalButtonDisabled() {
+        // Disabling the chat-audio button should hide its dependent rows (model, prompt,
+        // dictionary, expected languages) so the screen stops asking the user to configure a
+        // path they explicitly turned off, while leaving STT settings untouched.
+        val traditionalOffItems = buildVoiceScreenItems(
+            voiceInputEnabled = true,
+            voiceModel = "mistralai/voxtral-small-24b-2507",
+            provider = AiProvider.OPENROUTER,
+            traditionalEnabled = false,
+            sttEnabled = true,
+        )
+
+        assertTrue(Settings.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED in traditionalOffItems)
+        assertFalse(Settings.PREF_VOICE_MODEL in traditionalOffItems)
+        assertFalse(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT in traditionalOffItems)
+        assertFalse(Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY in traditionalOffItems)
+        assertFalse(Settings.PREF_VOICE_EXPECTED_LANGUAGES in traditionalOffItems)
+        assertTrue(Settings.PREF_VOICE_STT_ENABLED in traditionalOffItems)
+        assertTrue(Settings.PREF_VOICE_STT_MODEL in traditionalOffItems)
+    }
+
+    @Test
     fun voiceItemsUsePayPerQKeyAndHideOpenRouterZdrWhenPayPerQSelected() {
         val items = buildVoiceScreenItems(
             voiceInputEnabled = true,
@@ -76,6 +134,10 @@ class VoiceScreenLogicTest {
                 "Defaults.PREF_TEXT_FIX_MODEL must be a text-fix slug supported by $provider"
             )
         }
+        assertTrue(
+            supportsOpenRouterSttSlug(Defaults.PREF_VOICE_STT_MODEL),
+            "Defaults.PREF_VOICE_STT_MODEL must be an OpenRouter STT slug"
+        )
     }
 
     @Test

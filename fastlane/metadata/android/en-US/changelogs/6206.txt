@@ -1,0 +1,2 @@
+* Dedicated STT now has its own prompt, dictionary, and expected-languages settings, independent of the chat-audio voice path
+* Tightened the transcription dictionary instruction so models follow the configured spellings strictly across both flows

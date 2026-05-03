@@ -1114,6 +1114,22 @@ New dictionary:
     <string name="voice_model">Voice Model</string>
     <string name="voice_model_custom">Custom Model ID</string>
     <string name="voice_model_custom_summary">Only used when Voice Model is set to Custom</string>
+    <string name="voice_traditional_category">Traditional voice button (chat-audio)</string>
+    <string name="voice_traditional_button_enabled">Show traditional voice button</string>
+    <string name="voice_traditional_button_enabled_summary">When off, the chat-audio voice button is hidden from the long-press Return menu so you can rely solely on the dedicated STT button.</string>
+    <string name="voice_shared_category">Shared capture options</string>
+    <string name="voice_stt_category">Dedicated speech-to-text endpoint</string>
+    <string name="voice_stt_enabled">Add STT button to Return menu</string>
+    <string name="voice_stt_enabled_summary">Adds a separate long-press Return button that uses OpenRouter\'s audio transcription endpoint, independent of the traditional voice button.</string>
+    <string name="voice_stt_model">STT Model</string>
+    <string name="voice_stt_model_custom">Custom STT Model ID</string>
+    <string name="voice_stt_model_custom_summary">Only used when STT Model is set to Custom</string>
+    <string name="voice_stt_prompt">STT Prompt</string>
+    <string name="voice_stt_prompt_summary">Instruction sent to the dedicated STT endpoint, independent of the Voice Model prompt</string>
+    <string name="voice_stt_dictionary">STT dictionary</string>
+    <string name="voice_stt_dictionary_summary">Comma-separated names, brands, acronyms, and technical terms the STT model should follow exactly</string>
+    <string name="voice_stt_expected_languages">STT expected languages</string>
+    <string name="voice_stt_expected_languages_summary">Comma-separated languages the speaker may use when the STT button is pressed</string>
     <string name="voice_transcription_prompt">Transcription Prompt</string>
     <string name="voice_transcription_prompt_summary">Full instruction sent to the AI for shaping the transcript output</string>
     <string name="voice_transcription_dictionary">Transcription dictionary</string>
@@ -1130,6 +1146,7 @@ New dictionary:
     <string name="voice_error_not_enabled">Enable Voice Input in settings</string>
     <string name="voice_error_no_permission">Grant microphone permission in settings</string>
     <string name="voice_error_no_network">No internet connection</string>
+    <string name="voice_error_stt_openrouter_only">Dedicated STT is only available with OpenRouter</string>
     <string name="voice_error_transcription_failed">Transcription failed</string>
     <string name="voice_error_rate_limited">AI provider rate limit reached — try again in a moment</string>
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
@@ -1237,4 +1254,6 @@ New dictionary:
     <string name="popup_keys_emoji_action_key" tools:keep="@string/popup_keys_emoji_action_key">Emoji</string>
     <string name="popup_keys_text_fix_key" tools:keep="@string/popup_keys_text_fix_key">Text Fix</string>
     <string name="popup_keys_text_fix_2_key" tools:keep="@string/popup_keys_text_fix_2_key">Second Text Fix</string>
+    <string name="popup_keys_stt_action_key" tools:keep="@string/popup_keys_stt_action_key">STT Voice</string>
+    <string name="label_stt_action_key" tools:keep="@string/label_stt_action_key">STT</string>
 </resources>

@@ -32,6 +32,8 @@ class OpenRouterClient(
     private val runtimeInstruction: String?,
     private val provider: AiProvider = AiProvider.OPENROUTER,
     private val useZeroDataRetention: Boolean = false,
+    private val transcriptionMode: VoiceTranscriptionMode = VoiceTranscriptionMode.CHAT_AUDIO,
+    private val transcriptionLanguage: String? = null,
     private val connectTimeoutMs: Int = DEFAULT_CONNECT_TIMEOUT_MS,
     private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
 ) {
@@ -41,6 +43,7 @@ class OpenRouterClient(
         private const val TAG = "OpenRouterClient"
         const val API_BASE = "https://openrouter.ai/api/v1"
         private const val ENDPOINT = "$API_BASE/chat/completions"
+        private const val OPENROUTER_TRANSCRIPTION_ENDPOINT = "$API_BASE/audio/transcriptions"
         const val KEY_ENDPOINT = "$API_BASE/key"
         const val ZDR_ENDPOINT = "$API_BASE/endpoints/zdr"
         const val PAYPERQ_API_BASE = "https://api.ppq.ai"
@@ -50,6 +53,9 @@ class OpenRouterClient(
         /** Template: call [modelEndpointUrl] to fill in the model id safely. */
         fun modelEndpointUrl(author: String, slug: String): String = "$API_BASE/models/$author/$slug/endpoints"
         private const val STABLE_AUDIO_INSTRUCTION = "Process the attached audio input according to the system instructions. Return only the final answer."
+        private const val APP_REFERER = "https://github.com/anomalyco/Turtleboard"
+        private const val APP_TITLE = "Turtleboard"
+        private const val APP_CATEGORIES = "programming-app"
         const val DEFAULT_CONNECT_TIMEOUT_MS = 15_000
         const val DEFAULT_READ_TIMEOUT_MS = 90_000
         private const val MAX_ATTEMPTS = 3
@@ -83,6 +89,12 @@ class OpenRouterClient(
                     isLenient = false
                 }
         }
+
+        fun applyOpenRouterAttributionHeaders(connection: HttpURLConnection) {
+            connection.setRequestProperty("HTTP-Referer", APP_REFERER)
+            connection.setRequestProperty("X-OpenRouter-Title", APP_TITLE)
+            connection.setRequestProperty("X-OpenRouter-Categories", APP_CATEGORIES)
+        }
     }
 
     /**
@@ -99,7 +111,9 @@ class OpenRouterClient(
         while (attempt < MAX_ATTEMPTS) {
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
             try {
-                return if (provider == AiProvider.PAYPERQ && "/" !in model) {
+                return if (provider == AiProvider.OPENROUTER && transcriptionMode == VoiceTranscriptionMode.OPENROUTER_STT) {
+                    performOpenRouterSttTranscription(audioFile, enforceZdr)
+                } else if (provider == AiProvider.PAYPERQ && "/" !in model) {
                     performPayPerQTranscription(audioFile)
                 } else {
                     performRequest(audioFile, enforceZdr)
@@ -204,6 +218,7 @@ class OpenRouterClient(
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
             setRequestProperty("Content-Type", "application/json")
+            if (provider == AiProvider.OPENROUTER) applyOpenRouterAttributionHeaders(this)
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
             doOutput = true
@@ -251,6 +266,9 @@ class OpenRouterClient(
 
     private fun putProviderPreferences(body: JSONObject, enforceZdr: Boolean) {
         if (!enforceZdr || provider != AiProvider.OPENROUTER) return
+        // `zdr: true` is stricter, but it currently rejects the default Voxtral chat-audio
+        // route. Keep the existing no-data-collection routing so the legacy voice path stays
+        // usable while still avoiding data-collection endpoints.
         body.put("provider", JSONObject().apply { put("data_collection", "deny") })
     }
 
@@ -299,6 +317,7 @@ class OpenRouterClient(
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
             setRequestProperty("Content-Type", "application/json")
+            if (provider == AiProvider.OPENROUTER) applyOpenRouterAttributionHeaders(this)
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
             doOutput = true
@@ -336,6 +355,71 @@ class OpenRouterClient(
     private fun chatEndpoint(): String = when (provider) {
         AiProvider.OPENROUTER -> ENDPOINT
         AiProvider.PAYPERQ -> PAYPERQ_CHAT_ENDPOINT
+    }
+
+    private fun buildOpenRouterSttEnvelope(enforceZdr: Boolean): Pair<String, String> {
+        val prompt = listOfNotNull(
+            systemPrompt.takeIf { it.isNotBlank() },
+            runtimeInstruction?.takeIf { it.isNotBlank() },
+        ).joinToString("\n").take(1_000)
+        val body = JSONObject().apply {
+            put("model", model)
+            put("input_audio", JSONObject().apply {
+                put("data", AUDIO_PLACEHOLDER)
+                put("format", "wav")
+            })
+            transcriptionLanguage?.takeIf { it.isNotBlank() }?.let { put("language", it) }
+            put("temperature", 0)
+            if (prompt.isNotBlank()) put("prompt", prompt)
+            putProviderPreferences(this, enforceZdr)
+            if (prompt.isNotBlank()) {
+                val providerObject = optJSONObject("provider") ?: JSONObject().also { put("provider", it) }
+                providerObject.put("options", JSONObject().apply {
+                    put("groq", JSONObject().apply { put("prompt", prompt) })
+                    put("openai", JSONObject().apply { put("prompt", prompt) })
+                })
+            }
+        }.toString()
+        val placeholderIndex = body.indexOf(AUDIO_PLACEHOLDER)
+        check(placeholderIndex >= 0) { "Audio placeholder not found in STT request body" }
+        return body.substring(0, placeholderIndex) to body.substring(placeholderIndex + AUDIO_PLACEHOLDER.length)
+    }
+
+    private fun performOpenRouterSttTranscription(audioFile: File, enforceZdr: Boolean): String {
+        val (prefix, suffix) = buildOpenRouterSttEnvelope(enforceZdr)
+        val connection = (URL(OPENROUTER_TRANSCRIPTION_ENDPOINT).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            setRequestProperty("Authorization", "Bearer $apiKey")
+            setRequestProperty("Content-Type", "application/json")
+            applyOpenRouterAttributionHeaders(this)
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
+            doOutput = true
+            setChunkedStreamingMode(0)
+        }
+        activeConnection = connection
+        try {
+            connection.outputStream.use { out ->
+                out.write(prefix.toByteArray(Charsets.UTF_8))
+                streamBase64Audio(audioFile, out)
+                out.write(suffix.toByteArray(Charsets.UTF_8))
+                out.flush()
+            }
+
+            val responseCode = connection.responseCode
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                val errorBody = readErrorBodyCapped(connection.errorStream)
+                if (BuildConfig.DEBUG) Log.e(TAG, "API error $responseCode: ${sanitizeForLog(errorBody)}")
+                val retryAfterMs = parseRetryAfterMs(connection.getHeaderField("Retry-After"))
+                throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs, errorBody)
+            }
+
+            val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
+            return parseTranscriptionContent(responseBody)
+        } finally {
+            activeConnection = null
+            connection.disconnect()
+        }
     }
 
     private fun performPayPerQTranscription(audioFile: File): String {

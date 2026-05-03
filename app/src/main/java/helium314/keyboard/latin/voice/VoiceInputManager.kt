@@ -73,6 +73,7 @@ class VoiceInputManager(
     @Volatile private var activeTranscriptionToken = 0L
     @Volatile private var stopFinalizeJob: Job? = null
     @Volatile private var isStopFinalizing = false
+    @Volatile private var currentUseDedicatedStt = false
 
     fun getState() = state
 
@@ -83,8 +84,9 @@ class VoiceInputManager(
     fun getCurrentDurationMs(): Long = audioRecorder.currentDurationMs
 
     @Synchronized
-    fun startRecording() {
+    fun startRecording(useDedicatedStt: Boolean = false) {
         if (state != State.IDLE) return
+        currentUseDedicatedStt = useDedicatedStt
 
         val prefs = context.prefs()
 
@@ -112,6 +114,12 @@ class VoiceInputManager(
 
         if (!isNetworkAvailable(context)) {
             Toast.makeText(context, R.string.voice_error_no_network, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (currentUseDedicatedStt && provider != AiProvider.OPENROUTER) {
+            currentUseDedicatedStt = false
+            Toast.makeText(context, R.string.voice_error_stt_openrouter_only, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -178,6 +186,7 @@ class VoiceInputManager(
         if (wavFile == null || !wavFile.exists() || wavFile.length() <= 44L) {
             wavFile?.delete()
             currentAudioFile = null
+            currentUseDedicatedStt = false
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_no_audio))
@@ -192,6 +201,7 @@ class VoiceInputManager(
         if (audioRecorder.lastDurationMs < MIN_RECORDING_DURATION_MS) {
             wavFile.delete()
             currentAudioFile = null
+            currentUseDedicatedStt = false
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_too_short))
@@ -200,6 +210,7 @@ class VoiceInputManager(
         if (audioRecorder.lastMeanAmplitude < MIN_SPEECH_MEAN_AMPLITUDE) {
             wavFile.delete()
             currentAudioFile = null
+            currentUseDedicatedStt = false
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_silent))
@@ -214,26 +225,47 @@ class VoiceInputManager(
         val apiKey = SecretStore.getApiKey(context, provider.apiKeyPrefKey(), provider.defaultApiKey())
         val selectedModel = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL) ?: Defaults.PREF_VOICE_MODEL
         val customModel = prefs.getString(Settings.PREF_VOICE_MODEL_CUSTOM, Defaults.PREF_VOICE_MODEL_CUSTOM) ?: ""
-        val savedPrompt = prefs.getString(
-            Settings.PREF_VOICE_TRANSCRIPTION_PROMPT,
-            Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
-        ) ?: Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
-        val transcriptionDictionary = prefs.getString(
-            Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY,
-            Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY
-        ) ?: Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY
-        val expectedLanguages = prefs.getString(
-            Settings.PREF_VOICE_EXPECTED_LANGUAGES,
-            Defaults.PREF_VOICE_EXPECTED_LANGUAGES
-        ) ?: Defaults.PREF_VOICE_EXPECTED_LANGUAGES
+        val selectedSttModel = prefs.getString(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL) ?: Defaults.PREF_VOICE_STT_MODEL
+        val customSttModel = prefs.getString(Settings.PREF_VOICE_STT_MODEL_CUSTOM, Defaults.PREF_VOICE_STT_MODEL_CUSTOM) ?: ""
+        val useDedicatedStt = currentUseDedicatedStt
+        // STT has its own prompt, dictionary, and expected-languages prefs so users can tune
+        // the dedicated transcription endpoint independently of the chat-audio path. Falling
+        // back to the chat-audio defaults would re-couple the two flows, so we read each set
+        // from its own keys.
+        val savedPrompt = if (useDedicatedStt) {
+            prefs.getString(Settings.PREF_VOICE_STT_PROMPT, Defaults.PREF_VOICE_STT_PROMPT)
+                ?: Defaults.PREF_VOICE_STT_PROMPT
+        } else {
+            prefs.getString(Settings.PREF_VOICE_TRANSCRIPTION_PROMPT, Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT)
+                ?: Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
+        }
+        val transcriptionDictionary = if (useDedicatedStt) {
+            prefs.getString(Settings.PREF_VOICE_STT_DICTIONARY, Defaults.PREF_VOICE_STT_DICTIONARY)
+                ?: Defaults.PREF_VOICE_STT_DICTIONARY
+        } else {
+            prefs.getString(Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY, Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY)
+                ?: Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY
+        }
+        val expectedLanguages = if (useDedicatedStt) {
+            prefs.getString(Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES, Defaults.PREF_VOICE_STT_EXPECTED_LANGUAGES)
+                ?: Defaults.PREF_VOICE_STT_EXPECTED_LANGUAGES
+        } else {
+            prefs.getString(Settings.PREF_VOICE_EXPECTED_LANGUAGES, Defaults.PREF_VOICE_EXPECTED_LANGUAGES)
+                ?: Defaults.PREF_VOICE_EXPECTED_LANGUAGES
+        }
         val languageHintEnabled = prefs.getBoolean(Settings.PREF_VOICE_LANGUAGE_HINT, Defaults.PREF_VOICE_LANGUAGE_HINT)
         val spaceHeuristicEnabled = prefs.getBoolean(Settings.PREF_VOICE_SPACE_HEURISTIC, Defaults.PREF_VOICE_SPACE_HEURISTIC)
         val useZdr = provider == AiProvider.OPENROUTER &&
             prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
 
-        val model = resolveProviderModel(selectedModel, customModel)
+        val model = if (useDedicatedStt) {
+            resolveVoiceSttModel(selectedSttModel, customSttModel)
+        } else {
+            resolveProviderModel(selectedModel, customModel)
+        }
         if (model == null) {
             wavFile.delete()
+            currentUseDedicatedStt = false
             state = State.IDLE
             callbacks.onFinished()
             callbacks.onError(context.getString(R.string.voice_error_no_model))
@@ -250,6 +282,8 @@ class VoiceInputManager(
             runtimeInstruction = prompt.runtimeInstruction,
             provider = provider,
             useZeroDataRetention = useZdr,
+            transcriptionMode = if (useDedicatedStt) VoiceTranscriptionMode.OPENROUTER_STT else VoiceTranscriptionMode.CHAT_AUDIO,
+            transcriptionLanguage = localeHint?.toOpenRouterSttLanguage(),
         )
         val requestToken = activeTranscriptionToken + 1
         activeTranscriptionToken = requestToken
@@ -297,6 +331,7 @@ class VoiceInputManager(
                 stopFinalizeJob?.cancel()
                 stopFinalizeJob = null
                 isStopFinalizing = false
+                currentUseDedicatedStt = false
                 currentAudioFile = null
                 state = State.IDLE
                 callbacks.onFinished()
@@ -307,6 +342,7 @@ class VoiceInputManager(
                 transcriptionJob?.cancel()
                 transcriptionJob = null
                 transcriptionClient = null
+                currentUseDedicatedStt = false
                 // The transcription thread's finally block will handle file deletion; only
                 // reach in here if it couldn't start.
                 currentAudioFile?.takeIf { it.exists() }?.delete()
@@ -354,6 +390,7 @@ class VoiceInputManager(
             }
             transcriptionJob = null
             transcriptionClient = null
+            currentUseDedicatedStt = false
             state = State.IDLE
             callbacks.onFinished()
             if (!result.isNullOrEmpty()) {

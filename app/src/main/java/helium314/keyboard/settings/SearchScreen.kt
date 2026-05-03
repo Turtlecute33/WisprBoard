@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,41 +65,31 @@ fun SearchSettingsScreen(
         content = {
             if (content != null) content()
             else {
+                // LazyColumn over a pre-filtered, pre-keyed snapshot. Going lazy means only the
+                // rows currently on screen run their `Preference()` composition (each of which
+                // registers a SharedPreferences listener), which makes scrolling a long screen
+                // — Voice especially — meaningfully smoother than the previous verticalScroll
+                // Column that composed every row up-front. The cached `visibleItems` keeps the
+                // list stable so unrelated state changes don't reshuffle keys.
+                val visibleItems = remember(settings) {
+                    settings.mapIndexedNotNull { index, value -> value?.let { index to it } }
+                }
                 Scaffold(
                     contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
                 ) { innerPadding ->
-                    Column(
-                        Modifier.verticalScroll(rememberScrollState()).then(Modifier.padding(innerPadding))
-                    ) {
-                        settings.forEach {
-                            if (it is Int) {
-                                PreferenceCategory(stringResource(it))
+                    LazyColumn(contentPadding = innerPadding) {
+                        items(
+                            items = visibleItems,
+                            key = { (index, value) -> "$index:${value.javaClass.simpleName}:$value" },
+                            contentType = { (_, value) -> if (value is Int) "category" else "pref" },
+                        ) { (_, value) ->
+                            if (value is Int) {
+                                PreferenceCategory(stringResource(value))
                             } else {
-                                // this only animates appearing prefs
-                                // a solution would be using a list(visible to key)
-                                AnimatedVisibility(visible = it != null) {
-                                    if (it != null)
-                                        SettingsActivity.settingsContainer[it]?.Preference()
-                                }
+                                SettingsActivity.settingsContainer[value]?.Preference()
                             }
                         }
                     }
-                    // lazyColumn has janky scroll for a while (not sure why compose gets smoother after a while)
-                    // maybe related to unnecessary recompositions? but even for just displaying text it's there
-                    // didn't manage to improve things with @Immutable list wrapper and other lazy list hints
-                    // so for now: just use "normal" Column
-                    //  even though it takes up to ~50% longer to load it's much better UX
-                    //  and the missing appear animations could be added
-    //                LazyColumn {
-    //                    items(prefs.filterNotNull(), key = { it }) {
-    //                        Box(Modifier.animateItem()) {
-    //                            if (it is Int)
-    //                                PreferenceCategory(stringResource(it))
-    //                            else
-    //                                SettingsActivity.settingsContainer[it]!!.Preference()
-    //                        }
-    //                    }
-    //                }
                 }
             }
         },

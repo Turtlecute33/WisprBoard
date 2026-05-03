@@ -1,0 +1,3 @@
+* Traditional voice button and dedicated STT button are now independent: each has its own toggle, model, prompt, dictionary, and expected-languages settings, and either flow can be used alone
+* Long-press Return menu honors both toggles separately, so users can hide the chat-audio button while keeping STT (or vice versa)
+* Settings screens now use a lazy list for smoother scrolling, especially on long pages like Voice

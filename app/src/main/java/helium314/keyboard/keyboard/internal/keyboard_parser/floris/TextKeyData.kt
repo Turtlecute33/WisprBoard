@@ -22,11 +22,13 @@ import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.common.StringUtils
+import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.spellcheck.AndroidSpellCheckerService
 import helium314.keyboard.latin.utils.LayoutType
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.ToolbarKey
+import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.toolbarKeyStrings
 
 // taken from FlorisBoard, modified (see also KeyData)
@@ -238,6 +240,7 @@ sealed interface KeyData : AbstractKeyData {
             "clipboard_action_key" to "!icon/clipboard_action_key|!code/key_clipboard",
             "shortcut_key" to "!icon/shortcut_key|!code/key_voice_input",
             "emoji_action_key" to "!icon/emoji_action_key|!code/key_emoji",
+            "stt_action_key" to "!icon/stt_action_key|!code/key_voice_stt_input",
             "text_fix_key" to "!icon/text_fix_key|!code/key_text_fix",
             "text_fix_2_key" to "!icon/text_fix_2_key|!code/key_text_fix_2",
         )
@@ -247,12 +250,31 @@ sealed interface KeyData : AbstractKeyData {
             val entries = nameToEntry.values.toSet()
             // Snapshot the orderable subset that survived the prior filtering passes.
             val present = popupKeys.filter { it in entries }.toMutableList()
+            val prefs = Settings.getCurrentContext().prefs()
+            // Traditional voice button is opt-out so existing users don't lose the long-press
+            // mic. STT button is opt-in. Both are independent toggles so the user can run with
+            // only STT, only the chat-audio button, both, or neither.
+            val traditionalEnabled = prefs.getBoolean(
+                Settings.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED,
+                Defaults.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED
+            )
+            val sttEnabled = prefs.getBoolean(
+                Settings.PREF_VOICE_STT_ENABLED,
+                Defaults.PREF_VOICE_STT_ENABLED
+            )
+            if (!traditionalEnabled) {
+                present.remove("!icon/shortcut_key|!code/key_voice_input")
+            }
             // Pull in the optional second text-fix entry only when its pref is on AND the
             // primary text-fix slot is present (otherwise the variant has nothing to anchor to).
             if (Settings.getInstance().current.mTextFix2Enabled
                 && "!icon/text_fix_key|!code/key_text_fix" in present) {
                 val tf2 = "!icon/text_fix_2_key|!code/key_text_fix_2"
                 if (tf2 !in present) present.add(tf2)
+            }
+            if (sttEnabled) {
+                val stt = "!icon/stt_action_key|!code/key_voice_stt_input"
+                if (stt !in present) present.add(stt)
             }
             if (present.isEmpty()) return
 

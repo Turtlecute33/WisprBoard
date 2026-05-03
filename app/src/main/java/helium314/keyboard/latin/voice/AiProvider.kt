@@ -40,6 +40,13 @@ private val OPENROUTER_VOICE_SLUGS = setOf(
     "openai/gpt-4o-audio-preview",
     "openai/gpt-audio",
 )
+private val OPENROUTER_STT_SLUGS = setOf(
+    "openai/gpt-4o-mini-transcribe",
+    "openai/whisper-large-v3-turbo",
+    "openai/whisper-large-v3",
+    "openai/whisper-1",
+    "openai/gpt-4o-transcribe",
+)
 private val PAYPERQ_VOICE_SLUGS = setOf(
     "mistralai/voxtral-small-24b-2507",
     "openai/gpt-audio-mini",
@@ -64,6 +71,11 @@ internal fun AiProvider.supportsVoiceSlug(slug: String): Boolean {
         AiProvider.OPENROUTER -> OPENROUTER_VOICE_SLUGS
         AiProvider.PAYPERQ -> PAYPERQ_VOICE_SLUGS
     }
+}
+
+internal fun supportsOpenRouterSttSlug(slug: String): Boolean {
+    if (slug == MODEL_CUSTOM) return true
+    return slug in OPENROUTER_STT_SLUGS
 }
 
 internal fun AiProvider.supportsTextFixSlug(slug: String): Boolean {

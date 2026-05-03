@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.edit
+import helium314.keyboard.keyboard.KeyboardSwitcher
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -37,6 +38,7 @@ import helium314.keyboard.latin.voice.resolveVoiceModel
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.latin.voice.defaultApiKey
+import helium314.keyboard.latin.voice.supportsOpenRouterSttSlug
 import helium314.keyboard.latin.voice.supportsTextFixSlug
 import helium314.keyboard.latin.voice.supportsVoiceSlug
 import helium314.keyboard.settings.SearchSettingsScreen
@@ -66,7 +68,13 @@ fun VoiceScreen(
         Defaults.PREF_VOICE_INPUT_ENABLED
     )
     val voiceModel by rememberStringPreferenceState(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+    val sttModel by rememberStringPreferenceState(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL)
     val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
+    val traditionalEnabled by rememberBooleanPreferenceState(
+        Settings.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED,
+        Defaults.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED
+    )
+    val sttEnabled by rememberBooleanPreferenceState(Settings.PREF_VOICE_STT_ENABLED, Defaults.PREF_VOICE_STT_ENABLED)
     val voiceAutoStop by rememberBooleanPreferenceState(
         Settings.PREF_VOICE_AUTO_STOP_SILENCE,
         Defaults.PREF_VOICE_AUTO_STOP_SILENCE
@@ -78,7 +86,10 @@ fun VoiceScreen(
         settings = buildVoiceScreenItems(
             voiceInputEnabled = voiceInputEnabled,
             voiceModel = voiceModel,
+            sttModel = sttModel,
             provider = AiProvider.fromPref(providerPref),
+            traditionalEnabled = traditionalEnabled,
+            sttEnabled = sttEnabled,
             voiceAutoStop = voiceAutoStop,
         )
     )
@@ -87,7 +98,10 @@ fun VoiceScreen(
 internal fun buildVoiceScreenItems(
     voiceInputEnabled: Boolean,
     voiceModel: String,
+    sttModel: String = Defaults.PREF_VOICE_STT_MODEL,
     provider: AiProvider = AiProvider.OPENROUTER,
+    traditionalEnabled: Boolean = Defaults.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED,
+    sttEnabled: Boolean = Defaults.PREF_VOICE_STT_ENABLED,
     voiceAutoStop: Boolean = Defaults.PREF_VOICE_AUTO_STOP_SILENCE,
 ): List<Any?> = listOf(
     Settings.PREF_VOICE_INPUT_ENABLED,
@@ -95,12 +109,25 @@ internal fun buildVoiceScreenItems(
     if (voiceInputEnabled) provider.apiKeyPrefKey() else null,
     if (voiceInputEnabled && provider == AiProvider.OPENROUTER) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_TEST_KEY else null,
-    if (voiceInputEnabled) Settings.PREF_VOICE_MODEL else null,
-    if (voiceInputEnabled && voiceModel == "custom") Settings.PREF_VOICE_MODEL_CUSTOM else null,
-    if (voiceInputEnabled) Settings.PREF_VOICE_ACTION_PROMPT_PRESET else null,
-    if (voiceInputEnabled) Settings.PREF_VOICE_TRANSCRIPTION_PROMPT else null,
-    if (voiceInputEnabled) Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY else null,
-    if (voiceInputEnabled) Settings.PREF_VOICE_EXPECTED_LANGUAGES else null,
+    // Traditional voice (chat-audio) subsection — independent of STT below.
+    if (voiceInputEnabled) R.string.voice_traditional_category else null,
+    if (voiceInputEnabled) Settings.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED else null,
+    if (voiceInputEnabled && traditionalEnabled) Settings.PREF_VOICE_MODEL else null,
+    if (voiceInputEnabled && traditionalEnabled && voiceModel == "custom") Settings.PREF_VOICE_MODEL_CUSTOM else null,
+    if (voiceInputEnabled && traditionalEnabled) Settings.PREF_VOICE_ACTION_PROMPT_PRESET else null,
+    if (voiceInputEnabled && traditionalEnabled) Settings.PREF_VOICE_TRANSCRIPTION_PROMPT else null,
+    if (voiceInputEnabled && traditionalEnabled) Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY else null,
+    if (voiceInputEnabled && traditionalEnabled) Settings.PREF_VOICE_EXPECTED_LANGUAGES else null,
+    // Dedicated STT subsection — fully independent toggle and settings.
+    if (voiceInputEnabled && provider == AiProvider.OPENROUTER) R.string.voice_stt_category else null,
+    if (voiceInputEnabled && provider == AiProvider.OPENROUTER) Settings.PREF_VOICE_STT_ENABLED else null,
+    if (voiceInputEnabled && provider == AiProvider.OPENROUTER && sttEnabled) Settings.PREF_VOICE_STT_MODEL else null,
+    if (voiceInputEnabled && provider == AiProvider.OPENROUTER && sttEnabled && sttModel == "custom") Settings.PREF_VOICE_STT_MODEL_CUSTOM else null,
+    if (voiceInputEnabled && provider == AiProvider.OPENROUTER && sttEnabled) Settings.PREF_VOICE_STT_PROMPT else null,
+    if (voiceInputEnabled && provider == AiProvider.OPENROUTER && sttEnabled) Settings.PREF_VOICE_STT_DICTIONARY else null,
+    if (voiceInputEnabled && provider == AiProvider.OPENROUTER && sttEnabled) Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES else null,
+    // Shared playback / capture options apply to both flows.
+    if (voiceInputEnabled) R.string.voice_shared_category else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_LANGUAGE_HINT else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_SPACE_HEURISTIC else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_HAPTIC_FEEDBACK else null,
@@ -207,11 +234,16 @@ fun createVoiceSettings(context: Context) = listOf(
             // both providers, so a single fallback works either way.
             val currentVoice = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
                 ?: Defaults.PREF_VOICE_MODEL
+            val currentStt = prefs.getString(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL)
+                ?: Defaults.PREF_VOICE_STT_MODEL
             val currentTextFix = prefs.getString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
                 ?: Defaults.PREF_TEXT_FIX_MODEL
             prefs.edit {
                 if (!provider.supportsVoiceSlug(currentVoice)) {
                     putString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+                }
+                if (provider != AiProvider.OPENROUTER || !supportsOpenRouterSttSlug(currentStt)) {
+                    putString(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL)
                 }
                 if (!provider.supportsTextFixSlug(currentTextFix)) {
                     putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
@@ -247,6 +279,68 @@ fun createVoiceSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_VOICE_MODEL_CUSTOM, R.string.voice_model_custom, R.string.voice_model_custom_summary) {
         TextInputPreference(it, Defaults.PREF_VOICE_MODEL_CUSTOM)
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED,
+        R.string.voice_traditional_button_enabled,
+        R.string.voice_traditional_button_enabled_summary
+    ) {
+        SwitchPreference(it, Defaults.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED) {
+            KeyboardSwitcher.getInstance().setThemeNeedsReload()
+        }
+    },
+    Setting(context, Settings.PREF_VOICE_STT_ENABLED, R.string.voice_stt_enabled, R.string.voice_stt_enabled_summary) {
+        SwitchPreference(it, Defaults.PREF_VOICE_STT_ENABLED) {
+            KeyboardSwitcher.getInstance().setThemeNeedsReload()
+        }
+    },
+    Setting(context, Settings.PREF_VOICE_STT_MODEL, R.string.voice_stt_model) { setting ->
+        val ctx = LocalContext.current
+        val items = listOf(
+            "OpenAI Whisper Large V3 Turbo (Default, Fast)" to "openai/whisper-large-v3-turbo",
+            "OpenAI Whisper Large V3 (High Accuracy)" to "openai/whisper-large-v3",
+            "OpenAI Whisper 1" to "openai/whisper-1",
+            "OpenAI GPT-4o Mini Transcribe" to "openai/gpt-4o-mini-transcribe",
+            "OpenAI GPT-4o Transcribe" to "openai/gpt-4o-transcribe",
+            ctx.getString(R.string.voice_custom_model) to "custom",
+        )
+        ListPreference(setting, items, Defaults.PREF_VOICE_STT_MODEL)
+    },
+    Setting(context, Settings.PREF_VOICE_STT_MODEL_CUSTOM, R.string.voice_stt_model_custom, R.string.voice_stt_model_custom_summary) {
+        TextInputPreference(it, Defaults.PREF_VOICE_STT_MODEL_CUSTOM)
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_STT_PROMPT,
+        R.string.voice_stt_prompt,
+        R.string.voice_stt_prompt_summary
+    ) {
+        val prefs = LocalContext.current.prefs()
+        TextInputPreference(
+            setting = it,
+            default = Defaults.PREF_VOICE_STT_PROMPT,
+            singleLine = false,
+            neutralButtonText = stringResource(R.string.button_default),
+            onNeutral = { prefs.edit { remove(Settings.PREF_VOICE_STT_PROMPT) } },
+            checkTextValid = { text -> text.isNotBlank() }
+        )
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_STT_DICTIONARY,
+        R.string.voice_stt_dictionary,
+        R.string.voice_stt_dictionary_summary
+    ) {
+        VoiceSttDictionaryPreference(it)
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES,
+        R.string.voice_stt_expected_languages,
+        R.string.voice_stt_expected_languages_summary
+    ) {
+        VoiceSttExpectedLanguagesPreference(it)
     },
     Setting(
         context,
@@ -375,6 +469,76 @@ private fun VoiceDictionaryPreference(setting: Setting) {
                     putString(
                         Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY,
                         parseVoiceDictionaryTerms(value).joinToString(", ")
+                    )
+                }
+            },
+            initialText = rawValue,
+            title = { Text(setting.title) },
+            description = { Text(setting.description ?: "") },
+            singleLine = false,
+            checkTextValid = { true },
+        )
+    }
+}
+
+@Composable
+private fun VoiceSttDictionaryPreference(setting: Setting) {
+    val ctx = LocalContext.current
+    val prefs = ctx.prefs()
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    val rawValue by rememberStringPreferenceState(
+        Settings.PREF_VOICE_STT_DICTIONARY,
+        Defaults.PREF_VOICE_STT_DICTIONARY
+    )
+    val displayValue = parseVoiceDictionaryTerms(rawValue).joinToString(", ")
+    Preference(
+        name = setting.title,
+        description = displayValue.ifEmpty { setting.description },
+        onClick = { showDialog = true },
+    )
+    if (showDialog) {
+        TextInputDialog(
+            onDismissRequest = { showDialog = false },
+            onConfirmed = { value ->
+                prefs.edit {
+                    putString(
+                        Settings.PREF_VOICE_STT_DICTIONARY,
+                        parseVoiceDictionaryTerms(value).joinToString(", ")
+                    )
+                }
+            },
+            initialText = rawValue,
+            title = { Text(setting.title) },
+            description = { Text(setting.description ?: "") },
+            singleLine = false,
+            checkTextValid = { true },
+        )
+    }
+}
+
+@Composable
+private fun VoiceSttExpectedLanguagesPreference(setting: Setting) {
+    val ctx = LocalContext.current
+    val prefs = ctx.prefs()
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    val rawValue by rememberStringPreferenceState(
+        Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES,
+        Defaults.PREF_VOICE_STT_EXPECTED_LANGUAGES
+    )
+    val displayValue = parseExpectedLanguages(rawValue).joinToString(", ")
+    Preference(
+        name = setting.title,
+        description = displayValue.ifEmpty { setting.description },
+        onClick = { showDialog = true },
+    )
+    if (showDialog) {
+        TextInputDialog(
+            onDismissRequest = { showDialog = false },
+            onConfirmed = { value ->
+                prefs.edit {
+                    putString(
+                        Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES,
+                        parseExpectedLanguages(value).joinToString(", ")
                     )
                 }
             },
@@ -533,6 +697,7 @@ private fun probeApiKey(provider: AiProvider, apiKey: String, model: String, use
     val keyConn = (java.net.URL(OpenRouterClient.KEY_ENDPOINT).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
+        OpenRouterClient.applyOpenRouterAttributionHeaders(this)
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
         readTimeout = 10_000
     }
@@ -580,6 +745,7 @@ private fun probeModel(apiKey: String, model: String, useZdr: Boolean): TestResu
     val conn = (java.net.URL(OpenRouterClient.modelEndpointUrl(author, slug)).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
+        OpenRouterClient.applyOpenRouterAttributionHeaders(this)
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
         readTimeout = 10_000
     }
@@ -601,6 +767,7 @@ private fun probeZdrModelSupport(apiKey: String, model: String): Boolean {
     val conn = (java.net.URL(OpenRouterClient.ZDR_ENDPOINT).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
+        OpenRouterClient.applyOpenRouterAttributionHeaders(this)
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
         readTimeout = 10_000
     }

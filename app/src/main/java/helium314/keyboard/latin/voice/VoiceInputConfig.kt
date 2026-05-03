@@ -86,12 +86,23 @@ internal data class ResolvedVoicePrompt(
     val runtimeInstruction: String?,
 )
 
+enum class VoiceTranscriptionMode {
+    CHAT_AUDIO,
+    OPENROUTER_STT,
+}
+
 internal fun resolveVoiceModel(selectedModel: String, customModel: String): String? {
     if (selectedModel != "custom") {
         return selectedModel.trim().takeIf { it.isNotEmpty() }
     }
     return customModel.trim().takeIf { it.isNotEmpty() }
 }
+
+internal fun resolveVoiceSttModel(selectedModel: String, customModel: String): String? =
+    resolveVoiceModel(selectedModel, customModel)
+
+internal fun Locale.toOpenRouterSttLanguage(): String? =
+    language.takeIf { it.length == 2 && it.all { ch -> ch.isLetter() } }?.lowercase(Locale.ROOT)
 
 internal fun resolveVoicePrompt(
     savedPrompt: String,
@@ -145,9 +156,11 @@ private fun expectedLanguagesInstruction(languages: List<String>): String? {
 private fun dictionaryInstruction(terms: List<String>): String? {
     if (terms.isEmpty()) return null
     return buildString {
-        append("Prefer these exact spellings for names, brands, acronyms, and technical terms whenever they match the audio context: ")
+        append("Strict dictionary — these are the canonical spellings for names, brands, acronyms, and technical terms in this transcript. ")
+        append("Whenever the audio matches one of these terms phonetically, even loosely, you MUST output the exact spelling, casing, and punctuation shown here, without exception: ")
         append(terms.joinToString(", "))
-        append(". Do not force them when the audio clearly says something else.")
+        append(". Apply this to every occurrence in the audio, not just the first one. Never substitute a homophone, common spelling, or translation. ")
+        append("Only ignore an entry when the audio unambiguously says a completely different word.")
     }
 }
 

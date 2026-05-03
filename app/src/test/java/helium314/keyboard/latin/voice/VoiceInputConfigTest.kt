@@ -44,7 +44,8 @@ class VoiceInputConfigTest {
             transcriptionDictionaryRaw = "OpenRouter, WisprBoard, gRPC",
         )
 
-        assertTrue(prompt.systemPrompt.contains("Prefer these exact spellings"))
+        assertTrue(prompt.systemPrompt.contains("Strict dictionary"))
+        assertTrue(prompt.systemPrompt.contains("MUST output the exact spelling"))
         assertTrue(prompt.systemPrompt.contains("OpenRouter, WisprBoard, gRPC"))
         assertNull(prompt.runtimeInstruction)
     }

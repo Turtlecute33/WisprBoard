@@ -74,6 +74,13 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_PAYPERQ_API_KEY = "payperq_api_key";
     public static final String PREF_VOICE_MODEL = "voice_model";
     public static final String PREF_VOICE_MODEL_CUSTOM = "voice_model_custom";
+    public static final String PREF_VOICE_TRADITIONAL_BUTTON_ENABLED = "voice_traditional_button_enabled";
+    public static final String PREF_VOICE_STT_ENABLED = "voice_stt_enabled";
+    public static final String PREF_VOICE_STT_MODEL = "voice_stt_model";
+    public static final String PREF_VOICE_STT_MODEL_CUSTOM = "voice_stt_model_custom";
+    public static final String PREF_VOICE_STT_PROMPT = "voice_stt_prompt";
+    public static final String PREF_VOICE_STT_DICTIONARY = "voice_stt_dictionary";
+    public static final String PREF_VOICE_STT_EXPECTED_LANGUAGES = "voice_stt_expected_languages";
     public static final String PREF_VOICE_TRANSCRIPTION_PROMPT = "voice_transcription_prompt";
     public static final String PREF_VOICE_TRANSCRIPTION_DICTIONARY = "voice_transcription_dictionary";
     public static final String PREF_VOICE_EXPECTED_LANGUAGES = "voice_expected_languages";
