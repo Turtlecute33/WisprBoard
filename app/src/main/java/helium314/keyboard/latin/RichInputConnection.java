@@ -113,6 +113,7 @@ public final class RichInputConnection implements PrivateCommandPerformer {
      * This contains the currently composing text, as LatinIME thinks the TextView is seeing it.
      */
     private final StringBuilder mComposingText = new StringBuilder();
+    private final Object mCacheLock = new Object();
 
     /**
      * This variable is a temporary object used in {@link #commitText(CharSequence,int)}
@@ -201,7 +202,11 @@ public final class RichInputConnection implements PrivateCommandPerformer {
     }
 
     public void endBatchEdit() {
-        if (mNestLevel <= 0) Log.e(TAG, "Batch edit not in progress!"); // TODO: exception instead
+        if (mNestLevel <= 0) {
+            Log.e(TAG, "Batch edit not in progress!"); // TODO: exception instead
+            mNestLevel = 0;
+            return;
+        }
         if (--mNestLevel == 0 && isConnected()) {
             mIC.endBatchEdit();
         }
@@ -226,7 +231,9 @@ public final class RichInputConnection implements PrivateCommandPerformer {
      */
     public boolean resetCachesUponCursorMoveAndReturnSuccess(final int newSelStart,
             final int newSelEnd, final boolean shouldFinishComposition) {
-        mComposingText.setLength(0);
+        synchronized (mCacheLock) {
+            mComposingText.setLength(0);
+        }
         final boolean didReloadTextSuccessfully = reloadTextCache();
         if (!didReloadTextSuccessfully) {
             Log.d(TAG, "Will try to retrieve text later.");
@@ -253,11 +260,9 @@ public final class RichInputConnection implements PrivateCommandPerformer {
      * @return true if successful
      */
     private boolean reloadTextCache() {
-        mCommittedTextBeforeComposingText.setLength(0);
-        // Clearing composing text was not in original AOSP and OpenBoard, but why? should actually
-        // be necessary when reloading text. Only when called by setSelection, mComposingText isn't
-        // always empty, but looks like things still work normally
-        mComposingText.setLength(0);
+        synchronized (mCacheLock) {
+            clearTextCachesLocked();
+        }
         mIC = mParent.getCurrentInputConnection();
         // Call upon the inputconnection directly since our own method is using the cache, and
         // we want to refresh it.
@@ -269,12 +274,16 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         if (null == textBeforeCursor) {
             // For some reason the app thinks we are not connected to it. This looks like a
             // framework bug... Fall back to ground state and return false.
-            mExpectedSelStart = INVALID_CURSOR_POSITION;
-            mExpectedSelEnd = INVALID_CURSOR_POSITION;
+            synchronized (mCacheLock) {
+                mExpectedSelStart = INVALID_CURSOR_POSITION;
+                mExpectedSelEnd = INVALID_CURSOR_POSITION;
+            }
             Log.e(TAG, "Unable to connect to the editor to retrieve text.");
             return false;
         }
-        mCommittedTextBeforeComposingText.append(textBeforeCursor);
+        synchronized (mCacheLock) {
+            mCommittedTextBeforeComposingText.append(textBeforeCursor);
+        }
         return true;
     }
 
@@ -282,8 +291,22 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         if (!isConnected()) return;
         final ExtractedText et = mIC.getExtractedText(new ExtractedTextRequest(), 0);
         if (et == null) return;
-        mExpectedSelStart = et.selectionStart + et.startOffset;
-        mExpectedSelEnd = et.selectionEnd + et.startOffset;
+        synchronized (mCacheLock) {
+            mExpectedSelStart = et.selectionStart + et.startOffset;
+            mExpectedSelEnd = et.selectionEnd + et.startOffset;
+            if (mExpectedSelStart == Constants.NOT_A_CURSOR_POSITION
+                    || mExpectedSelEnd == Constants.NOT_A_CURSOR_POSITION) {
+                clearTextCachesLocked();
+            }
+        }
+    }
+
+    private void clearTextCachesLocked() {
+        mCommittedTextBeforeComposingText.setLength(0);
+        // Clearing composing text was not in original AOSP and OpenBoard, but why? should actually
+        // be necessary when reloading text. Only when called by setSelection, mComposingText isn't
+        // always empty, but looks like things still work normally
+        mComposingText.setLength(0);
     }
 
     private void checkBatchEdit() {
@@ -300,8 +323,10 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         // TODO: this is not correct! The cursor is not necessarily after the composing text.
         // In the practice right now this is only called when input ends so it will be reset so
         // it works, but it's wrong and should be fixed.
-        mCommittedTextBeforeComposingText.append(mComposingText);
-        mComposingText.setLength(0);
+        synchronized (mCacheLock) {
+            mCommittedTextBeforeComposingText.append(mComposingText);
+            mComposingText.setLength(0);
+        }
         if (isConnected()) {
             mIC.finishComposingText();
         }
@@ -322,13 +347,15 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         if (DEBUG_PREVIOUS_TEXT) checkConsistencyForDebug();
         if (DebugFlags.DEBUG_ENABLED)
             Log.d(TAG, "committing "+text.length()+" characters");
-        mCommittedTextBeforeComposingText.append(text);
-        // TODO: the following is exceedingly error-prone. Right now when the cursor is in the
-        //  middle of the composing word mComposingText only holds the part of the composing text
-        //  that is before the cursor, so this actually works, but it's terribly confusing. Fix this.
-        mExpectedSelStart += text.length() - mComposingText.length();
-        mExpectedSelEnd = mExpectedSelStart;
-        mComposingText.setLength(0);
+        synchronized (mCacheLock) {
+            mCommittedTextBeforeComposingText.append(text);
+            // TODO: the following is exceedingly error-prone. Right now when the cursor is in the
+            //  middle of the composing word mComposingText only holds the part of the composing text
+            //  that is before the cursor, so this actually works, but it's terribly confusing. Fix this.
+            mExpectedSelStart += text.length() - mComposingText.length();
+            mExpectedSelEnd = mExpectedSelStart;
+            mComposingText.setLength(0);
+        }
         if (isConnected()) {
             mTempObjectForCommitText.clear();
             mTempObjectForCommitText.append(text);
@@ -419,45 +446,49 @@ public final class RichInputConnection implements PrivateCommandPerformer {
     }
 
     public int getCodePointBeforeCursor() {
-        final CharSequence text = mComposingText.length() == 0 ? mCommittedTextBeforeComposingText : mComposingText;
-        final int length = text.length();
-        if (length < 1) return Constants.NOT_A_CODE;
-        return Character.codePointBefore(text, length);
+        synchronized (mCacheLock) {
+            final CharSequence text = mComposingText.length() == 0
+                    ? mCommittedTextBeforeComposingText : mComposingText;
+            final int length = text.length();
+            if (length < 1) return Constants.NOT_A_CODE;
+            return Character.codePointBefore(text, length);
+        }
     }
 
     public int getCharBeforeBeforeCursor() {
-        if (mComposingText.length() >= 2) return mComposingText.charAt(mComposingText.length() - 2);
-        final int length = mCommittedTextBeforeComposingText.length();
-        if (mComposingText.length() == 1) {
-            if (length < 1) return Constants.NOT_A_CODE;
-            return mCommittedTextBeforeComposingText.charAt(length - 1);
+        synchronized (mCacheLock) {
+            if (mComposingText.length() >= 2) {
+                return mComposingText.charAt(mComposingText.length() - 2);
+            }
+            final int length = mCommittedTextBeforeComposingText.length();
+            if (mComposingText.length() == 1) {
+                if (length < 1) return Constants.NOT_A_CODE;
+                return mCommittedTextBeforeComposingText.charAt(length - 1);
+            }
+            if (length < 2) return Constants.NOT_A_CODE;
+            return mCommittedTextBeforeComposingText.charAt(length - 2);
         }
-        if (length < 2) return Constants.NOT_A_CODE;
-        return mCommittedTextBeforeComposingText.charAt(length - 2);
     }
 
     @Nullable public CharSequence getTextBeforeCursor(final int n, final int flags) {
-        final int cachedLength = mCommittedTextBeforeComposingText.length() + mComposingText.length();
-        // If we have enough characters to satisfy the request, or if we have all characters in
-        // the text field, then we can return the cached version right away.
-        // However, if we don't have an expected cursor position, then we should always
-        // go fetch the cache again (as it happens, INVALID_CURSOR_POSITION < 0, so we need to
-        // test for this explicitly)
-        if (INVALID_CURSOR_POSITION != mExpectedSelStart
-                && (cachedLength >= n || cachedLength >= mExpectedSelStart)) {
-            final StringBuilder s = new StringBuilder(mCommittedTextBeforeComposingText.toString());
-            // We call #toString() here to create a temporary object.
-            // In some situations, this method is called on a worker thread, and it's possible
-            // the main thread touches the contents of mComposingText while this worker thread
-            // is suspended, because mComposingText is a StringBuilder. This may lead to crashes,
-            // so we call #toString() on it. That will result in the return value being strictly
-            // speaking wrong, but since this is used for basing bigram probability off, and
-            // it's only going to matter for one getSuggestions call, it's fine in the practice.
-            s.append(mComposingText.toString());
-            if (s.length() > n) {
-                s.delete(0, s.length() - n);
+        synchronized (mCacheLock) {
+            final int cachedLength = mCommittedTextBeforeComposingText.length()
+                    + mComposingText.length();
+            // If we have enough characters to satisfy the request, or if we have all characters in
+            // the text field, then we can return the cached version right away.
+            // However, if we don't have an expected cursor position, then we should always
+            // go fetch the cache again (as it happens, INVALID_CURSOR_POSITION < 0, so we need to
+            // test for this explicitly)
+            if (INVALID_CURSOR_POSITION != mExpectedSelStart
+                    && (cachedLength >= n || cachedLength >= mExpectedSelStart)) {
+                final StringBuilder s = new StringBuilder(
+                        mCommittedTextBeforeComposingText.toString());
+                s.append(mComposingText.toString());
+                if (s.length() > n) {
+                    s.delete(0, s.length() - n);
+                }
+                return s;
             }
-            return s;
         }
         return getTextBeforeCursorAndDetectLaggyConnection(
                 OPERATION_GET_TEXT_BEFORE_CURSOR,
@@ -475,9 +506,13 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         final CharSequence result = mIC.getTextBeforeCursor(n, flags);
         detectLaggyConnection(operation, timeout, startTime);
 
+        final boolean hasCachedText;
+        synchronized (mCacheLock) {
+            hasCachedText = mCommittedTextBeforeComposingText.length() > 0
+                    || mComposingText.length() > 0;
+        }
         // only do the consistency check if we actually have text (i.e. we're not coming from some reload / reset)
-        if ((mCommittedTextBeforeComposingText.length() > 0 || mComposingText.length() > 0)
-                && result != null && !checkTextBeforeCursorConsistency(result)) {
+        if (hasCachedText && result != null && !checkTextBeforeCursorConsistency(result)) {
             // inconsistent state can occur for (at least) two reasons
             // 1. the app actively changes text field content, e.g. joplin when deleting list markers like "2."
             // 2. the app has outdated contents in the text field, e.g. com.farmerbb.notepad returns the
@@ -495,34 +530,41 @@ public final class RichInputConnection implements PrivateCommandPerformer {
     // only checks the end for performance reasons
     // may need to check more than just the last character, because the text may end in e.g. rrrrr and even there a single car offset should be found
     private boolean checkTextBeforeCursorConsistency(final CharSequence textField) {
-        final int lastIndex = textField.length() - 1;
-        if (lastIndex == -1) return true;
-        final char lastChar = textField.charAt(lastIndex);
-        final int composingLength = mComposingText.length();
-        for (int i = 0; i <= lastIndex; i++) {
-            // get last minus i character and compare
-            final char currentTextFieldChar = textField.charAt(lastIndex - i);
-            final char currentCachedChar;
-            if (i < composingLength) {
-                // take char from composing text
-                currentCachedChar = mComposingText.charAt(composingLength - 1 - i);
-            } else {
-                // take last char from mCommittedTextBeforeComposingText, consider composing length
-                final int index = mCommittedTextBeforeComposingText.length() - 1 - (i - composingLength);
-                if (index < mCommittedTextBeforeComposingText.length() && index >= 0)
-                    currentCachedChar = mCommittedTextBeforeComposingText.charAt(index);
-                else return lastIndex > 100; // still let it pass if the same character is repeated many times, but cached text too short
+        synchronized (mCacheLock) {
+            final int lastIndex = textField.length() - 1;
+            if (lastIndex == -1) return true;
+            final char lastChar = textField.charAt(lastIndex);
+            final int composingLength = mComposingText.length();
+            for (int i = 0; i <= lastIndex; i++) {
+                // get last minus i character and compare
+                final char currentTextFieldChar = textField.charAt(lastIndex - i);
+                final char currentCachedChar;
+                if (i < composingLength) {
+                    // take char from composing text
+                    currentCachedChar = mComposingText.charAt(composingLength - 1 - i);
+                } else {
+                    // take last char from mCommittedTextBeforeComposingText, consider composing length
+                    final int index = mCommittedTextBeforeComposingText.length() - 1
+                            - (i - composingLength);
+                    if (index < mCommittedTextBeforeComposingText.length() && index >= 0) {
+                        currentCachedChar = mCommittedTextBeforeComposingText.charAt(index);
+                    } else {
+                        return lastIndex > 100; // still let it pass if the same character is repeated many times, but cached text too short
+                    }
+                }
+
+                if (currentTextFieldChar != currentCachedChar) {
+                    // different character -> inconsistent
+                    return false;
+                }
+
+                if (lastChar != currentTextFieldChar) {
+                    // not the same, and no inconsistency found so far -> unlikely there is one that won't be found later -> return early
+                    return true;
+                }
             }
-
-            if (currentTextFieldChar != currentCachedChar)
-                // different character -> inconsistent
-                return false;
-
-            if (lastChar != currentTextFieldChar)
-                // not the same, and no inconsistency found so far -> unlikely there is one that won't be found later -> return early
-                return true;
+            return true; // no inconsistency found after going through everything
         }
-        return true; // no inconsistency found after going through everything
     }
 
     @Nullable public CharSequence getTextAfterCursor(final int n, final int flags) {
@@ -657,23 +699,29 @@ public final class RichInputConnection implements PrivateCommandPerformer {
     public void setComposingRegion(final int start, final int end) {
         if (DEBUG_BATCH_NESTING) checkBatchEdit();
         if (DEBUG_PREVIOUS_TEXT) checkConsistencyForDebug();
-        final int moveBy = mExpectedSelStart - start; // determine now, as mExpectedSelStart may change in getTextBeforeCursor
+        final int moveBy;
+        synchronized (mCacheLock) {
+            moveBy = mExpectedSelStart - start; // determine now, as mExpectedSelStart may change in getTextBeforeCursor
+        }
         final CharSequence textBeforeCursor =
                 getTextBeforeCursor(Constants.EDITOR_CONTENTS_CACHE_SIZE + (end - start), 0);
-        mCommittedTextBeforeComposingText.setLength(0);
-        // also clear composing text, otherwise we may append existing text
-        // this can happen when we're a little out of sync with the editor
-        mComposingText.setLength(0);
-        if (!TextUtils.isEmpty(textBeforeCursor)) {
-            // The cursor is not necessarily at the end of the composing text, but we have its
-            // position in mExpectedSelStart and mExpectedSelEnd. In this case we want the start
-            // of the text, so we should use mExpectedSelStart. In other words, the composing
-            // text starts (mExpectedSelStart - start) characters before the end of textBeforeCursor
-            final int indexOfStartOfComposingText = Math.max(textBeforeCursor.length() - moveBy, 0);
-            mComposingText.append(textBeforeCursor.subSequence(indexOfStartOfComposingText,
-                    textBeforeCursor.length()));
-            mCommittedTextBeforeComposingText.append(
-                    textBeforeCursor.subSequence(0, indexOfStartOfComposingText));
+        synchronized (mCacheLock) {
+            mCommittedTextBeforeComposingText.setLength(0);
+            // also clear composing text, otherwise we may append existing text
+            // this can happen when we're a little out of sync with the editor
+            mComposingText.setLength(0);
+            if (!TextUtils.isEmpty(textBeforeCursor)) {
+                // The cursor is not necessarily at the end of the composing text, but we have its
+                // position in mExpectedSelStart and mExpectedSelEnd. In this case we want the start
+                // of the text, so we should use mExpectedSelStart. In other words, the composing
+                // text starts (mExpectedSelStart - start) characters before the end of textBeforeCursor
+                final int indexOfStartOfComposingText =
+                        Math.max(textBeforeCursor.length() - moveBy, 0);
+                mComposingText.append(textBeforeCursor.subSequence(indexOfStartOfComposingText,
+                        textBeforeCursor.length()));
+                mCommittedTextBeforeComposingText.append(
+                        textBeforeCursor.subSequence(0, indexOfStartOfComposingText));
+            }
         }
         if (isConnected()) {
             mIC.setComposingRegion(start, end);
@@ -685,10 +733,12 @@ public final class RichInputConnection implements PrivateCommandPerformer {
     public boolean setComposingText(final CharSequence text, final int newCursorPosition) {
         if (DEBUG_BATCH_NESTING) checkBatchEdit();
         if (DEBUG_PREVIOUS_TEXT) checkConsistencyForDebug();
-        mExpectedSelStart += text.length() - mComposingText.length();
-        mExpectedSelEnd = mExpectedSelStart;
-        mComposingText.setLength(0);
-        mComposingText.append(text);
+        synchronized (mCacheLock) {
+            mExpectedSelStart += text.length() - mComposingText.length();
+            mExpectedSelEnd = mExpectedSelStart;
+            mComposingText.setLength(0);
+            mComposingText.append(text);
+        }
         // TODO: support values of newCursorPosition != 1. At this time, this is never called with
         //  newCursorPosition != 1.
         if (isConnected()) {
@@ -731,12 +781,14 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         if (start < 0 || end < 0) {
             return false;
         }
-        if (start > end) {
-            mExpectedSelStart = end;
-            mExpectedSelEnd = start;
-        } else {
-            mExpectedSelStart = start;
-            mExpectedSelEnd = end;
+        synchronized (mCacheLock) {
+            if (start > end) {
+                mExpectedSelStart = end;
+                mExpectedSelEnd = start;
+            } else {
+                mExpectedSelStart = start;
+                mExpectedSelEnd = end;
+            }
         }
         if (isConnected()) {
             final boolean isIcValid = mIC.setSelection(start, end);
@@ -1103,7 +1155,10 @@ public final class RichInputConnection implements PrivateCommandPerformer {
             // result in degraded behavior from the next input.
             // Interestingly, in either case, chances are any action the user takes next will result
             // in a call to onUpdateSelection, which should set things right.
-            mExpectedSelStart = mExpectedSelEnd = Constants.NOT_A_CURSOR_POSITION;
+            synchronized (mCacheLock) {
+                mExpectedSelStart = mExpectedSelEnd = Constants.NOT_A_CURSOR_POSITION;
+                clearTextCachesLocked();
+            }
         } else {
             final int textLength = textBeforeCursor.length();
             if (textLength < Constants.EDITOR_CONTENTS_CACHE_SIZE

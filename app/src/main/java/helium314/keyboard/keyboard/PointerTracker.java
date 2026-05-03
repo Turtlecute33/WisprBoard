@@ -87,6 +87,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     }
 
     public static void switchTo(DrawingProxy drawingProxy) {
+        cancelCurrentPointerState();
         sDrawingProxy = drawingProxy;
         final Object[] thatArray = sProxyMap.get(drawingProxy); // if it's null, the view we're switching to should not exist
         sParams = (PointerTrackerParams) thatArray[0];
@@ -96,6 +97,14 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         sTimerProxy = (TimerProxy) thatArray[4];
         //noinspection unchecked
         sTrackers = (ArrayList<PointerTracker>) thatArray[5];
+    }
+
+    private static void cancelCurrentPointerState() {
+        sPointerTrackerQueue.cancelAllPointerTrackers();
+        if (sTimerProxy != null) {
+            sTimerProxy.cancelAllKeyTimers();
+            sTimerProxy.cancelAllUpdateBatchInputTimers();
+        }
     }
 
     private static final GestureEnabler sGestureEnabler = new GestureEnabler();

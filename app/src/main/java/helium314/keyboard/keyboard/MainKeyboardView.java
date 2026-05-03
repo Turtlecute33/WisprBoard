@@ -24,6 +24,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -471,7 +472,12 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        mDrawingPreviewPlacerView.removeAllViews();
+        final ViewParent parent = mDrawingPreviewPlacerView.getParent();
+        if (parent instanceof ViewGroup) {
+            ((ViewGroup) parent).removeView(mDrawingPreviewPlacerView);
+        } else {
+            mDrawingPreviewPlacerView.removeAllViews();
+        }
     }
 
     // Implements {@link DrawingProxy@showPopupKeysKeyboard(Key,PointerTracker)}.

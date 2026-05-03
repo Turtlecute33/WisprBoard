@@ -2656,9 +2656,11 @@ public final class InputLogic {
             spannable.setSpan(backgroundColorSpan, 0, spanLength, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE | Spanned.SPAN_COMPOSING);
             composingTextToBeSet = spannable;
         }
-        if (!mConnection.setComposingText(composingTextToBeSet, newCursorPosition))
+        if (!mConnection.setComposingText(composingTextToBeSet, newCursorPosition)) {
             // inconsistency in set and found composing text, better cancel composing (should be restarted automatically)
+            mConnection.finishComposingText();
             mWordComposer.reset();
+        }
     }
 
     /**

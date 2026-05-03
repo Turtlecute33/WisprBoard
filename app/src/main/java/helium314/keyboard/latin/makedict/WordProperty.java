@@ -145,7 +145,9 @@ public final class WordProperty implements Comparable<WordProperty> {
                 word.mShortcutTargets,
                 word.mNgrams,
                 word.mIsNotAWord,
-                word.mIsPossiblyOffensive
+                word.mIsPossiblyOffensive,
+                word.mHasNgrams,
+                word.mHasShortcuts
         });
     }
 
@@ -175,7 +177,7 @@ public final class WordProperty implements Comparable<WordProperty> {
         return mProbabilityInfo.equals(w.mProbabilityInfo) && mWord.equals(w.mWord)
                 && mShortcutTargets.equals(w.mShortcutTargets) && equals(mNgrams, w.mNgrams)
                 && mIsNotAWord == w.mIsNotAWord && mIsPossiblyOffensive == w.mIsPossiblyOffensive
-                && mHasNgrams == w.mHasNgrams && mHasShortcuts && w.mHasNgrams;
+                && mHasNgrams == w.mHasNgrams && mHasShortcuts == w.mHasShortcuts;
     }
 
     // TDOO: Have a utility method like java.util.Objects.equals.

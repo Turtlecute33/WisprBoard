@@ -59,6 +59,11 @@ public interface TimerProxy {
     void cancelKeyTimersOf(@NonNull PointerTracker tracker);
 
     /**
+     * Cancel all timers for detecting repeated key presses and long pressed keys.
+     */
+    void cancelAllKeyTimers();
+
+    /**
      * Start a timer to detect double tapped shift key.
      */
     void startDoubleTapShiftKeyTimer();
@@ -107,6 +112,8 @@ public interface TimerProxy {
         public void cancelLongPressShiftKeyTimer() {}
         @Override
         public void cancelKeyTimersOf(@NonNull PointerTracker tracker) {}
+        @Override
+        public void cancelAllKeyTimers() {}
         @Override
         public void startDoubleTapShiftKeyTimer() {}
         @Override

@@ -62,6 +62,16 @@ class OpenRouterSanitizeForLogTest {
     }
 
     @Test
+    fun providerKeysInUnusualErrorBodiesAreMasked() {
+        val out = client.sanitizeForLog(
+            """error={"payperq_api_key":"ppq-secret-value","openrouter":"sk-or-v1-abcdef0123456789"}"""
+        )
+        assertFalse(out.contains("ppq-secret-value"))
+        assertFalse(out.contains("sk-or-v1-abcdef0123456789"))
+        assertTrue(out.contains("***"))
+    }
+
+    @Test
     fun cleanTextPassesThroughUnchanged() {
         val clean = "Request timed out after retries"
         assertEquals(clean, client.sanitizeForLog(clean))

@@ -1,0 +1,3 @@
+* Fixed reliability issues in composing text, pointer tracking, keyboard previews, and dictionary handling
+* Hardened encrypted AI key recovery to avoid deleting the AndroidKeyStore master key
+* Added regression coverage for IME state, serialization, dictionary properties, and AI error log sanitization

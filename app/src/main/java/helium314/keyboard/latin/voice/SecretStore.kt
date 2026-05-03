@@ -72,23 +72,23 @@ object SecretStore {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
         return try {
             EncryptedPrefsFactory.create(context, ENCRYPTED_FILE)
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             // Warm-up (allowRecovery=false) is best-effort: the first real read/write will run
             // through the same path with allowRecovery=true and log + recover then. Skipping the
             // warning here keeps test stderr (Robolectric has no AndroidKeyStore) and the
             // never-used-voice install case quiet.
             if (!allowRecovery) return null
             Log.w(TAG, "Failed to open encrypted prefs", e)
-            // Recovery wipes the encrypted prefs file and master key alias. Only run it from
-            // explicit read/write paths; warm-up must never destroy a working API key on a
-            // transient KeyStore hiccup.
+            // Recovery wipes only the encrypted prefs storage. The AndroidKeyStore master key is
+            // shared by EncryptedSharedPreferences users and must not be deleted on a transient
+            // open failure, because that would make otherwise recoverable data unreadable.
             if (recoveryAttempted) return null
             recoveryAttempted = true
-            Log.w(TAG, "Attempting one-shot recovery of encrypted prefs master key")
+            Log.w(TAG, "Attempting one-shot recovery of encrypted prefs storage")
             attemptRecovery(context)
             try {
                 EncryptedPrefsFactory.create(context, ENCRYPTED_FILE)
-            } catch (e2: Throwable) {
+            } catch (e2: Exception) {
                 Log.w(TAG, "Encrypted prefs still unavailable after recovery", e2)
                 null
             }
@@ -103,15 +103,8 @@ object SecretStore {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 context.deleteSharedPreferences(ENCRYPTED_FILE)
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             Log.w(TAG, "Failed to clear encrypted prefs file during recovery", e)
-        }
-        try {
-            java.security.KeyStore.getInstance("AndroidKeyStore")
-                .apply { load(null) }
-                .deleteEntry("_androidx_security_master_key_")
-        } catch (e: Throwable) {
-            Log.w(TAG, "Failed to delete master key alias during recovery", e)
         }
     }
 }

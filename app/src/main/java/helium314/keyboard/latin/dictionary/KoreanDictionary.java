@@ -84,7 +84,7 @@ public class KoreanDictionary extends Dictionary {
     protected boolean same(char[] word, int length, String typedWord) {
         word = processInput(new String(word)).toCharArray();
         typedWord = processInput(typedWord);
-        return mDictionary.same(word, length, typedWord);
+        return mDictionary.same(word, word.length, typedWord);
     }
 
     @Override

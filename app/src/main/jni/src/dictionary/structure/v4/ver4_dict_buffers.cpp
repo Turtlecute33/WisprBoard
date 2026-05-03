@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <vector>
 
 #include "dictionary/utils/byte_array_utils.h"
@@ -119,6 +120,7 @@ bool Ver4DictBuffers::flushHeaderAndDictBuffers(const char *const dictDirPath,
     FILE *const file = fdopen(fd, "wb");
     if (!file) {
         AKLOGE("fdopen failed for the file %s. errno: %d", bodyFilePath, errno);
+        close(fd);
         ASSERT(false);
         return false;
     }

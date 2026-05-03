@@ -183,6 +183,7 @@ public final class TimerHandler extends LeakGuardHandlerWrapper<DrawingProxy>
         cancelLongPressTimersOf(tracker);
     }
 
+    @Override
     public void cancelAllKeyTimers() {
         cancelKeyRepeatTimers();
         cancelLongPressTimers();

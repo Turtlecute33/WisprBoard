@@ -729,6 +729,16 @@ class InputLogicTest {
         assertEquals("/48", InputLogic.getInlineEmojiSearchString("2606:127.0.0.1::/48")) // do we want this?
     }
 
+    @Test fun richInputConnectionExtraEndBatchEditDoesNotGoNegative() {
+        reset()
+        connection.endBatchEdit()
+        assertEquals(0, batchEdit)
+        connection.beginBatchEdit()
+        connection.endBatchEdit()
+        connection.endBatchEdit()
+        assertEquals(0, batchEdit)
+    }
+
     // ------- helper functions ---------
 
     // should be called before every test, so the same state is guaranteed

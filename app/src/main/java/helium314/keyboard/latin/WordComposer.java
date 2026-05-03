@@ -454,7 +454,7 @@ public final class WordComposer {
 
     public void resumeSuggestionOnLastComposedWord(final LastComposedWord lastComposedWord) {
         mEvents.clear();
-        Collections.copy(mEvents, lastComposedWord.mEvents);
+        mEvents.addAll(lastComposedWord.mEvents);
         mInputPointers.set(lastComposedWord.mInputPointers);
         mCombinerChain.reset();
         refreshTypedWordCache();
