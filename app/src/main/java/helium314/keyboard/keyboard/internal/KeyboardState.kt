@@ -579,12 +579,13 @@ class KeyboardState(private val switchActions: SwitchActions) {
                 // Shift has been pressed without chording while shift locked state.
                 isShiftLocked && !shiftKeyState.isIgnoring && !withSliding -> setShiftLocked(false)
                 // Shift has been pressed without chording while shifted state.
-                !withSliding && ((alphabetShiftState.isShiftedOrShiftLocked && shiftKeyState.isPressingOnShifted)
-                    // Shift has been pressed without chording while manual shifted transited from automatic shifted
-                    || (alphabetShiftState.isManualShiftedFromAutomaticShifted && shiftKeyState.isPressing)) -> {
+                !withSliding && alphabetShiftState.isShiftedOrShiftLocked && shiftKeyState.isPressingOnShifted -> {
                         setShifted(ShiftMode.UNSHIFT)
                         isInAlphabetUnshiftedFromShifted = true
                     }
+                // Shift overrides autocaps: unshift without setting the flag to avoid spurious caps lock on next tap.
+                !withSliding && alphabetShiftState.isManualShiftedFromAutomaticShifted && shiftKeyState.isPressing ->
+                    setShifted(ShiftMode.UNSHIFT)
             }
         }
         shiftKeyState.onRelease()
