@@ -655,8 +655,15 @@ class KeyboardState(private val switchActions: SwitchActions) {
         }
 
         if (Constants.isLetterCode(code)) {
-            // If the code is a letter, update keyboard shift state.
-            updateAlphabetShiftState(autoCapsFlags, recapitalizeMode)
+            if (mode == Mode.ALPHABET
+                    && shiftKeyState.isReleasing
+                    && alphabetShiftState.isManualShifted
+                    && !alphabetShiftState.isShiftLocked) {
+                setShifted(ShiftMode.UNSHIFT)
+            } else {
+                // If the code is a letter, update keyboard shift state.
+                updateAlphabetShiftState(autoCapsFlags, recapitalizeMode)
+            }
         } else when (code) {
             KeyCode.EMOJI -> setEmojiKeyboard()
             KeyCode.ALPHA -> setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
