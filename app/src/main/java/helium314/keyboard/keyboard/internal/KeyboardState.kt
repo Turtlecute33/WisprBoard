@@ -69,6 +69,10 @@ class KeyboardState(private val switchActions: SwitchActions) {
     private var prevSymbolsKeyboardWasShifted = false
     private var recapitalizeMode: RecapitalizeMode? = null
 
+    // For handling double tap.
+    private var isInAlphabetUnshiftedFromShifted = false
+    private var isInDoubleTapShiftKey = false
+
     private val savedKeyboardState = SavedKeyboardState()
 
     private class SavedKeyboardState {
@@ -510,22 +514,34 @@ class KeyboardState(private val switchActions: SwitchActions) {
             shiftKeyState.onPress()
             return
         }
-        if (alphabetShiftState.isShiftLocked) {
-            // Shift key is pressed while shift locked state, we will treat this state as
-            // shift lock shifted state and mark as if shift key pressed while normal state.
-            setShifted(ShiftMode.SHIFT_LOCKED)
-            shiftKeyState.onPress()
-        } else if (alphabetShiftState.isAutomaticShifted) {
-            // Shift key is pressed while automatic shifted, we have to move to manual shifted.
-            setShifted(ShiftMode.MANUAL)
-            shiftKeyState.onPress()
-        } else if (alphabetShiftState.isShiftedOrShiftLocked) {
-            // In manual shifted state, we just record shift key has been pressing while shifted state.
-            shiftKeyState.onPressOnShifted()
+        isInDoubleTapShiftKey = switchActions.isInDoubleTapShiftKeyTimeout
+        if (isInDoubleTapShiftKey) {
+            if (alphabetShiftState.isManualShifted || isInAlphabetUnshiftedFromShifted) {
+                // Shift key has been double tapped while in manual shifted or automatic shifted state.
+                setShiftLocked(true)
+            }
+            // Else shift key has been double tapped while in normal state.
+            // This is the second tap to disable shift locked state, so just ignore this.
         } else {
-            // In base layout, chording or manual shifted mode is started.
-            setShifted(ShiftMode.MANUAL)
-            shiftKeyState.onPress()
+            // This is first tap.
+            switchActions.startDoubleTapShiftKeyTimer()
+            if (alphabetShiftState.isShiftLocked) {
+                // Shift key is pressed while shift locked state, we will treat this state as
+                // shift lock shifted state and mark as if shift key pressed while normal state.
+                setShifted(ShiftMode.SHIFT_LOCKED)
+                shiftKeyState.onPress()
+            } else if (alphabetShiftState.isAutomaticShifted) {
+                // Shift key is pressed while automatic shifted, we have to move to manual shifted.
+                setShifted(ShiftMode.MANUAL)
+                shiftKeyState.onPress()
+            } else if (alphabetShiftState.isShiftedOrShiftLocked) {
+                // In manual shifted state, we just record shift key has been pressing while shifted state.
+                shiftKeyState.onPressOnShifted()
+            } else {
+                // In base layout, chording or manual shifted mode is started.
+                setShifted(ShiftMode.MANUAL)
+                shiftKeyState.onPress()
+            }
         }
     }
 
@@ -541,7 +557,10 @@ class KeyboardState(private val switchActions: SwitchActions) {
             }
         } else {
             val isShiftLocked = alphabetShiftState.isShiftLocked
+            isInAlphabetUnshiftedFromShifted = false
             when {
+                // Double tap shift key has been handled in {@link #onPressShift}, so that just ignore this release shift key here.
+                isInDoubleTapShiftKey -> isInDoubleTapShiftKey = false
                 // After chording input
                 shiftKeyState.isChording -> {
                     if (alphabetShiftState.isShiftLockShifted) setShiftLocked(true) else setShifted(ShiftMode.UNSHIFT)
@@ -564,6 +583,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
                     // Shift has been pressed without chording while manual shifted transited from automatic shifted
                     || (alphabetShiftState.isManualShiftedFromAutomaticShifted && shiftKeyState.isPressing)) -> {
                         setShifted(ShiftMode.UNSHIFT)
+                        isInAlphabetUnshiftedFromShifted = true
                     }
             }
         }
@@ -635,15 +655,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
         }
 
         if (Constants.isLetterCode(code)) {
-            if (mode == Mode.ALPHABET
-                    && shiftKeyState.isReleasing
-                    && alphabetShiftState.isManualShifted
-                    && !alphabetShiftState.isShiftLocked) {
-                setShifted(ShiftMode.UNSHIFT)
-            } else {
-                // If the code is a letter, update keyboard shift state.
-                updateAlphabetShiftState(autoCapsFlags, recapitalizeMode)
-            }
+            // If the code is a letter, update keyboard shift state.
+            updateAlphabetShiftState(autoCapsFlags, recapitalizeMode)
         } else when (code) {
             KeyCode.EMOJI -> setEmojiKeyboard()
             KeyCode.ALPHA -> setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
