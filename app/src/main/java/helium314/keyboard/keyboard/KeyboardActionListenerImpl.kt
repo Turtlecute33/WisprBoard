@@ -18,17 +18,13 @@ import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.RichInputMethodManager
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.InputPointers
-import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.common.combiningRange
-import helium314.keyboard.latin.common.loopOverCodePoints
-import helium314.keyboard.latin.common.loopOverCodePointsBackwards
 import helium314.keyboard.latin.common.moveStepsToCharCount
 import helium314.keyboard.latin.define.ProductionFlags
 import helium314.keyboard.latin.inputlogic.InputLogic
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.SubtypeSettings
 import kotlin.math.abs
-import kotlin.math.min
 
 class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inputLogic: InputLogic) : KeyboardActionListener {
 
@@ -194,22 +190,9 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     }
 
     private fun actualSteps(steps: Int): Int {
-        var actualSteps = 0
-        // corrected steps to avoid splitting chars belonging to the same codepoint
-        if (steps > 0) {
-            val text = connection.getSelectedText(0) ?: return steps
-            loopOverCodePoints(text) { cp, charCount ->
-                actualSteps += charCount
-                actualSteps >= steps
-            }
-        } else {
-            val text = connection.getTextBeforeCursor(-steps * 4, 0) ?: return steps
-            loopOverCodePointsBackwards(text) { cp, charCount ->
-                actualSteps -= charCount
-                actualSteps <= steps
-            }
-        }
-        return actualSteps
+        val text = if (steps > 0) connection.getSelectedText(0) ?: return steps
+        else connection.getTextBeforeCursor(-steps * 4, 0) ?: return steps
+        return moveStepsToCharCount(text, steps)
     }
 
     override fun onUpWithDeletePointerActive() {
