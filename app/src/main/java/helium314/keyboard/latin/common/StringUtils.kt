@@ -2,7 +2,6 @@
 
 package helium314.keyboard.latin.common
 
-import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.StringUtils.mightBeEmoji
 import helium314.keyboard.latin.common.StringUtils.newSingleCodePointString
 import helium314.keyboard.latin.settings.SpacingAndPunctuations
@@ -11,8 +10,10 @@ import helium314.keyboard.latin.utils.SpacedTokens
 import helium314.keyboard.latin.utils.SpannableStringUtils
 import helium314.keyboard.latin.utils.TextRange
 import java.math.BigInteger
+import java.text.BreakIterator
 import java.util.Locale
 import kotlin.math.max
+import kotlin.text.indexOfFirst
 
 fun CharSequence.codePointAt(offset: Int) = Character.codePointAt(this, offset)
 fun CharSequence.codePointBefore(offset: Int) = Character.codePointBefore(this, offset)
@@ -63,36 +64,10 @@ fun hasLetterBeforeLastSpaceBeforeCursor(text: CharSequence): Boolean {
 }
 
 /** get the complete emoji at end of [text], considering that emojis can be joined with ZWJ resulting in different emojis */
+// todo: this is now only used for tests, do we actually need it?
 fun getFullEmojiAtEnd(text: CharSequence): String {
-    val s = text.toString()
-    var offset = s.length
-    while (offset > 0) {
-        val codepoint = s.codePointBefore(offset)
-        // continue if codepoint could be emoji, or if it's followed by a variation selector
-        if (!(mightBeEmoji(codepoint) || (offset <= s.lastIndex && (s[offset].code == 0xFE0F || s[offset].code == 0xFE0E))))
-            return text.substring(offset)
-        offset -= Character.charCount(codepoint)
-        if (offset > 0 && s[offset - 1].code == KeyCode.ZWJ) {
-            // todo: this appends ZWJ in weird cases like text, ZWJ, emoji
-            //  and detects single ZWJ as emoji (at least irrelevant for current use of getFullEmojiAtEnd)
-            offset -= 1
-            continue
-        }
-
-        if (codepoint in 0x1F3FB..0x1F3FF) {
-            // Skin tones are not added with ZWJ, but just appended. This is not nice as they can be emojis on their own,
-            // but that's how it is done. Assume that an emoji before the skin tone will get merged (usually correct in practice)
-            val codepointBefore = s.codePointBefore(offset)
-            if (isEmoji(codepointBefore)) {
-                offset -= Character.charCount(codepointBefore)
-                continue
-            }
-        }
-        // check the whole text after offset
-        val textToCheck = s.substring(offset)
-        if (isEmoji(textToCheck)) return textToCheck
-    }
-    return s.substring(offset)
+    val lastGrapheme = text.toString().lastGrapheme
+    return if (isEmoji(lastGrapheme)) lastGrapheme else ""
 }
 
 /**
@@ -112,6 +87,7 @@ fun endsWithWordCodepoint(text: String, spacingAndPunctuations: SpacingAndPunctu
 }
 
 // todo: simplify... maybe compare with original code?
+// todo: this breaks at e.g. э́, but should not
 fun getTouchedWordRange(before: CharSequence, after: CharSequence, script: String, spacingAndPunctuations: SpacingAndPunctuations): TextRange {
     // Going backward, find the first breaking point (separator)
     var startIndexInBefore = before.length
@@ -270,7 +246,63 @@ fun mightBeEmoji(text: CharSequence): Boolean {
 fun isEmoji(c: Int): Boolean = mightBeEmoji(c) && isEmoji(newSingleCodePointString(c))
 
 /** returns whether the text is a single emoji */
-fun isEmoji(text: CharSequence): Boolean = mightBeEmoji(text) && text.matches(emoRegex)
+fun isEmoji(text: CharSequence): Boolean = text.toString().isSingleGrapheme && mightBeEmoji(text) && text.matches(emoRegex)
+
+// from https://github.com/chattymin/Pebble/blob/main/pebble/src/main/java/com/chattymin/pebble/LocalBreakIterator.kt, Apache-2.0 license
+// there is more potentially useful code like String.graphemeLength (should be graphemeCount though)
+private val LocalBreakIterator = ThreadLocal<BreakIterator>().apply {
+    // this is always Locale.ROOT, but (Android Studio) testing on all available key labels showed no difference by locale
+    // maybe this works better with android.icu.text.BreakIterator, but that one requires API24
+    set(BreakIterator.getCharacterInstance(Locale.ROOT))
+}
+
+private val localBreakIterator: BreakIterator = LocalBreakIterator.get() ?: initBreakIterator()
+
+private fun initBreakIterator() = BreakIterator.getCharacterInstance(Locale.ROOT).also {
+    LocalBreakIterator.set(it)
+}
+
+val String.isSingleGrapheme: Boolean get() {
+    if (isEmpty()) return false
+    if (length == 1) return true
+
+    val iterator = localBreakIterator
+    iterator.setText(this)
+    iterator.next()
+    if (iterator.next() != BreakIterator.DONE) return false
+    // we have a single grapheme, but " 🏼" is detected as single grapheme which we don't want
+    val tone = indexOfFirst { it.code == 0xD83C }
+    return if (tone == -1) true // does not contain skin tone
+    else emoRegex.matches(this) // single grapheme only if it's a single emoji
+}
+
+val String.lastGrapheme: String get() {
+    if (length <= 1) return this
+
+    val iterator = localBreakIterator
+    iterator.setText(this)
+    val res = substring(iterator.preceding(length))
+    val tone = res.indexOfFirst { it.code == 0xD83C }
+    return if (tone == -1 || emoRegex.matches(res)) res
+    else res.substring(tone) // " 🏼" is detected as single grapheme, but we don't want this
+}
+
+/** translates a move of [steps] graphemes in [text] to character count */
+fun moveStepsToCharCount(text: CharSequence, steps: Int): Int {
+    if (steps == 0) return 0
+    val iterator = localBreakIterator
+    iterator.setText(text.toString())
+    if (steps > 0) {
+        repeat(steps) { iterator.next() }
+        return if (iterator.current() == BreakIterator.DONE) text.length
+        else iterator.current()
+    } else {
+        iterator.last()
+        repeat(-steps) { iterator.previous() }
+        return if (iterator.current() == BreakIterator.DONE) -text.length
+        else iterator.current() - text.length
+    }
+}
 
 fun String.splitOnWhitespace() = SpacedTokens(this).toList()
 
