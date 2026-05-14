@@ -15,6 +15,7 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import java.io.File
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -70,7 +71,7 @@ class VoiceInputManager(
     private var currentAudioFile: File? = null
     @Volatile private var transcriptionJob: Job? = null
     @Volatile private var transcriptionClient: OpenRouterClient? = null
-    @Volatile private var activeTranscriptionToken = 0L
+    private val activeTranscriptionToken = AtomicLong(0L)
     @Volatile private var stopFinalizeJob: Job? = null
     @Volatile private var isStopFinalizing = false
     @Volatile private var currentUseDedicatedStt = false
@@ -285,8 +286,7 @@ class VoiceInputManager(
             transcriptionMode = if (useDedicatedStt) VoiceTranscriptionMode.OPENROUTER_STT else VoiceTranscriptionMode.CHAT_AUDIO,
             transcriptionLanguage = localeHint?.toOpenRouterSttLanguage(),
         )
-        val requestToken = activeTranscriptionToken + 1
-        activeTranscriptionToken = requestToken
+        val requestToken = activeTranscriptionToken.incrementAndGet()
         transcriptionClient = client
 
         transcriptionJob = backgroundScope.launch(CoroutineName("VoiceTranscription")) {
@@ -337,7 +337,7 @@ class VoiceInputManager(
                 callbacks.onFinished()
             }
             State.TRANSCRIBING -> {
-                activeTranscriptionToken += 1
+                activeTranscriptionToken.incrementAndGet()
                 transcriptionClient?.cancel()
                 transcriptionJob?.cancel()
                 transcriptionJob = null
@@ -385,7 +385,7 @@ class VoiceInputManager(
         error: String? = null,
     ) {
         mainHandler.post {
-            if (activeTranscriptionToken != requestToken) {
+            if (activeTranscriptionToken.get() != requestToken) {
                 return@post
             }
             transcriptionJob = null

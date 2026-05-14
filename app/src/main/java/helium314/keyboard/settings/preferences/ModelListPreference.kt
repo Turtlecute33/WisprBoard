@@ -53,9 +53,14 @@ internal fun ModelListPreference(
     val selected = items.firstOrNull { it.slug == selectedSlug }
     var showDialog by rememberSaveable { mutableStateOf(false) }
 
+    // If the saved slug isn't in this catalog (e.g. a model retired in a previous app version,
+    // or one carried over from the other provider), call it out so the user understands why the
+    // picker doesn't reflect their choice — and so they pick something current.
+    val description = selected?.displayName
+        ?: ctx.getString(R.string.voice_model_unavailable, selectedSlug)
     Preference(
         name = setting.title,
-        description = selected?.displayName,
+        description = description,
         onClick = { showDialog = true },
     )
     if (showDialog) {
@@ -86,9 +91,11 @@ private fun ModelPickerDialog(
     LaunchedEffect(selectedSlug) {
         // Custom is pinned to the bottom of the list; if it's currently selected, scroll to
         // the top so the user can see (and re-pick) the bundled presets — otherwise reopening
-        // the picker lands on Custom and the presets above sit above the viewport.
-        val index = if (selectedSlug == "custom") 0 else items.indexOfFirst { it.slug == selectedSlug }
-        if (index != -1) state.scrollToItem(index, -state.layoutInfo.viewportSize.height / 3)
+        // the picker lands on Custom and the presets above sit above the viewport. Stale slugs
+        // (not in this catalog) also scroll to the top so the user sees the available choices.
+        val rawIndex = if (selectedSlug == "custom") 0 else items.indexOfFirst { it.slug == selectedSlug }
+        val index = if (rawIndex == -1) 0 else rawIndex
+        state.scrollToItem(index, -state.layoutInfo.viewportSize.height / 3)
     }
     ThreeButtonAlertDialog(
         onDismissRequest = onDismissRequest,

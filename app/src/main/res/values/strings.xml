@@ -1110,7 +1110,7 @@ New dictionary:
     <string name="payperq_api_key">PayPerQ API Key</string>
     <string name="payperq_api_key_summary">Required before using voice input or Text Fix with your PayPerQ account</string>
     <string name="openrouter_zdr_enabled">Use zero data retention</string>
-    <string name="openrouter_zdr_enabled_summary">Prefer OpenRouter zero data retention endpoints. ZDR is enforced for models that support it (look for the ZDR pill in the picker); other models still work, but the request may use non-ZDR routing.</string>
+    <string name="openrouter_zdr_enabled_summary">Prefer models that promise not to store your data. The ZDR badge in the model picker shows which ones qualify; other models still work, but the request will go through standard routing.</string>
     <string name="voice_model">Voice Model</string>
     <string name="voice_model_custom">Custom Model ID</string>
     <string name="voice_model_custom_summary">Only used when Voice Model is set to Custom</string>
@@ -1149,6 +1149,7 @@ New dictionary:
     <string name="voice_error_stt_openrouter_only">Dedicated STT is only available with OpenRouter</string>
     <string name="voice_error_transcription_failed">Transcription failed</string>
     <string name="voice_error_rate_limited">AI provider rate limit reached — try again in a moment</string>
+    <string name="voice_max_duration_reached">Maximum recording length reached — transcribing&#8230;</string>
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
     <string name="voice_mic_rationale_title">Microphone access</string>
     <string name="voice_mic_rationale_message">WisprBoard records audio only while you hold the voice button. The recording is sent over HTTPS to your selected AI provider for transcription using the API key you supply; it is not proxied by any WisprBoard server. You can revoke microphone access at any time from Android\'s app settings.</string>
@@ -1157,8 +1158,9 @@ New dictionary:
     <string name="voice_enable_privacy_message">Voice Input sends your recorded audio over HTTPS to your selected AI provider using the API key you supply.</string>
     <string name="voice_enable_privacy_confirm">Enable Voice Input</string>
     <string name="voice_custom_model">Custom</string>
+    <string name="voice_model_unavailable">Saved model not available: <xliff:g id="slug">%1$s</xliff:g>. Pick a new one.</string>
     <string name="voice_max_duration">Maximum recording length</string>
-    <string name="voice_max_duration_summary">Stop recording automatically after this many seconds</string>
+    <string name="voice_max_duration_summary">Stop recording automatically after this many seconds (default 90)</string>
     <string name="voice_max_duration_seconds"><xliff:g id="seconds">%1$d</xliff:g> seconds</string>
     <string name="voice_auto_stop_silence">Auto-stop on silence</string>
     <string name="voice_auto_stop_silence_summary">Stop recording after a short silence once you\'ve started speaking</string>
@@ -1230,6 +1232,7 @@ New dictionary:
     <string name="text_fix_prompt">Fix Prompt</string>
     <string name="text_fix_prompt_summary">Instruction sent to the AI when improving your selected text</string>
     <string name="text_fix_working">Fixing…</string>
+    <string name="text_fix_result_a11y">Proposed text: <xliff:g id="text">%1$s</xliff:g>. Use Replace to accept or Discard to reject.</string>
     <string name="text_fix_replace">Replace</string>
     <string name="text_fix_discard">Discard</string>
     <string name="text_fix_error_no_selection">Select text first, then long-press Return to fix</string>

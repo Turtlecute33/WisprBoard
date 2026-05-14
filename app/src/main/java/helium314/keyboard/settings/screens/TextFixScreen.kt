@@ -23,6 +23,7 @@ import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.ModelCatalog
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
+import helium314.keyboard.latin.voice.isValidCustomModelSlug
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
@@ -108,7 +109,7 @@ fun createTextFixSettings(context: Context) = listOf(
         ModelListPreference(setting, entries, Defaults.PREF_TEXT_FIX_MODEL)
     },
     Setting(context, Settings.PREF_TEXT_FIX_MODEL_CUSTOM, R.string.text_fix_model_custom, R.string.text_fix_model_custom_summary) {
-        TextInputPreference(it, Defaults.PREF_TEXT_FIX_MODEL_CUSTOM)
+        TextInputPreference(it, Defaults.PREF_TEXT_FIX_MODEL_CUSTOM, checkTextValid = ::isValidCustomModelSlug)
     },
     Setting(context, Settings.PREF_TEXT_FIX_PROMPT, R.string.text_fix_prompt, R.string.text_fix_prompt_summary) {
         val prefs = LocalContext.current.prefs()

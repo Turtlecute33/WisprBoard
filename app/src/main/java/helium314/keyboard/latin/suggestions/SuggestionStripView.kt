@@ -360,6 +360,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         textFixOverlay?.showResult(proposed)
     }
 
+    fun showTextFixError(message: String) {
+        textFixOverlay?.showError(message)
+    }
+
     fun hideTextFixOverlay() {
         textFixOverlay = null
         clear()

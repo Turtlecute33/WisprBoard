@@ -37,11 +37,11 @@ internal const val MODEL_CUSTOM = "custom"
  * (e.g. `~google/gemini-flash-latest`). The leading tilde is part of the slug — requests using
  * the bare form return 400 "not a valid model ID". Pinned slugs use the bare form.
  */
-private val OPENROUTER_VOICE_SLUGS = ModelCatalog.OPENROUTER_VOICE.mapTo(mutableSetOf()) { it.slug }
-private val OPENROUTER_STT_SLUGS = ModelCatalog.OPENROUTER_STT.mapTo(mutableSetOf()) { it.slug }
-private val PAYPERQ_VOICE_SLUGS = ModelCatalog.PAYPERQ_VOICE.mapTo(mutableSetOf()) { it.slug }
-private val OPENROUTER_TEXT_FIX_SLUGS = ModelCatalog.OPENROUTER_TEXT_FIX.mapTo(mutableSetOf()) { it.slug }
-private val PAYPERQ_TEXT_FIX_SLUGS = ModelCatalog.PAYPERQ_TEXT_FIX.mapTo(mutableSetOf()) { it.slug }
+private val OPENROUTER_VOICE_SLUGS: Set<String> = ModelCatalog.OPENROUTER_VOICE.mapTo(LinkedHashSet()) { it.slug }
+private val OPENROUTER_STT_SLUGS: Set<String> = ModelCatalog.OPENROUTER_STT.mapTo(LinkedHashSet()) { it.slug }
+private val PAYPERQ_VOICE_SLUGS: Set<String> = ModelCatalog.PAYPERQ_VOICE.mapTo(LinkedHashSet()) { it.slug }
+private val OPENROUTER_TEXT_FIX_SLUGS: Set<String> = ModelCatalog.OPENROUTER_TEXT_FIX.mapTo(LinkedHashSet()) { it.slug }
+private val PAYPERQ_TEXT_FIX_SLUGS: Set<String> = ModelCatalog.PAYPERQ_TEXT_FIX.mapTo(LinkedHashSet()) { it.slug }
 
 internal fun AiProvider.supportsVoiceSlug(slug: String): Boolean {
     if (slug == MODEL_CUSTOM) return true
@@ -62,4 +62,14 @@ internal fun AiProvider.supportsTextFixSlug(slug: String): Boolean {
         AiProvider.OPENROUTER -> OPENROUTER_TEXT_FIX_SLUGS
         AiProvider.PAYPERQ -> PAYPERQ_TEXT_FIX_SLUGS
     }
+}
+
+// Accepts: author/slug, author/slug:variant, ~author/slug-latest. Rejects whitespace, bare names,
+// missing slug. Empty input is allowed so the user can clear the field without a validation block.
+private val CUSTOM_MODEL_SLUG_REGEX = Regex("""^~?[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?/[A-Za-z0-9](?:[A-Za-z0-9._:-]*[A-Za-z0-9])?$""")
+
+internal fun isValidCustomModelSlug(raw: String): Boolean {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return true
+    return CUSTOM_MODEL_SLUG_REGEX.matches(trimmed)
 }

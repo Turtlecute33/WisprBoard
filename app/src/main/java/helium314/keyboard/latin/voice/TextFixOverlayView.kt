@@ -3,6 +3,7 @@ package helium314.keyboard.latin.voice
 
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
+import android.os.SystemClock
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
@@ -27,6 +28,7 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
 
     var onReplaceClick: (() -> Unit)? = null
     var onDiscardClick: (() -> Unit)? = null
+    private var lastClickMs = 0L
 
     init {
         orientation = HORIZONTAL
@@ -49,8 +51,8 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
                 marginEnd = dp(12)
             }
         }
-        discardButton = makePillButton(R.string.text_fix_discard, isPrimary = false) { onDiscardClick?.invoke() }
-        replaceButton = makePillButton(R.string.text_fix_replace, isPrimary = true) { onReplaceClick?.invoke() }
+        discardButton = makePillButton(R.string.text_fix_discard, isPrimary = false) { debounceClick { onDiscardClick?.invoke() } }
+        replaceButton = makePillButton(R.string.text_fix_replace, isPrimary = true) { debounceClick { onReplaceClick?.invoke() } }
 
         addView(statusText)
         addView(resultText)
@@ -103,6 +105,7 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
         resultText.visibility = View.GONE
         replaceButton.visibility = View.GONE
         discardButton.visibility = View.VISIBLE
+        announceForAccessibility(statusText.text)
     }
 
     fun showResult(proposed: String) {
@@ -111,6 +114,25 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
         resultText.visibility = View.VISIBLE
         replaceButton.visibility = View.VISIBLE
         discardButton.visibility = View.VISIBLE
+        announceForAccessibility(context.getString(R.string.text_fix_result_a11y, proposed))
+    }
+
+    fun showError(message: String) {
+        statusText.text = message
+        statusText.visibility = View.VISIBLE
+        resultText.visibility = View.GONE
+        replaceButton.visibility = View.GONE
+        discardButton.visibility = View.VISIBLE
+        announceForAccessibility(message)
+    }
+
+    private inline fun debounceClick(action: () -> Unit) {
+        // Replace and Discard both mutate persistent state (cancelling an in-flight request or
+        // committing a text replacement). A double-tap should never fire the callback twice.
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastClickMs < 300L) return
+        lastClickMs = now
+        action()
     }
 
     private fun dp(value: Int): Int = TypedValue.applyDimension(

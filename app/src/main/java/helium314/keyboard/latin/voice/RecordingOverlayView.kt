@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.View
 import android.view.animation.LinearInterpolator
@@ -30,6 +31,7 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
     private val stopButton: ImageView
     private val tickHandler = Handler(Looper.getMainLooper())
     private var tickRunnable: Runnable? = null
+    private var lastClickMs = 0L
 
     var onStopClick: (() -> Unit)? = null
     var onCancelClick: (() -> Unit)? = null
@@ -57,10 +59,10 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
             layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
         }
         cancelButton = makeRoundButton(isCancel = true, descRes = R.string.voice_cancel) {
-            onCancelClick?.invoke()
+            debounceClick { onCancelClick?.invoke() }
         }
         stopButton = makeRoundButton(isCancel = false, descRes = R.string.voice_stop_recording) {
-            onStopClick?.invoke()
+            debounceClick { onStopClick?.invoke() }
         }
 
         addView(meterView)
@@ -115,6 +117,7 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
         stopButton.visibility = View.VISIBLE
         cancelButton.visibility = View.VISIBLE
         startTicking()
+        announceForAccessibility(statusText.text)
     }
 
     fun showTranscribing() {
@@ -126,6 +129,7 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
         // Cancel remains visible so the user can abort the upload.
         cancelButton.visibility = View.VISIBLE
         stopTicking()
+        announceForAccessibility(statusText.text)
     }
 
     fun stopAnimation() {
@@ -152,6 +156,15 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
     private fun stopTicking() {
         tickRunnable?.let { tickHandler.removeCallbacks(it) }
         tickRunnable = null
+    }
+
+    private inline fun debounceClick(action: () -> Unit) {
+        // Stop/Cancel both have heavy side effects (stop the recorder, cancel an in-flight upload).
+        // A spammed double-tap can race the state machine — 300ms is plenty of breathing room.
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastClickMs < 300L) return
+        lastClickMs = now
+        action()
     }
 
     override fun onDetachedFromWindow() {

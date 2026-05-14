@@ -39,6 +39,7 @@ import helium314.keyboard.latin.voice.resolveVoiceModel
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.latin.voice.defaultApiKey
+import helium314.keyboard.latin.voice.isValidCustomModelSlug
 import helium314.keyboard.latin.voice.supportsOpenRouterSttSlug
 import helium314.keyboard.latin.voice.supportsTextFixSlug
 import helium314.keyboard.latin.voice.supportsVoiceSlug
@@ -265,7 +266,7 @@ fun createVoiceSettings(context: Context) = listOf(
         ModelListPreference(setting, entries, Defaults.PREF_VOICE_MODEL)
     },
     Setting(context, Settings.PREF_VOICE_MODEL_CUSTOM, R.string.voice_model_custom, R.string.voice_model_custom_summary) {
-        TextInputPreference(it, Defaults.PREF_VOICE_MODEL_CUSTOM)
+        TextInputPreference(it, Defaults.PREF_VOICE_MODEL_CUSTOM, checkTextValid = ::isValidCustomModelSlug)
     },
     Setting(
         context,
@@ -286,7 +287,7 @@ fun createVoiceSettings(context: Context) = listOf(
         ModelListPreference(setting, ModelCatalog.OPENROUTER_STT, Defaults.PREF_VOICE_STT_MODEL)
     },
     Setting(context, Settings.PREF_VOICE_STT_MODEL_CUSTOM, R.string.voice_stt_model_custom, R.string.voice_stt_model_custom_summary) {
-        TextInputPreference(it, Defaults.PREF_VOICE_STT_MODEL_CUSTOM)
+        TextInputPreference(it, Defaults.PREF_VOICE_STT_MODEL_CUSTOM, checkTextValid = ::isValidCustomModelSlug)
     },
     Setting(
         context,

@@ -648,6 +648,7 @@ public class LatinIME extends InputMethodService implements
             @Override
             public void onMaxDurationReached() {
                 AudioAndHapticFeedbackManager.getInstance().vibrate(50L);
+                Toast.makeText(LatinIME.this, R.string.voice_max_duration_reached, Toast.LENGTH_LONG).show();
             }
 
             @Nullable
@@ -733,10 +734,23 @@ public class LatinIME extends InputMethodService implements
             @Override
             public void onError(@NonNull final String message) {
                 Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
-                if (mSuggestionStripView != null) mSuggestionStripView.hideTextFixOverlay();
+                // Surface the error in the overlay too — the toast can flash by before the user
+                // notices, while the overlay was the surface they were already watching. Auto-hide
+                // a few seconds later so it doesn't linger after they move on.
+                if (mSuggestionStripView != null) {
+                    mSuggestionStripView.showTextFixError(message);
+                    final SuggestionStripView strip = mSuggestionStripView;
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        if (mSuggestionStripView == strip) {
+                            mSuggestionStripView.hideTextFixOverlay();
+                        }
+                    }, TEXT_FIX_ERROR_OVERLAY_HIDE_MS);
+                }
             }
         });
     }
+
+    private static final long TEXT_FIX_ERROR_OVERLAY_HIDE_MS = 3500L;
 
     private void commitTextFixReplacement() {
         final String original = mPendingTextFixOriginal;
@@ -2095,8 +2109,11 @@ public class LatinIME extends InputMethodService implements
     }
 
     private void cancelVoiceRecordingIfCapturing() {
+        // Also abort an in-flight upload: when the user dismisses the keyboard mid-transcription
+        // (Back key, app switch, finishInputView), they expect the network request to stop, not
+        // to insert text into a stale field a few seconds later.
         if (mVoiceInputManager != null
-                && mVoiceInputManager.getState() == VoiceInputManager.State.RECORDING) {
+                && mVoiceInputManager.getState() != VoiceInputManager.State.IDLE) {
             mVoiceInputManager.cancelRecording();
         }
     }
