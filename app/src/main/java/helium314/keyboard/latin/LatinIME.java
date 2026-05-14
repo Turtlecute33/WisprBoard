@@ -147,6 +147,9 @@ public class LatinIME extends InputMethodService implements
     private TextFixManager mTextFixManager;
     private String mPendingTextFixOriginal;
     private String mPendingTextFixProposed;
+    private final android.os.Handler mTextFixOverlayHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable mTextFixErrorOverlayHideRunnable;
 
     private RichInputMethodManager mRichImm;
     final KeyboardSwitcher mKeyboardSwitcher;
@@ -712,6 +715,7 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onWorking() {
+                cancelPendingTextFixErrorOverlayHide();
                 if (mSuggestionStripView != null) {
                     mSuggestionStripView.setOnReplaceTextFix(LatinIME.this::commitTextFixReplacement);
                     mSuggestionStripView.setOnDiscardTextFix(LatinIME.this::discardTextFix);
@@ -726,6 +730,7 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onResult(@NonNull final String originalText, @NonNull final String proposedText) {
+                cancelPendingTextFixErrorOverlayHide();
                 mPendingTextFixOriginal = originalText;
                 mPendingTextFixProposed = proposedText;
                 if (mSuggestionStripView != null) mSuggestionStripView.showTextFixResult(proposedText);
@@ -733,6 +738,7 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onError(@NonNull final String message) {
+                cancelPendingTextFixErrorOverlayHide();
                 Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
                 // Surface the error in the overlay too — the toast can flash by before the user
                 // notices, while the overlay was the surface they were already watching. Auto-hide
@@ -740,11 +746,18 @@ public class LatinIME extends InputMethodService implements
                 if (mSuggestionStripView != null) {
                     mSuggestionStripView.showTextFixError(message);
                     final SuggestionStripView strip = mSuggestionStripView;
-                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                        if (mSuggestionStripView == strip) {
-                            mSuggestionStripView.hideTextFixOverlay();
+                    final Runnable hideRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if (mTextFixErrorOverlayHideRunnable != this) return;
+                            mTextFixErrorOverlayHideRunnable = null;
+                            if (mSuggestionStripView == strip) {
+                                mSuggestionStripView.hideTextFixOverlay();
+                            }
                         }
-                    }, TEXT_FIX_ERROR_OVERLAY_HIDE_MS);
+                    };
+                    mTextFixErrorOverlayHideRunnable = hideRunnable;
+                    mTextFixOverlayHandler.postDelayed(hideRunnable, TEXT_FIX_ERROR_OVERLAY_HIDE_MS);
                 }
             }
         });
@@ -752,7 +765,14 @@ public class LatinIME extends InputMethodService implements
 
     private static final long TEXT_FIX_ERROR_OVERLAY_HIDE_MS = 3500L;
 
+    private void cancelPendingTextFixErrorOverlayHide() {
+        if (mTextFixErrorOverlayHideRunnable == null) return;
+        mTextFixOverlayHandler.removeCallbacks(mTextFixErrorOverlayHideRunnable);
+        mTextFixErrorOverlayHideRunnable = null;
+    }
+
     private void commitTextFixReplacement() {
+        cancelPendingTextFixErrorOverlayHide();
         final String original = mPendingTextFixOriginal;
         final String proposed = mPendingTextFixProposed;
         mPendingTextFixOriginal = null;
@@ -780,6 +800,7 @@ public class LatinIME extends InputMethodService implements
     }
 
     private void clearPendingTextFixState() {
+        cancelPendingTextFixErrorOverlayHide();
         mPendingTextFixOriginal = null;
         mPendingTextFixProposed = null;
         if (mTextFixManager != null) mTextFixManager.cancel();
