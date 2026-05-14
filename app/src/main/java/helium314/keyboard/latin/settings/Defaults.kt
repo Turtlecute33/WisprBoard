@@ -193,10 +193,13 @@ object Defaults {
     const val PREF_VOICE_STT_ENABLED = false
     const val PREF_VOICE_STT_MODEL = "google/chirp-3"
     const val PREF_VOICE_STT_MODEL_CUSTOM = ""
-    const val PREF_VOICE_STT_PROMPT = "Transcribe this audio exactly as spoken. Output only the transcription, nothing else."
+    // Default transcription prompts: stronger, model-independent instructions for high-quality
+    // verbatim output with natural punctuation and casing. Drives quality uniformly across STT
+    // backends and chat-audio models.
+    const val PREF_VOICE_STT_PROMPT = "Transcribe the audio with the highest possible fidelity. Preserve every spoken word verbatim, including proper names, numbers, code, and technical terms. Apply natural punctuation and sentence casing (periods, commas, question marks, capitalization). Do not translate, summarize, censor, or add commentary. If unsure of a word, write your best phonetic guess. Output only the transcription, with no preamble, quotes, or explanation."
     const val PREF_VOICE_STT_DICTIONARY = ""
     const val PREF_VOICE_STT_EXPECTED_LANGUAGES = ""
-    const val PREF_VOICE_TRANSCRIPTION_PROMPT = "Transcribe this audio exactly as spoken. Output only the transcription, nothing else."
+    const val PREF_VOICE_TRANSCRIPTION_PROMPT = "Transcribe the audio with the highest possible fidelity. Preserve every spoken word verbatim, including proper names, numbers, code, and technical terms. Apply natural punctuation and sentence casing (periods, commas, question marks, capitalization). Do not translate, summarize, censor, or add commentary. If unsure of a word, write your best phonetic guess. Output only the transcription, with no preamble, quotes, or explanation."
     const val PREF_VOICE_TRANSCRIPTION_DICTIONARY = ""
     const val PREF_VOICE_EXPECTED_LANGUAGES = ""
     const val PREF_VOICE_MAX_DURATION_SECONDS = 90
@@ -205,6 +208,20 @@ object Defaults {
     const val PREF_VOICE_LANGUAGE_HINT = true
     const val PREF_VOICE_SPACE_HEURISTIC = true
     const val PREF_VOICE_HAPTIC_FEEDBACK = true
+    const val PREF_VOICE_AUTO_POLISH_ENABLED = false
+    // Polish level values: "natural" (bypass), "light", "fixed", "rephrased", "corrected", "polished".
+    // Kept as a plain string so it persists like the other enum-style prefs in this file.
+    const val PREF_VOICE_POLISH_LEVEL = "fixed"
+    const val PREF_VOICE_POLISH_MODEL = "~openai/gpt-mini-latest"
+    const val PREF_VOICE_POLISH_MODEL_CUSTOM = ""
+    // System prompts per polish level. The "natural" level skips the polish pass entirely so it
+    // has no prompt. Each level is graded from no-rewrite to aggressive rewrite; all of them
+    // strictly preserve meaning, facts, and the speaker's language.
+    const val PREF_VOICE_POLISH_PROMPT_LIGHT = "You receive a voice-to-text transcript. Fix only obvious transcription errors: capitalization, punctuation, and clear spelling mistakes. Do not rewrite, restructure, reorder, or change wording. Preserve every word, pause, and the speaker's voice exactly. Preserve the original language. Output only the corrected text, with no preamble, quotes, or explanation."
+    const val PREF_VOICE_POLISH_PROMPT_FIXED = "You receive a voice-to-text transcript. Fix grammar, punctuation, spelling, and capitalization. Remove disfluencies (um, uh, like, you know) and false starts. Keep the speaker's wording, tone, and intent — do not rephrase or reorder. Preserve the original language. Output only the corrected text, with no preamble, quotes, or explanation."
+    const val PREF_VOICE_POLISH_PROMPT_REPHRASED = "You receive a voice-to-text transcript. Rewrite it into clean, natural prose. Remove disfluencies, false starts, and stray repetitions. Restructure run-on sentences and clarify confusing phrasing while strictly preserving meaning, facts, and the speaker's intent. Keep the same language and a conversational tone. Output only the rewritten text, with no preamble, quotes, or explanation."
+    const val PREF_VOICE_POLISH_PROMPT_CORRECTED = "You receive a voice-to-text transcript that likely contains transcription mistakes, misheard words, and misspeaks. Reconstruct what the speaker most likely meant: fix misheard words using context, honor any self-corrections (\"I mean…\"), drop disfluencies and false starts, and produce a grammatical, well-punctuated final text. Strictly preserve meaning, facts, and language. Output only the corrected text, with no preamble, quotes, or explanation."
+    const val PREF_VOICE_POLISH_PROMPT_POLISHED = "You receive a voice-to-text transcript. Produce a polished, concise written version: drop filler, tighten redundancy, restructure for clarity, and improve flow while strictly preserving the speaker's meaning, facts, and language. Aim for natural written prose, not a verbatim transcript. Do not invent details. Output only the polished text, with no preamble, quotes, or explanation."
     const val PREF_TEXT_FIX_ENABLED = false
     const val PREF_TEXT_FIX_MODEL = "~openai/gpt-mini-latest"
     const val PREF_TEXT_FIX_MODEL_CUSTOM = ""

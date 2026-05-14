@@ -33,6 +33,7 @@ import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.ModelCatalog
 import helium314.keyboard.latin.voice.OpenRouterClient
+import helium314.keyboard.latin.voice.PolishLevel
 import helium314.keyboard.latin.voice.parseVoiceDictionaryTerms
 import helium314.keyboard.latin.voice.parseExpectedLanguages
 import helium314.keyboard.latin.voice.resolveVoiceModel
@@ -82,6 +83,14 @@ fun VoiceScreen(
         Settings.PREF_VOICE_AUTO_STOP_SILENCE,
         Defaults.PREF_VOICE_AUTO_STOP_SILENCE
     )
+    val autoPolishEnabled by rememberBooleanPreferenceState(
+        Settings.PREF_VOICE_AUTO_POLISH_ENABLED,
+        Defaults.PREF_VOICE_AUTO_POLISH_ENABLED
+    )
+    val polishModel by rememberStringPreferenceState(
+        Settings.PREF_VOICE_POLISH_MODEL,
+        Defaults.PREF_VOICE_POLISH_MODEL
+    )
 
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -94,6 +103,8 @@ fun VoiceScreen(
             traditionalEnabled = traditionalEnabled,
             sttEnabled = sttEnabled,
             voiceAutoStop = voiceAutoStop,
+            autoPolishEnabled = autoPolishEnabled,
+            polishModel = polishModel,
         )
     )
 }
@@ -106,6 +117,8 @@ internal fun buildVoiceScreenItems(
     traditionalEnabled: Boolean = Defaults.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED,
     sttEnabled: Boolean = Defaults.PREF_VOICE_STT_ENABLED,
     voiceAutoStop: Boolean = Defaults.PREF_VOICE_AUTO_STOP_SILENCE,
+    autoPolishEnabled: Boolean = Defaults.PREF_VOICE_AUTO_POLISH_ENABLED,
+    polishModel: String = Defaults.PREF_VOICE_POLISH_MODEL,
 ): List<Any?> = listOf(
     Settings.PREF_VOICE_INPUT_ENABLED,
     if (voiceInputEnabled) Settings.PREF_AI_PROVIDER else null,
@@ -129,6 +142,13 @@ internal fun buildVoiceScreenItems(
     if (voiceInputEnabled && provider == AiProvider.OPENROUTER && sttEnabled) Settings.PREF_VOICE_STT_PROMPT else null,
     if (voiceInputEnabled && provider == AiProvider.OPENROUTER && sttEnabled) Settings.PREF_VOICE_STT_DICTIONARY else null,
     if (voiceInputEnabled && provider == AiProvider.OPENROUTER && sttEnabled) Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES else null,
+    // Auto-polish: a second LLM pass that cleans up the raw transcription. Applies to both the
+    // chat-audio and dedicated-STT flows, hence its placement above the shared section.
+    if (voiceInputEnabled) R.string.voice_polish_category else null,
+    if (voiceInputEnabled) Settings.PREF_VOICE_AUTO_POLISH_ENABLED else null,
+    if (voiceInputEnabled && autoPolishEnabled) Settings.PREF_VOICE_POLISH_LEVEL else null,
+    if (voiceInputEnabled && autoPolishEnabled) Settings.PREF_VOICE_POLISH_MODEL else null,
+    if (voiceInputEnabled && autoPolishEnabled && polishModel == "custom") Settings.PREF_VOICE_POLISH_MODEL_CUSTOM else null,
     // Shared playback / capture options apply to both flows.
     if (voiceInputEnabled) R.string.voice_shared_category else null,
     if (voiceInputEnabled) Settings.PREF_VOICE_LANGUAGE_HINT else null,
@@ -241,6 +261,8 @@ fun createVoiceSettings(context: Context) = listOf(
                 ?: Defaults.PREF_VOICE_STT_MODEL
             val currentTextFix = prefs.getString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
                 ?: Defaults.PREF_TEXT_FIX_MODEL
+            val currentPolish = prefs.getString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL)
+                ?: Defaults.PREF_VOICE_POLISH_MODEL
             prefs.edit {
                 if (!provider.supportsVoiceSlug(currentVoice)) {
                     putString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
@@ -250,6 +272,9 @@ fun createVoiceSettings(context: Context) = listOf(
                 }
                 if (!provider.supportsTextFixSlug(currentTextFix)) {
                     putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
+                }
+                if (!provider.supportsTextFixSlug(currentPolish)) {
+                    putString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL)
                 }
             }
         }
@@ -367,6 +392,46 @@ fun createVoiceSettings(context: Context) = listOf(
     },
     Setting(context, Settings.PREF_VOICE_HAPTIC_FEEDBACK, R.string.voice_haptic_feedback, R.string.voice_haptic_feedback_summary) {
         SwitchPreference(it, Defaults.PREF_VOICE_HAPTIC_FEEDBACK)
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_AUTO_POLISH_ENABLED,
+        R.string.voice_auto_polish_enabled,
+        R.string.voice_auto_polish_enabled_summary,
+    ) {
+        SwitchPreference(it, Defaults.PREF_VOICE_AUTO_POLISH_ENABLED)
+    },
+    Setting(context, Settings.PREF_VOICE_POLISH_LEVEL, R.string.voice_polish_level, R.string.voice_polish_level_summary) { setting ->
+        val ctx = LocalContext.current
+        // Mirror the PolishLevel enum order so the picker reads as a graded scale from
+        // "do nothing" to "rewrite aggressively". Labels are translation-friendly resources.
+        val items = listOf(
+            ctx.getString(R.string.voice_polish_level_natural) to PolishLevel.NATURAL.prefValue,
+            ctx.getString(R.string.voice_polish_level_light) to PolishLevel.LIGHT.prefValue,
+            ctx.getString(R.string.voice_polish_level_fixed) to PolishLevel.FIXED.prefValue,
+            ctx.getString(R.string.voice_polish_level_rephrased) to PolishLevel.REPHRASED.prefValue,
+            ctx.getString(R.string.voice_polish_level_corrected) to PolishLevel.CORRECTED.prefValue,
+            ctx.getString(R.string.voice_polish_level_polished) to PolishLevel.POLISHED.prefValue,
+        )
+        ListPreference(setting, items, Defaults.PREF_VOICE_POLISH_LEVEL)
+    },
+    Setting(context, Settings.PREF_VOICE_POLISH_MODEL, R.string.voice_polish_model) { setting ->
+        val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
+        // Polish is a chat-completion call against text, so the text-fix catalog is the right
+        // model list for both providers.
+        val entries = when (AiProvider.fromPref(providerPref)) {
+            AiProvider.OPENROUTER -> ModelCatalog.OPENROUTER_TEXT_FIX
+            AiProvider.PAYPERQ -> ModelCatalog.PAYPERQ_TEXT_FIX
+        }
+        ModelListPreference(setting, entries, Defaults.PREF_VOICE_POLISH_MODEL)
+    },
+    Setting(
+        context,
+        Settings.PREF_VOICE_POLISH_MODEL_CUSTOM,
+        R.string.voice_polish_model_custom,
+        R.string.voice_polish_model_custom_summary,
+    ) {
+        TextInputPreference(it, Defaults.PREF_VOICE_POLISH_MODEL_CUSTOM, checkTextValid = ::isValidCustomModelSlug)
     },
     Setting(context, Settings.PREF_VOICE_MAX_DURATION_SECONDS, R.string.voice_max_duration, R.string.voice_max_duration_summary) { setting ->
         SliderPreference(
@@ -743,6 +808,12 @@ private fun probeModel(apiKey: String, model: String, useZdr: Boolean): TestResu
 }
 
 private fun probeZdrModelSupport(apiKey: String, model: String): Boolean {
+    // The catalog is the authoritative source for known slugs — its `zdr` flags are verified
+    // against OpenRouter's ZDR endpoint list, and they're what the request path actually keys
+    // off when deciding to send `provider.zdr: true`. Hitting `/endpoints/zdr` here used to
+    // false-negative for every `~author/...-latest` alias because OpenRouter returns canonical
+    // model IDs without the leading tilde, so the exact-string match never landed.
+    if (ModelCatalog.openRouterSupportsZdr(model)) return true
     val conn = (java.net.URL(OpenRouterClient.ZDR_ENDPOINT).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
@@ -754,8 +825,12 @@ private fun probeZdrModelSupport(apiKey: String, model: String): Boolean {
         if (conn.responseCode != 200) return true
         val body = readProbeResponseCapped(conn.inputStream)
         val endpoints = JSONObject(body).optJSONArray("data") ?: return true
+        // Belt-and-suspenders for custom slugs: also accept a match against the tilde-stripped
+        // form, since the user can paste either shape into the Custom Model ID field.
+        val tildeStripped = model.removePrefix("~")
         for (i in 0 until endpoints.length()) {
-            if (endpoints.optJSONObject(i)?.optString("model_id") == model) return true
+            val id = endpoints.optJSONObject(i)?.optString("model_id") ?: continue
+            if (id == model || id == tildeStripped) return true
         }
         false
     } catch (_: Exception) {

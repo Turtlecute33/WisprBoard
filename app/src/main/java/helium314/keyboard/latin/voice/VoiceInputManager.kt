@@ -259,6 +259,18 @@ class VoiceInputManager(
         val useZdr = provider == AiProvider.OPENROUTER &&
             prefs.getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
 
+        // Wispr-Flow-style auto-polish: after the raw transcription comes back, optionally pipe it
+        // through a second, text-only LLM call that cleans it up to the chosen level. Resolved
+        // here on the main thread so the background job receives plain values.
+        val polishEnabled = prefs.getBoolean(Settings.PREF_VOICE_AUTO_POLISH_ENABLED, Defaults.PREF_VOICE_AUTO_POLISH_ENABLED)
+        val polishLevel = PolishLevel.fromPref(prefs.getString(Settings.PREF_VOICE_POLISH_LEVEL, Defaults.PREF_VOICE_POLISH_LEVEL))
+        val polishSystemPrompt = polishPromptForLevel(polishLevel)
+        val polishModelSelected = prefs.getString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL) ?: Defaults.PREF_VOICE_POLISH_MODEL
+        val polishModelCustom = prefs.getString(Settings.PREF_VOICE_POLISH_MODEL_CUSTOM, Defaults.PREF_VOICE_POLISH_MODEL_CUSTOM) ?: ""
+        val polishModel = if (polishEnabled && polishSystemPrompt != null) {
+            resolveProviderModel(polishModelSelected, polishModelCustom)
+        } else null
+
         val model = if (useDedicatedStt) {
             resolveVoiceSttModel(selectedSttModel, customSttModel)
         } else {
@@ -299,7 +311,35 @@ class VoiceInputManager(
                     )
                     return@launch
                 }
-                val finalText = applySpacing(transcription, spacingContext)
+                // Auto-polish stage. We swap transcriptionClient over so the manager-wide cancel
+                // path tears down the polish connection if the user backs out. Any failure here
+                // is non-fatal: we keep the raw transcription rather than dropping the user's
+                // recording on the floor.
+                val polished = if (polishEnabled && polishSystemPrompt != null && polishModel != null) {
+                    val polishClient = OpenRouterClient(
+                        apiKey = apiKey,
+                        model = polishModel,
+                        systemPrompt = polishSystemPrompt,
+                        runtimeInstruction = null,
+                        provider = provider,
+                        useZeroDataRetention = useZdr,
+                    )
+                    transcriptionClient = polishClient
+                    try {
+                        val raw = runInterruptible { polishClient.fixText(transcription) }
+                        sanitizeTranscription(raw).takeIf { it.isNotBlank() } ?: transcription
+                    } catch (ce: CancellationException) {
+                        throw ce
+                    } catch (ie: InterruptedException) {
+                        throw ie
+                    } catch (pe: Exception) {
+                        if (BuildConfig.DEBUG) Log.w(TAG, "Polish failed; falling back to raw transcription", pe)
+                        transcription
+                    } finally {
+                        transcriptionClient = client
+                    }
+                } else transcription
+                val finalText = applySpacing(polished, spacingContext)
                 finishTranscription(requestToken = requestToken, result = finalText)
             } catch (e: CancellationException) {
                 if (BuildConfig.DEBUG) Log.i(TAG, "Transcription cancelled")

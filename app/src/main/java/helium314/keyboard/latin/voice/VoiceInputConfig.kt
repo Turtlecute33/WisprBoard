@@ -114,6 +114,34 @@ enum class VoiceTranscriptionMode {
     OPENROUTER_STT,
 }
 
+/**
+ * Levels of post-transcription polishing. NATURAL bypasses the polish pass entirely; the rest map
+ * to a graded system prompt that the polish LLM uses to clean up the raw transcription.
+ */
+enum class PolishLevel(val prefValue: String) {
+    NATURAL("natural"),
+    LIGHT("light"),
+    FIXED("fixed"),
+    REPHRASED("rephrased"),
+    CORRECTED("corrected"),
+    POLISHED("polished");
+
+    companion object {
+        fun fromPref(value: String?): PolishLevel =
+            entries.firstOrNull { it.prefValue == value } ?: FIXED
+    }
+}
+
+/** Returns the system prompt for [level], or null when no polish pass should run. */
+internal fun polishPromptForLevel(level: PolishLevel): String? = when (level) {
+    PolishLevel.NATURAL -> null
+    PolishLevel.LIGHT -> Defaults.PREF_VOICE_POLISH_PROMPT_LIGHT
+    PolishLevel.FIXED -> Defaults.PREF_VOICE_POLISH_PROMPT_FIXED
+    PolishLevel.REPHRASED -> Defaults.PREF_VOICE_POLISH_PROMPT_REPHRASED
+    PolishLevel.CORRECTED -> Defaults.PREF_VOICE_POLISH_PROMPT_CORRECTED
+    PolishLevel.POLISHED -> Defaults.PREF_VOICE_POLISH_PROMPT_POLISHED
+}
+
 internal fun resolveVoiceModel(selectedModel: String, customModel: String): String? {
     if (selectedModel != "custom") {
         return selectedModel.trim().takeIf { it.isNotEmpty() }
