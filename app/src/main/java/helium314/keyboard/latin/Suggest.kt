@@ -451,8 +451,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                     || -1 == info.mWord.indexOf(Constants.CODE_SPACE.toChar()))
         }
 
-        // public for testing
-        fun getTransformedSuggestedWordInfo(
+        private fun getTransformedSuggestedWordInfo(
             wordInfo: SuggestedWordInfo, locale: Locale, capsMode: Int, trailingSingleQuotesCount: Int
         ): SuggestedWordInfo {
             var capitalizedWord = capitalize(wordInfo.mWord, capsMode, locale)

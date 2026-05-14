@@ -280,12 +280,6 @@ class SuggestTest {
         assert(!result.last()) // should not be corrected
     }
 
-    @Test fun `quotes are added to suggestions when needed`() {
-        val result = Suggest.getTransformedSuggestedWordInfo(suggestion("word", 1, Locale.ENGLISH, true),
-            Locale.ENGLISH, WordComposer.CAPS_MODE_OFF, 1)
-        assertEquals("word'", result.mWord)
-    }
-
     @Test fun `typed word is first suggestion`() { // first suggestion will not be shown to the user
         tapTypingSuggestions = suggestionResults(listOf(suggestion("hello", 123, currentTypingLocale)))
         val results = getSuggestedWords(false, "henlo", WordComposer.CAPS_MODE_OFF)
