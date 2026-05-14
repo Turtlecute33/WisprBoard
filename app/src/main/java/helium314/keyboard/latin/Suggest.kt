@@ -26,6 +26,7 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SuggestionResults
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -129,7 +130,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         // Otherwise, if the relevant setting is enabled, show the typed word in the middle.
         val typedWordWasCapitalized = capitalizedTypedWord != wordComposer.typedWord
         val correctToCapitalizedWord = typedWordWasCapitalized && isCorrectionEnabled && wordComposer.typedWord.drop(1).none { it.isUpperCase() }
-        val indexOfTypedWord = if (hasAutoCorrection) 2 else 1
+        val indexOfTypedWord = 1 + if (hasAutoCorrection) SuggestedWords.INDEX_OF_AUTO_CORRECTION else SuggestedWords.INDEX_OF_TYPED_WORD
         if (
             (hasAutoCorrection
                 || (Settings.getValues().mCenterSuggestionTextToEnter && !wordComposer.isResumed)
@@ -458,11 +459,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             // Appending quotes is here to help people quote words. However, it's not helpful
             // when they type words with quotes toward the end like "it's" or "didn't", where
             // it's more likely the user missed the last character (or didn't type it yet).
-            val quotesToAppend = (trailingSingleQuotesCount
-                    - if (-1 == wordInfo.mWord.indexOf(Constants.CODE_SINGLE_QUOTE.toChar())) 0 else 1)
-            for (i in quotesToAppend - 1 downTo 0) {
-                capitalizedWord = "$capitalizedWord'"
-            }
+            val quotesToAppend = trailingSingleQuotesCount - if (wordInfo.mWord.contains('\'')) 1 else 0
+            repeat(max(0, quotesToAppend)) { capitalizedWord += '\'' }
             return SuggestedWordInfo(
                 capitalizedWord, wordInfo.mPrevWordsContext,
                 wordInfo.mScore, wordInfo.mKindAndFlags,

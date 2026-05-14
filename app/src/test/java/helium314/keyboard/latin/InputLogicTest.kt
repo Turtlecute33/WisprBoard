@@ -161,7 +161,7 @@ class InputLogicTest {
     //  https://github.com/HeliBorg/HeliBoard/issues/214
     @org.junit.Ignore("Known Hangul mid-word insertion bug, see issue #214.")
     @Test fun insertLetterIntoWordHangulFails() {
-        if (BuildConfig.BUILD_TYPE == "runTests") return
+        reset()
         latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
         chainInput("ㅛㅎㄹㅎㅕㅛ")
         setCursorPosition(3)
