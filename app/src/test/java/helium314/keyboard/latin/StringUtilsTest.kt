@@ -11,7 +11,6 @@ import helium314.keyboard.latin.common.getFullEmojiAtEnd
 import helium314.keyboard.latin.common.getTouchedWordRange
 import helium314.keyboard.latin.common.isEmoji
 import helium314.keyboard.latin.common.isSingleGrapheme
-import helium314.keyboard.latin.common.lastGrapheme
 import helium314.keyboard.latin.common.moveStepsToCharCount
 import helium314.keyboard.latin.common.nonWordCodePointAndNoSpaceBeforeCursor
 import helium314.keyboard.latin.common.splitOnWhitespace
@@ -21,7 +20,6 @@ import helium314.keyboard.latin.utils.TextRange
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import kotlin.system.measureTimeMillis
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
