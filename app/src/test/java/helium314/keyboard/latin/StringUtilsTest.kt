@@ -166,18 +166,12 @@ class StringUtilsTest {
 
         val brokenDetectionAtStart = listOf("〰️", "〽️", "©️", "®️", "#️⃣", "*️⃣", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "㊗️", "㊙️")
         allEmojis.forEach {
-            if (it == "🀄" || it == "🃏") return@forEach // todo: should be fixed, ideally in the regex
             assert(isEmoji(it))
             assert(StringUtils.mightBeEmoji(it.codePointBefore(it.length)))
             if (it !in brokenDetectionAtStart)
                 assert(StringUtils.mightBeEmoji(it.codePointAt(0)))
         }
     }
-
-    // todo: add tests for emoji detection?
-    //  could help towards fully fixing https://github.com/HeliBorg/HeliBoard/issues/22
-    //  though this might be tricky, as some emojis will show as one on new Android versions, and
-    //  as two on older versions (also may differ by app)
 
     private fun checkTextRange(before: String, after: String, sp: SpacingAndPunctuations, script: String, wordStart: Int, wordEnd: Int) {
         val got = getTouchedWordRange(before, after, script, sp)
