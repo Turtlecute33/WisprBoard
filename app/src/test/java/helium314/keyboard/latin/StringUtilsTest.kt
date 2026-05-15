@@ -14,6 +14,8 @@ import helium314.keyboard.latin.common.isSingleGrapheme
 import helium314.keyboard.latin.common.moveStepsToCharCount
 import helium314.keyboard.latin.common.nonWordCodePointAndNoSpaceBeforeCursor
 import helium314.keyboard.latin.common.splitOnWhitespace
+import helium314.keyboard.latin.common.stripTrailingSeparatorsAndConnectors
+import helium314.keyboard.latin.inputlogic.InputLogic
 import helium314.keyboard.latin.settings.SpacingAndPunctuations
 import helium314.keyboard.latin.utils.ScriptUtils
 import helium314.keyboard.latin.utils.TextRange
@@ -207,6 +209,20 @@ class StringUtilsTest {
             if (it !in brokenDetectionAtStart)
                 assert(StringUtils.mightBeEmoji(it.codePointAt(0)))
         }
+    }
+
+    @Test fun `strip trailing separators and connectors`() {
+        val ctx = ApplicationProvider.getApplicationContext<App>()
+        val svfs = SpacingAndPunctuations(ctx.resources, false)
+        assertEquals("word", stripTrailingSeparatorsAndConnectors("word", svfs))
+        assertEquals("word", stripTrailingSeparatorsAndConnectors("word)", svfs))
+        assertEquals("word", stripTrailingSeparatorsAndConnectors("word\"", svfs))
+        assertEquals("word", stripTrailingSeparatorsAndConnectors("word:", svfs))
+        assertEquals("wor:d", stripTrailingSeparatorsAndConnectors("wor:d:", svfs))
+        assertEquals("", stripTrailingSeparatorsAndConnectors(":", svfs))
+        assertEquals("word", stripTrailingSeparatorsAndConnectors("word-", svfs))
+        assertEquals("word", stripTrailingSeparatorsAndConnectors("word'", svfs))
+        assertEquals("word", stripTrailingSeparatorsAndConnectors("word'-'", svfs))
     }
 
     private fun checkTextRange(before: String, after: String, sp: SpacingAndPunctuations, script: String, wordStart: Int, wordEnd: Int) {

@@ -376,9 +376,6 @@ class SuggestTest {
         // todo: improve the situation on this!
         //  disable for shortcuts?
         //  maybe also could be removed from word connectors for a bunch of languages
-        // todo: this is actually added to dictionary, but probably it shouldn't -> don't add, or strip trailing word connectors?
-        //  technically e.g. dogs' is correct word, but do we really want it in history and potentially personal dictionary?
-        //  and many other cases are not correct words, e.g. 'as if' may add if' to history
 
         tapTypingSuggestions = suggestionResults(listOf(
             suggestion("ab", 1000),
@@ -472,8 +469,7 @@ class SuggestTest {
     @Test fun `suggestions use manual caps modes`() {
         // added in https://github.com/HeliBorg/HeliBoard/pull/1807 / cb0eae695f0cbd061e5bbcc416d6e14d18d869d8
         // manual caps mode can be set any time, even if there are already suggestions
-        // todo: test the different suggestions after pressing shift, as we see on the phone?
-        //  feels awkward, but can we actually do something against it?
+        // on the phone this will give different suggestions because there is different proximityInfo (coming from keyboard, which is different when shifted)
         tapTypingSuggestions = suggestionResults(listOf(
             suggestion("but", 100),
             suggestion("buy", 95),
@@ -529,7 +525,9 @@ class SuggestTest {
 
         glideTypingSuggestions = tapTypingSuggestions
         val result3 = getSuggestedWords(true, "", WordComposer.CAPS_MODE_MANUAL_SHIFTED)
-        assert(!result3.mWillAutoCorrect) // todo: why is this claiming it will not autocorrect? it really should, and works on phone
+        // mWillAutoCorrect is true on phone, because after glide typing is done, the result is set as typed word
+        // when pressing shift to capitalize it, autocorrect will only work if the typed word changes when capitalized. this does not work without typed word
+        //assert(result3.mWillAutoCorrect)
         assertEquals("but", result3.typedWordInfo.mWord)
         assertEquals(listOf("But", "Buy", "Bit", "😢", "Butter"), result3.mSuggestedWordInfoList.map { it.mWord })
     }
