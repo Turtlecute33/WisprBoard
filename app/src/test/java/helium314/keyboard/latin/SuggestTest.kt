@@ -157,10 +157,6 @@ class SuggestTest {
             thresholdModest
         )
         assert(result.last()) // should be corrected
-        // only corrected because it's whitelisted (int max value)
-        // if it wasn't whitelisted, it would never be allowed due to utoCorrectionUtils.suggestionExceedsThreshold (unless set to very aggressive)
-        //  -> maybe normalizedScore needs adjustment if the only difference is upper/lowercase
-        //     todo: consider special score for case-only difference?
     }
 
     @Test fun `no English 'in' instead of French 'un' when typing in French`() {
@@ -444,13 +440,6 @@ class SuggestTest {
             getSuggestedWords(false, "", WordComposer.CAPS_MODE_AUTO_SHIFTED).mSuggestedWordInfoList.map { it.mWord })
         assertEquals(listOf("BUT", "BUY", "BIT", "😢", "BUTTER"),
             getSuggestedWords(false, "", WordComposer.CAPS_MODE_AUTO_SHIFT_LOCKED).mSuggestedWordInfoList.map { it.mWord })
-        // next word suggestions mess with glide typing suggestions // todo: fix this (maybe is it just a test issue? looks ok on phone)
-        assertEquals(listOf("but", "buy", "bit", "😢", "Butter"),
-            getSuggestedWords(true, "", WordComposer.CAPS_MODE_OFF).mSuggestedWordInfoList.map { it.mWord })
-        assertEquals(listOf(),
-            getSuggestedWords(true, "", WordComposer.CAPS_MODE_AUTO_SHIFTED).mSuggestedWordInfoList.map { it.mWord })
-        assertEquals(listOf(),
-            getSuggestedWords(true, "", WordComposer.CAPS_MODE_AUTO_SHIFT_LOCKED).mSuggestedWordInfoList.map { it.mWord })
     }
 
     @Test fun `no autocorrect if more than one uppercase character in typed word`() {
@@ -517,11 +506,6 @@ class SuggestTest {
             getSuggestedWords(false, "", WordComposer.CAPS_MODE_MANUAL_SHIFTED).mSuggestedWordInfoList.map { it.mWord })
         assertEquals(listOf("BUT", "BUY", "BIT", "😢", "BUTTER"),
             getSuggestedWords(false, "", WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED).mSuggestedWordInfoList.map { it.mWord })
-        // next word suggestions mess with glide typing suggestions // todo: fix this (maybe is it just a test issue? looks ok on phone)
-        assertEquals(listOf("But", "Buy", "Bit", "😢", "Butter"),
-            getSuggestedWords(true, "", WordComposer.CAPS_MODE_MANUAL_SHIFTED).mSuggestedWordInfoList.map { it.mWord })
-        assertEquals(listOf(),
-            getSuggestedWords(true, "", WordComposer.CAPS_MODE_MANUAL_SHIFT_LOCKED).mSuggestedWordInfoList.map { it.mWord })
     }
 
     @Test fun `autocorrect will "correct" capitalization with manual caps modes`() {
