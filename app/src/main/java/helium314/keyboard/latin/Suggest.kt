@@ -209,7 +209,7 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             // was type with a lot of care
             || wordComposer.hasDigits() // If the word is mostly caps, we never auto-correct because this is almost
             // certainly intentional (and careful input)
-            || wordComposer.isMostlyCaps // We never auto-correct when suggestions are resumed because it would be unexpected
+            || (wordComposer.isMostlyCaps && !wordComposer.isAllUpperCase) // We never auto-correct when suggestions are resumed because it would be unexpected
             || wordComposer.isResumed // If we don't have a main dictionary, we never want to auto-correct. The reason
             // for this is, the user may have a contact whose name happens to match a valid
             // word in their language, and it will unexpectedly auto-correct. For example, if
