@@ -45,7 +45,6 @@ import helium314.keyboard.latin.utils.ToolbarMode;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -268,13 +267,13 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     private static final Settings sInstance = new Settings();
 
     // preferences that are not used in SettingsValues and thus should not trigger reload when changed
-    private static final HashSet<String> dontReloadOnChanged = new HashSet<>() {{
-        add(PREF_LAST_SHOWN_EMOJI_CATEGORY_PAGE_ID);
-        add(PREF_LAST_SHOWN_EMOJI_CATEGORY_ID);
-        add(PREF_EMOJI_RECENT_KEYS);
-        add(PREF_DONT_SHOW_MISSING_DICTIONARY_DIALOG);
-        add(PREF_SELECTED_SUBTYPE);
-    }};
+    private static boolean reloadOnChanged(String key) {
+        return switch (key) {
+            case PREF_LAST_SHOWN_EMOJI_CATEGORY_PAGE_ID, PREF_LAST_SHOWN_EMOJI_CATEGORY_ID, PREF_EMOJI_RECENT_KEYS,
+                 PREF_DONT_SHOW_MISSING_DICTIONARY_DIALOG, PREF_SELECTED_SUBTYPE -> false;
+            default -> !key.startsWith(PREF_SAVED_APP_SUBTYPE_PREFIX);
+        };
+    }
 
     public static Settings getInstance() {
         return sInstance;
@@ -308,7 +307,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
 
     @Override
     public void onSharedPreferenceChanged(final SharedPreferences prefs, final String key) {
-        if (dontReloadOnChanged.contains(key) || (key != null && key.startsWith(PREF_SAVED_APP_SUBTYPE_PREFIX)))
+        if (key != null && !reloadOnChanged(key))
             return;
         mSettingsValuesLock.lock();
         try {
