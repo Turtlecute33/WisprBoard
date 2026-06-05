@@ -279,7 +279,6 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         val locale = mDictionaryFacilitator.mainLocale
         val capsMode = getCapsModeForGesture(wordComposer, keyboard)
         val suggestionsContainer = ArrayList(suggestionResults)
-        capitalizeAndAddTrailingSingleQuotes(suggestionsContainer, capsMode, 0, locale)
         replaceSingleLetterFirstSuggestion(suggestionsContainer)
 
         val rejected: SuggestedWordInfo?
@@ -295,7 +294,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         }
         SuggestedWordInfo.removeDupsAndTypedWord(null, suggestionsContainer)
         makeFirstTwoSuggestionsNonEmoji(suggestionsContainer)
-        val pseudoTypedWord = suggestionsContainer.firstOrNull() // unchanged first suggestion, but after makeFirstTwoSuggestionsNonEmoji
+        val pseudoTypedWord = suggestionsContainer.firstOrNull() // unchanged first suggestion, but considering adjusted order
+        capitalizeAndAddTrailingSingleQuotes(suggestionsContainer, capsMode, 0, locale)
 
         // For some reason some suggestions with MIN_VALUE are making their way here.
         // TODO: Find a more robust way to detect distracters.
