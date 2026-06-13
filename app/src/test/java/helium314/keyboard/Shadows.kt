@@ -10,6 +10,7 @@ import androidx.core.app.LocaleManagerCompat
 import androidx.core.os.LocaleListCompat
 import com.android.inputmethod.latin.utils.BinaryDictionaryUtils
 import helium314.keyboard.latin.BuildConfig
+import helium314.keyboard.latin.DictionaryFacilitatorImpl
 import helium314.keyboard.latin.common.StringUtils
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
@@ -34,6 +35,10 @@ class ShadowInputMethodManager2 : ShadowInputMethodManager() {
     )
     @Implementation
     fun getShortcutInputMethodsAndSubtypes() = emptyMap<InputMethodInfo, List<InputMethodSubtype>>()
+    @Implementation
+    override fun getCurrentInputMethodSubtype() = InputMethodSubtype.InputMethodSubtypeBuilder()
+        .setSubtypeLocale("en")
+        .build()
 }
 
 @Implements(BinaryDictionaryUtils::class)
@@ -98,5 +103,10 @@ object ShadowBinaryDictionaryUtils {
     private fun costOfSubstitution(a: Char, b: Char): Int {
         return if (a == b) 0 else 1
     }
+}
 
+@Implements(DictionaryFacilitatorImpl::class)
+class ShadowDictionaryFacilitatorImpl {
+    @Implementation
+    fun hasAtLeastOneInitializedMainDictionary() = true
 }

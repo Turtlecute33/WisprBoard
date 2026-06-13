@@ -307,9 +307,12 @@ public abstract class AndroidWordLevelSpellCheckerSession extends Session {
                                         TextUtils.join(Constants.STRING_SPACE, splitText) });
                     }
                 }
-                return isInDictForAnyCapitalization(text, capitalizeType) ?
-                        AndroidSpellCheckerService.getInDictEmptySuggestions() :
-                        AndroidSpellCheckerService.getNotInDictEmptySuggestions(!periodOnlyAtLastIndex);
+                return switch (checkability) {
+                    case CHECKABILITY_FIRST_LETTER_UNCHECKABLE, CHECKABILITY_TOO_MANY_NON_LETTERS -> AndroidSpellCheckerService.getNotInDictEmptySuggestions(false);
+                    default -> isInDictForAnyCapitalization(text, capitalizeType)
+                               ? AndroidSpellCheckerService.getInDictEmptySuggestions()
+                               : AndroidSpellCheckerService.getNotInDictEmptySuggestions(!periodOnlyAtLastIndex);
+                };
             }
 
             // Handle normal words.
