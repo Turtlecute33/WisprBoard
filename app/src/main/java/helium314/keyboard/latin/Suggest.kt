@@ -129,7 +129,8 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         // If there is an incoming autocorrection, make sure typed word is shown, so user is able to override it.
         // Otherwise, if the relevant setting is enabled, show the typed word in the middle.
         val typedWordWasCapitalized = capitalizedTypedWord != wordComposer.typedWord
-        val correctToCapitalizedWord = typedWordWasCapitalized && isCorrectionEnabled && wordComposer.typedWord.drop(1).none { it.isUpperCase() }
+        val correctToCapitalizedWord = typedWordWasCapitalized && isCorrectionEnabled
+            && !wordComposer.isCursorFrontOrMiddleOfComposingWord && wordComposer.typedWord.drop(1).none { it.isUpperCase() }
         val indexOfTypedWord = 1 + if (hasAutoCorrection) SuggestedWords.INDEX_OF_AUTO_CORRECTION else SuggestedWords.INDEX_OF_TYPED_WORD
         if (
             (hasAutoCorrection
@@ -330,8 +331,10 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
         } else {
             suggestionsContainer
         }
+
+        val autocorrectCapitalization = addCapitalizedSuggestion && isCorrectionEnabled && !wordComposer.isCursorFrontOrMiddleOfComposingWord
         return SuggestedWords(suggestionsList, suggestionResults.mRawSuggestions, pseudoTypedWordInfo, true,
-            addCapitalizedSuggestion && isCorrectionEnabled, false, inputStyle, sequenceNumber)
+            autocorrectCapitalization, false, inputStyle, sequenceNumber)
     }
 
     private fun useDefaultEmojiSkinTone(suggestionsList: ArrayList<SuggestedWordInfo>) {
