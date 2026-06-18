@@ -41,7 +41,7 @@ public final class WordComposer {
 
     // The list of events that served to compose this string.
     private final ArrayList<Event> mEvents;
-    private final InputPointers mInputPointers = new InputPointers(MAX_WORD_LENGTH);
+    private final InputPointers mInputPointers;
     private SuggestedWordInfo mAutoCorrection;
     private boolean mIsResumed;
     private boolean mIsBatchMode;
@@ -73,12 +73,35 @@ public final class WordComposer {
     public WordComposer() {
         mCombinerChain = new CombinerChain("", "");
         mEvents = new ArrayList<>();
+        mInputPointers = new InputPointers(MAX_WORD_LENGTH);
         mAutoCorrection = null;
         mIsResumed = false;
         mIsBatchMode = false;
         mCursorPositionWithinWord = 0;
         mRejectedBatchModeSuggestion = null;
         refreshTypedWordCache();
+    }
+
+    /** creates a copy of the internal state (currently reuses mInputPointers though, so don't use this for other purpose than getting suggestions) */
+    public WordComposer copy() {
+        return new WordComposer(this);
+    }
+
+    @SuppressWarnings("CopyConstructorMissesField")
+    private WordComposer(WordComposer other) {
+        mEvents = null;
+        mInputPointers = other.mInputPointers; // ideally we would have an actual copy, but for current use it should be ok
+        mAutoCorrection = other.mAutoCorrection;
+        mIsResumed = other.mIsResumed;
+        mIsBatchMode = other.mIsBatchMode;
+        mRejectedBatchModeSuggestion = other.mRejectedBatchModeSuggestion;
+        mTypedWordCache = other.mTypedWordCache;
+        mCapsCount = other.mCapsCount;
+        mDigitsCount = other.mDigitsCount;
+        mCapitalizedMode = other.mCapitalizedMode;
+        mCodePointSize = other.mCodePointSize;
+        mCursorPositionWithinWord = other.mCursorPositionWithinWord;
+        mIsOnlyFirstCharCapitalized = other.mIsOnlyFirstCharCapitalized;
     }
 
     public ComposedData getComposedDataSnapshot() {
@@ -504,6 +527,6 @@ public final class WordComposer {
     private WordComposer(boolean isEmpty) {
         mCodePointSize = isEmpty ? 0 : 1;
         mEvents = null;
+        mInputPointers = null;
     }
-
 }

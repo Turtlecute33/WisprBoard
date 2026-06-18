@@ -2631,7 +2631,7 @@ public final class InputLogic {
         mWordComposer.adviseCapitalizedModeBeforeFetchingSuggestions(
                 getActualCapsMode(settingsValues, KeyboardSwitcher.getInstance().getKeyboardShiftMode()));
         try {
-            final SuggestedWords suggestedWords = mSuggestState.mSuggest.getSuggestedWords(mWordComposer,
+            final SuggestedWords suggestedWords = mSuggestState.mSuggest.getSuggestedWords(mWordComposer.copy(),
                     getNgramContextFromNthPreviousWordForSuggestion(
                     settingsValues.mSpacingAndPunctuations,
                     // Get the word on which we should search the bigrams. If we are composing
