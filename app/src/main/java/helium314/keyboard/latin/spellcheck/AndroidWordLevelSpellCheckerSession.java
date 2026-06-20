@@ -188,7 +188,11 @@ public abstract class AndroidWordLevelSpellCheckerSession extends Session {
      * @return one of the FILTER_OUT_* constants above.
      */
     private static int getCheckabilityInScript(final String text, final String script) {
-        if (TextUtils.isEmpty(text) || text.length() <= 1) return CHECKABILITY_TOO_SHORT;
+        if (TextUtils.isEmpty(text)) return CHECKABILITY_TOO_SHORT;
+        if (text.length() == 1)
+            return ScriptUtils.isLetterPartOfScript(text.codePointAt(0), script)
+                   ? CHECKABILITY_TOO_SHORT
+                   : CHECKABILITY_TOO_MANY_NON_LETTERS;
 
         // TODO: check if an equivalent processing can't be done more quickly with a
         // compiled regexp.

@@ -24,4 +24,9 @@ class SpellCheckerTest {
         val result = checker.onGetSuggestions(TextInfo("123"), 2)
         assertNotEquals(SuggestionsInfo.RESULT_ATTR_LOOKS_LIKE_TYPO, result.suggestionsAttributes)
     }
+
+    @Test fun `$ is not a typo`() {
+        val result = checker.onGetSuggestions(TextInfo("$"), 2)
+        assertNotEquals(SuggestionsInfo.RESULT_ATTR_LOOKS_LIKE_TYPO, result.suggestionsAttributes)
+    }
 }
