@@ -2357,7 +2357,8 @@ public class LatinIME extends InputMethodService implements
                 || code == KeyCode.REDO;
     }
 
-    public void onTextInput(final String rawText) {
+    public void onTextInput(@Nullable final String rawText) {
+        if (rawText == null) return;
         releaseAiOverlaysForCommittedText();
         // TODO: have the keyboard pass the correct key code when we need it.
         final Event event = Event.createSoftwareTextEvent(rawText, KeyCode.MULTIPLE_CODE_POINTS, null);
