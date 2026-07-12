@@ -1560,6 +1560,11 @@ public final class InputLogic {
     private boolean tryStripSpaceAndReturnWhetherShouldSwapInstead(final Event event,
             final InputTransaction inputTransaction) {
         final int codePoint = event.getCodePoint();
+        if (codePoint == INLINE_EMOJI_SEARCH_MARKER && mEmojiDictionaryFacilitator != null) {
+            // Avoid interfering with inline emoji search
+            return false;
+        }
+
         final boolean isFromSuggestionStrip = event.isSuggestionStripPress();
         if (Constants.CODE_ENTER == codePoint &&
                 SpaceState.SWAP_PUNCTUATION == inputTransaction.getSpaceState()) {
