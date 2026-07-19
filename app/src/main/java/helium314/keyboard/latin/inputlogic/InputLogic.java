@@ -143,6 +143,8 @@ public final class InputLogic {
 
     private boolean mJustRevertedACommit = false;
 
+    private long mCursorMoveExpectedUntil = 0L;
+
     /**
      * Create a new instance of the input logic.
      * @param latinIME the instance of the parent LatinIME. We should remove this when we can.
@@ -373,6 +375,17 @@ public final class InputLogic {
         return inputTransaction;
     }
 
+    /** indicates that the next selection update is expected to be a cursor move (though not needed for arrow keys) */
+    public void setExpectCursorMove() {
+        mCursorMoveExpectedUntil = SystemClock.elapsedRealtime() + 500;
+    }
+
+    private boolean mightBeExpectedCursorMove() {
+        boolean isMove = mCursorMoveExpectedUntil > SystemClock.elapsedRealtime();
+        mCursorMoveExpectedUntil = 0L;
+        return isMove;
+    }
+
     /**
      * Consider an update to the cursor position. Evaluate whether this update has happened as
      * part of normal typing or whether it was an explicit cursor move by the user. In any case,
@@ -384,10 +397,13 @@ public final class InputLogic {
      * @param settingsValues the current values of the settings.
      * @return whether the cursor has moved as a result of user interaction.
      */
-    public boolean onUpdateSelection(final int oldSelStart, final int oldSelEnd, final int newSelStart,
-             final int newSelEnd, final int composingSpanStart, final int composingSpanEnd, final SettingsValues settingsValues) {
+    public boolean onUpdateSelection(int oldSelStart, int oldSelEnd, int newSelStart,
+             int newSelEnd, int composingSpanStart, int composingSpanEnd, SettingsValues settingsValues) {
+        boolean expectCursorMove = mightBeExpectedCursorMove(); // reset the timer
         if (mConnection.isBelatedExpectedUpdate(oldSelStart, newSelStart, oldSelEnd, newSelEnd, composingSpanStart, composingSpanEnd)) {
-            return false;
+            // return whether we expect a user-initiated explicit cursor move (i.e. not as result of other input, but e.g. space swipe)
+            // note that arrow keys are not considered, because for them isBelatedExpectedUpdate returns false
+            return expectCursorMove;
         }
         // TODO: the following is probably better done in resetEntireInputState().
         // it should only happen when the cursor moved, and the very purpose of the
