@@ -1241,6 +1241,8 @@ New dictionary:
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
     <string name="voice_warning_zdr_unenforceable">Zero data retention can\'t be enforced for <xliff:g id="slug">%1$s</xliff:g>. Sending anyway — pick a model with the ZDR badge for a guaranteed no-retention route.</string>
     <string name="voice_error_field_changed">Transcription discarded — the text field changed while it was being transcribed</string>
+    <!-- Shown when a finished dictation cannot be written back, so it is put on the clipboard -->
+    <string name="voice_copied_field_changed">The text field changed, so your dictation was copied to the clipboard. Paste it where you want it.</string>
     <!-- Badges shown next to AI models in the model picker -->
     <string name="model_badge_default">Default</string>
     <string name="model_badge_free">Free</string>

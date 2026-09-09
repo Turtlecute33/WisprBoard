@@ -530,7 +530,6 @@ public final class InputLogic {
             final KeyboardSwitcher keyboardSwitcher, final LatinIME.UIHandler handler) {
         mWordBeingCorrectedByCursor = null;
         mInputLogicHandler.onStartBatchInput();
-        handler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyBatchInstance(), false);
         handler.cancelUpdateSuggestionStrip();
         ++mAutoCommitSequenceNumber;
         mConnection.beginBatchEdit();
@@ -560,6 +559,14 @@ public final class InputLogic {
                 // set selected text as rejected to avoid glide typing resulting in exactly the selected word again
                 mWordComposer.setRejectedBatchModeSuggestion(selectedText.toString());
         }
+        // Deliberately AFTER the auto-correct/commit block above, not before it. This posts
+        // MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS, and commitCurrentAutoCorrection now waits
+        // on that message being drained — so posting it first made every glide started after a
+        // single tapped letter run a synchronous suggestion lookup on the main thread, inside an
+        // open batch edit. Posting it here is also strictly better for the strip: the method
+        // removes any queued message of the same id first, so it now also clears whatever the
+        // commit above produced.
+        handler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyBatchInstance(), false);
         final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
         if (Character.isLetterOrDigit(codePointBeforeCursor)
                 || settingsValues.isUsuallyFollowedBySpace(codePointBeforeCursor)) {

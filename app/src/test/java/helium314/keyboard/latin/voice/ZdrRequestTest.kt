@@ -66,4 +66,18 @@ class ZdrRequestTest {
         assertFalse(isZdrRouteUnavailable(401, "No endpoints found"))
         assertFalse(isZdrRouteUnavailable(404, "Model does not exist"))
     }
+
+    @Test
+    fun onlyARetentionSpecificRefusalIsRememberedForLater() {
+        // OpenRouter's real retention rejection.
+        assertTrue(isZdrRouteVerdictCacheable(404, "No endpoints found matching the data policy"))
+        assertTrue(isZdrRouteVerdictCacheable(400, "No ZDR endpoint is available"))
+        // Same wording, different cause: a provider that is momentarily down. Falling back for
+        // this request is right; remembering it for 30 minutes would take the user off
+        // zero-data-retention because of a transient outage.
+        assertFalse(isZdrRouteVerdictCacheable(404, "No endpoints found for foo/bar"))
+        assertFalse(isZdrRouteVerdictCacheable(401, "No endpoints found matching the data policy"))
+        // Anything cacheable must still trigger the fallback itself.
+        assertTrue(isZdrRouteUnavailable(404, "No endpoints found matching the data policy"))
+    }
 }

@@ -258,18 +258,21 @@ class OpenRouterClient(
         // second time and would otherwise be handed a fresh full budget.
         deadlineMs = totalBudgetMs?.let { SystemClock.elapsedRealtime() + it } ?: Long.MAX_VALUE
         if (disableReasoning && isReasoningControlKnownRejected(model)) suppressReasoningControl = true
-        val requestZdr = provider == AiProvider.OPENROUTER
-            && useZeroDataRetention
-            // A model whose ZDR route we have already found missing would otherwise re-upload the
-            // whole clip on every single dictation just to rediscover it.
-            && !isZdrRouteKnownUnavailable(model)
+        val zdrWanted = provider == AiProvider.OPENROUTER && useZeroDataRetention
+        // A model whose ZDR route we have already found missing would otherwise re-upload the
+        // whole clip on every single dictation just to rediscover it.
+        val zdrSuppressed = zdrWanted && isZdrRouteKnownUnavailable(model)
+        // Report the downgrade even when it comes from the cache rather than from a live refusal,
+        // so the user is told on every affected request and not only the first one in 30 minutes.
+        if (zdrSuppressed) didFallbackFromZdr = true
+        val requestZdr = zdrWanted && !zdrSuppressed
         return try {
             withReasoningFallback(label, requestZdr, retryTimeouts) { request(requestZdr) }
         } catch (e: OpenRouterException) {
             if (!requestZdr || !e.isZdrRouteUnavailable()) throw e
             // ZDR is a preference, not a hard requirement. Retry once through normal routing so
             // unsupported, custom, or temporarily unavailable ZDR routes do not break the feature.
-            markZdrRouteUnavailable(model)
+            if (isZdrRouteVerdictCacheable(e.statusCode, e.errorBody)) markZdrRouteUnavailable(model)
             didFallbackFromZdr = true
             withReasoningFallback(label, false, retryTimeouts) { request(false) }
         }
@@ -920,6 +923,25 @@ internal fun isReasoningControlRejected(statusCode: Int, errorBody: String): Boo
         body.contains("does not support") ||
         body.contains("not supported") ||
         body.contains("unsupported")
+}
+
+/**
+ * Whether a ZDR refusal is specific enough to *remember*.
+ *
+ * [isZdrRouteUnavailable] deliberately also matches a bare "no endpoint", because that is what
+ * OpenRouter answers when a model has no route that satisfies the constraint — but it is equally
+ * what it answers when a provider is momentarily down. Caching the latter for half an hour would
+ * silently take a user off zero-data-retention because of a transient outage, so only a body that
+ * actually mentions retention is allowed to set the cache. The fallback for this request still
+ * happens either way; only the memory of it is gated.
+ */
+internal fun isZdrRouteVerdictCacheable(statusCode: Int, errorBody: String): Boolean {
+    if (!isZdrRouteUnavailable(statusCode, errorBody)) return false
+    val body = errorBody.lowercase(Locale.US)
+    return body.contains("zdr") ||
+        body.contains("zero data") ||
+        body.contains("data retention") ||
+        body.contains("data policy")
 }
 
 internal fun isZdrRouteUnavailable(statusCode: Int, errorBody: String): Boolean {

@@ -171,6 +171,14 @@ public class LatinIME extends InputMethodService implements
     private long mInputSessionGeneration;
     private long mVoiceTargetSessionGeneration = -1L;
     private InputConnection mVoiceTargetInputConnection;
+    /**
+     * The selection as it was when recording started. Needed to tell "the selection the user
+     * deliberately dictated over" from "a selection made while the upload was in flight" — the
+     * commit-time refusal cannot distinguish those from a bare hasSelection() check, and refusing
+     * both means select-then-dictate never works at all.
+     */
+    private int mVoiceTargetSelectionStart = Constants.NOT_A_CURSOR_POSITION;
+    private int mVoiceTargetSelectionEnd = Constants.NOT_A_CURSOR_POSITION;
     private boolean mVoiceTargetSelectionChanged;
     private final android.os.Handler mTextFixOverlayHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
@@ -677,6 +685,8 @@ public class LatinIME extends InputMethodService implements
                 mVoiceTargetEditorId = currentEditorIdentity();
                 mVoiceTargetSessionGeneration = mInputSessionGeneration;
                 mVoiceTargetInputConnection = getCurrentInputConnection();
+                mVoiceTargetSelectionStart = mInputLogic.mConnection.getExpectedSelectionStart();
+                mVoiceTargetSelectionEnd = mInputLogic.mConnection.getExpectedSelectionEnd();
                 mVoiceTargetSelectionChanged = false;
                 if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(25L);
                 if (mSuggestionStripView != null) {
@@ -712,6 +722,8 @@ public class LatinIME extends InputMethodService implements
                 final long targetSession = mVoiceTargetSessionGeneration;
                 final InputConnection targetConnection = mVoiceTargetInputConnection;
                 final boolean selectionChanged = mVoiceTargetSelectionChanged;
+                final int targetSelStart = mVoiceTargetSelectionStart;
+                final int targetSelEnd = mVoiceTargetSelectionEnd;
                 clearVoiceTarget();
                 final String current = currentEditorIdentity();
                 // The InputConnection identity check stays. In Compose apps every text field shares
@@ -722,16 +734,20 @@ public class LatinIME extends InputMethodService implements
                         || !VoiceDestinationGuard.isUnchanged(
                         target, current, targetSession, mInputSessionGeneration, selectionChanged)) {
                     Log.i(TAG, "Discarding transcription: editor changed since recording started");
-                    Toast.makeText(LatinIME.this, R.string.voice_error_field_changed,
-                            Toast.LENGTH_LONG).show();
+                    rescueTranscription(text);
                     return;
                 }
-                // Refuse only the case that actually destroys work: committing here would replace
-                // whatever the user selected while they were waiting for the upload.
-                if (mInputLogic.mConnection.hasSelection()) {
-                    Log.i(TAG, "Discarding transcription: a selection was made while it was in flight");
-                    Toast.makeText(LatinIME.this, R.string.voice_error_field_changed,
-                            Toast.LENGTH_LONG).show();
+                // Refuse only the case that actually destroys work: committing over a selection
+                // that is not the one the recording started against. Dictating over a selection to
+                // replace it is a deliberate, supported action, so the positions have to be
+                // compared — a plain hasSelection() check refuses that too, and would also wrongly
+                // accept a selection the IME itself made mid-upload (Select All, shift+arrow), for
+                // which the move is "expected" and never arms mVoiceTargetSelectionChanged.
+                if (mInputLogic.mConnection.hasSelection()
+                        && (mInputLogic.mConnection.getExpectedSelectionStart() != targetSelStart
+                        || mInputLogic.mConnection.getExpectedSelectionEnd() != targetSelEnd)) {
+                    Log.i(TAG, "Discarding transcription: a different selection exists now");
+                    rescueTranscription(text);
                     return;
                 }
                 final Integer blocked = getBlockedErrorResId();
@@ -1047,6 +1063,24 @@ public class LatinIME extends InputMethodService implements
      * clipboard preview but also keep the text out of clipboard history, which is the whole
      * recovery mechanism.
      */
+    /**
+     * The dictation equivalent of {@link #rescueTranslation}: the user has already paid for this
+     * transcription, so a destination that can no longer accept it should not mean the words are
+     * simply deleted. The old message ("the text field changed, try again") also asserted
+     * something the user cannot act on — re-recording produces the same refusal.
+     *
+     * Not used for the sensitive-field refusal below: a password box or an incognito field is
+     * exactly where dictated text must not be quietly parked on the clipboard.
+     */
+    private void rescueTranscription(@NonNull final String text) {
+        if (mClipboardHistoryManager == null) {
+            Toast.makeText(this, R.string.voice_error_field_changed, Toast.LENGTH_LONG).show();
+            return;
+        }
+        mClipboardHistoryManager.copyToSystemClipboard(text);
+        Toast.makeText(this, R.string.voice_copied_field_changed, Toast.LENGTH_LONG).show();
+    }
+
     private void rescueTranslation(@NonNull final String translated) {
         if (mClipboardHistoryManager == null) {
             Toast.makeText(this, R.string.translate_error_selection_changed, Toast.LENGTH_LONG).show();
@@ -2196,6 +2230,22 @@ public class LatinIME extends InputMethodService implements
         clearPendingTranslateState();
     }
 
+    /**
+     * Retires a stale AI proposal when text is committed by some route other than a key event —
+     * an emoji, a clip, a suggestion, the start of a glide.
+     *
+     * Guarded rather than unconditional: {@code clearPending*State()} also calls
+     * {@code manager.cancel()}, so calling it blindly here aborted a Text Fix or Translate request
+     * the user had already paid for, reporting only {@code onFinished()} — no result, no error, no
+     * clipboard rescue. In the two guarded states both managers are IDLE, so the cancel inside is
+     * a no-op and only the on-screen proposal is taken down.
+     */
+    private void releaseAiOverlaysForCommittedText() {
+        if (mPendingTextFixProposed == null && !mTranslateMenuOpen) return;
+        clearPendingTextFixState();
+        clearPendingTranslateState();
+    }
+
     private static boolean changesEditorText(@NonNull final Event event) {
         if (!event.isFunctionalKeyEvent()) return true;
         final int code = event.getKeyCode();
@@ -2207,9 +2257,7 @@ public class LatinIME extends InputMethodService implements
     }
 
     public void onTextInput(final String rawText) {
-        // Committed text always replaces whatever the overlay was proposing.
-        clearPendingTextFixState();
-        clearPendingTranslateState();
+        releaseAiOverlaysForCommittedText();
         // TODO: have the keyboard pass the correct key code when we need it.
         final Event event = Event.createSoftwareTextEvent(rawText, KeyCode.MULTIPLE_CODE_POINTS, null);
         final InputTransaction completeInputTransaction =
@@ -2221,9 +2269,7 @@ public class LatinIME extends InputMethodService implements
     }
 
     public void onStartBatchInput() {
-        // A glide-typed word is about to be committed, so the overlay's proposal is stale.
-        clearPendingTextFixState();
-        clearPendingTranslateState();
+        releaseAiOverlaysForCommittedText();
         mInputLogic.onStartBatchInput(mSettings.getCurrent(), mKeyboardSwitcher, mHandler);
         mGestureConsumer.onGestureStarted(mRichImm.getCurrentSubtypeLocale(), mKeyboardSwitcher.getKeyboard());
     }
@@ -2675,6 +2721,8 @@ public class LatinIME extends InputMethodService implements
         mVoiceTargetEditorId = null;
         mVoiceTargetSessionGeneration = -1L;
         mVoiceTargetInputConnection = null;
+        mVoiceTargetSelectionStart = Constants.NOT_A_CURSOR_POSITION;
+        mVoiceTargetSelectionEnd = Constants.NOT_A_CURSOR_POSITION;
         mVoiceTargetSelectionChanged = false;
     }
 

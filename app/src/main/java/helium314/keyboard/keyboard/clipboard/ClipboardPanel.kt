@@ -193,7 +193,10 @@ private fun PanelTopBar(state: ClipboardPanelState, actions: ClipboardPanelActio
             // itself after a few seconds, which is load-bearing — the ComposeView content is
             // created once and reused across panel sessions, so a bare `remember` flag would
             // survive a close and reopen and the next single tap would delete everything.
-            var armed by remember { mutableStateOf(false) }
+            // Keyed on the session: the ComposeView content is created once and reused, so an
+            // unkeyed remember stayed armed across a close and reopen and the next single tap
+            // would have wiped the history.
+            var armed by remember(state.sessionId) { mutableStateOf(false) }
             LaunchedEffect(armed) {
                 if (armed) {
                     delay(CLEAR_ALL_ARMED_MS)

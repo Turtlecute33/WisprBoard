@@ -925,9 +925,11 @@ private fun VoiceTestKeyPreference(setting: Setting) {
     // lifecycle scope is cancelled when the settings screen really goes away, which is the
     // behaviour that was intended.
     val scope = LocalLifecycleOwner.current.lifecycleScope
-    // Deliberately not rememberSaveable for `busy`: the probe can't survive process death, so
-    // restoring busy=true would leave the UI stuck.
-    var busy by rememberSaveable { mutableStateOf(false) }
+    // Deliberately NOT rememberSaveable: the probe cannot survive a rotation or process death, so
+    // restoring busy=true would leave the row stuck on "Testing…" swallowing taps, with no live
+    // coroutine left to clear it. The lazy list hands the same MutableState back when the row
+    // scrolls out and in, so plain remember is enough to survive a scroll.
+    var busy by remember { mutableStateOf(false) }
     // The outcome used to be a toast only, which is easy to miss and gone a few seconds later —
     // leaving no way to tell whether the key was ever validated. Keep it under the row as well,
     // and keep it across a scroll, which is when the row is disposed and recreated.
@@ -964,10 +966,14 @@ private fun VoiceTestKeyPreference(setting: Setting) {
             busy = true
             lastResult = null
             scope.launch {
-                val result = withContext(Dispatchers.IO) { probeApiKey(provider, apiKey, model) }
-                Toast.makeText(ctx, result.messageRes, Toast.LENGTH_SHORT).show()
-                lastResult = result
-                busy = false
+                try {
+                    val result = withContext(Dispatchers.IO) { probeApiKey(provider, apiKey, model) }
+                    Toast.makeText(ctx, result.messageRes, Toast.LENGTH_SHORT).show()
+                    lastResult = result
+                } finally {
+                    // Also on cancellation: the row must never be left claiming it is still testing.
+                    busy = false
+                }
             }
         }
     )

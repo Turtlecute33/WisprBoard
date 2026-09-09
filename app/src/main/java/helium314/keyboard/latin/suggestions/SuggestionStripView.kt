@@ -572,12 +572,16 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         if (tag is ToolbarKey) {
             val code = getCodeForToolbarKey(tag)
             if (code != KeyCode.UNSPECIFIED) {
+                // Toolbar keys reach the clipboard, selection and text of a possibly locked device,
+                // so the lock state is re-checked here rather than trusted from the cache.
+                if (refuseToolbarActionWhenLocked()) return
                 Log.d(TAG, "click toolbar key $tag")
                 listener.onCodeInput(code, Constants.SUGGESTION_STRIP_COORDINATE, Constants.SUGGESTION_STRIP_COORDINATE, false)
                 return
             }
         }
         if (view === toolbarExpandKey) {
+            if (refuseToolbarActionWhenLocked()) return
             setToolbarVisibility(toolbarContainer.visibility != VISIBLE)
         }
 
@@ -607,6 +611,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
     private fun onLongClickToolbarKey(view: View) {
         val tag = view.tag as? ToolbarKey ?: return
+        if (refuseToolbarActionWhenLocked()) return
         if (!Settings.getValues().mQuickPinToolbarKeys || view.parent === pinnedKeys) {
             val longClickCode = getCodeForToolbarKeyLongClick(tag)
             if (longClickCode != KeyCode.UNSPECIFIED) {
@@ -778,10 +783,26 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         if (locked == deviceLocked) return
         deviceLocked = locked
         // An AI overlay owns the strip while it is installed; re-applying visibility underneath it
-        // would tear it down.
+        // would tear it down. The flag above is still updated, so the next repaint is correct.
         if (hasOverlay) return
         setToolbarVisibility(toolbarWanted)
         updateKeys()
+    }
+
+    /**
+     * Re-reads the lock state at the moment a toolbar key is actually used.
+     *
+     * The cache is refreshed on window-show, which covers locking and unlocking the device — but
+     * not a trust agent revoking trust *while* the user is replying from the lock screen, where the
+     * reply field keeps focus and the IME window is never hidden. There is no broadcast for that,
+     * so the check happens at the tap. One binder call per toolbar press, which is rare; keystrokes
+     * stay IPC-free, which was the point of the cache.
+     *
+     * @return true when the device is locked and the action must not proceed.
+     */
+    private fun refuseToolbarActionWhenLocked(): Boolean {
+        refreshLockedState()
+        return deviceLocked
     }
 
     private fun addKeyToPinnedKeys(pinnedKey: ToolbarKey) {

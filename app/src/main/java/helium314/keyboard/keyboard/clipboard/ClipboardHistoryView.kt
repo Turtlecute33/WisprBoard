@@ -123,6 +123,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         historyManager.prepareClipboardHistory()
         historyManager.setHistoryChangeListener(this)
 
+        panelState.sessionId++
         panelState.typingMode = null
         panelState.menuFor = null
         panelState.pickingLanguage = false

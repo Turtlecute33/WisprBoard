@@ -119,6 +119,13 @@ class ClipboardPanelState {
     /** true while a translation started from the action sheet is in flight */
     var translating by mutableStateOf(false)
 
+    /**
+     * Bumped every time the panel is opened. The ComposeView content is created once and reused
+     * across panel sessions, so a plain `remember` inside the panel survives a close and reopen —
+     * anything that must not, keys on this.
+     */
+    var sessionId by mutableIntStateOf(0)
+
     fun setClips(entries: List<ClipboardHistoryEntry>) {
         val items = entries.map { ClipItem(it) }
         clips.clear()
