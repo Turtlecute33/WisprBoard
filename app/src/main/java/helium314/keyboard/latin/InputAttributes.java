@@ -98,11 +98,18 @@ public final class InputAttributes {
 
         mShouldInsertSpacesAutomatically = InputTypeUtils.isAutoSpaceFriendlyType(mInputType);
 
+        // Note what is NOT here any more: `!isShortcutImeReady()`. Upstream hid the mic when no
+        // other IME advertised a voice shortcut to hand off to, but this fork performs dictation
+        // itself and `switchToShortcutIme` has no callers left — so that term only made the mic
+        // key disappear because of what some *other* keyboard on the device does or does not
+        // declare, which reads as the feature being broken.
+        // The email term stays, and URI joins it, because VoiceInputManager refuses both kinds of
+        // field: without this a URI field showed a mic key that could only produce a toast.
         final boolean noMicrophone = mIsPasswordField
                 || InputTypeUtils.isEmailVariation(variation)
+                || variation == InputType.TYPE_TEXT_VARIATION_URI
                 || hasNoMicrophoneKeyOption()
-                || !RichInputMethodManager.isInitialized() // avoid crash when only using spell checker
-                || !RichInputMethodManager.getInstance().isShortcutImeReady();
+                || !RichInputMethodManager.isInitialized(); // avoid crash when only using spell checker
         mShouldShowVoiceInputKey = !noMicrophone;
 
         mDisableGestureFloatingPreviewText = InputAttributes.inPrivateImeOptions(

@@ -236,10 +236,17 @@ fun <T: Any?> SearchScreen(
                         content()
                     }
                 } else {
-                    // Cache the filter result by search text so scrolling / unrelated recompositions
-                    // don't re-scan settingsContainer on every frame.
+                    // Cache the filter result so scrolling and unrelated recompositions don't
+                    // re-scan on every frame — but key on the lambda as well as the query.
+                    // Keying on the query alone froze the list for the whole screen: with the
+                    // search box untouched it was computed once and never again, so a colour
+                    // "auto" switch appeared to do nothing and a word added to the personal
+                    // dictionary did not show up until you left the screen.
+                    // SearchSettingsScreen's lambda captures nothing, so it stays a stable
+                    // singleton and keeps its cache; the callers whose lambda closes over mutable
+                    // state are exactly the ones that need to invalidate.
                     val query = searchText.text
-                    val items = remember(query) { filteredItems(query) }
+                    val items = remember(query, filteredItems) { filteredItems(query) }
                     Scaffold(
                         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
                     ) { innerPadding ->

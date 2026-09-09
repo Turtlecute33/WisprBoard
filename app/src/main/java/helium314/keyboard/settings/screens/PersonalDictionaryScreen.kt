@@ -85,7 +85,7 @@ fun PersonalDictionaryScreen(
         }
     )
     if (selectedWord != null) {
-        EditWordDialog(selectedWord!!, locale) { selectedWord = null }
+        EditWordDialog(selectedWord!!, locale, words) { selectedWord = null }
     }
     ExtendedFloatingActionButton(
         onClick = { selectedWord = Word("", null, null) },
@@ -97,12 +97,26 @@ fun PersonalDictionaryScreen(
 }
 
 @Composable
-private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> Unit) {
+private fun EditWordDialog(
+    word: Word,
+    locale: Locale?,
+    /** The words already stored for [locale], so the duplicate check needs no query. */
+    wordsForScreenLocale: List<Word>,
+    onDismissRequest: () -> Unit,
+) {
     val ctx = LocalContext.current
     val focusRequester = remember { FocusRequester() }
     var newWord by remember { mutableStateOf(word) }
     var newLocale by remember { mutableStateOf(locale) }
-    val wordValid = (newWord.word == word.word && locale == newLocale) || !doesWordExist(newWord.word, newLocale, ctx)
+    // The duplicate check used to run a cross-process UserDictionary ContentProvider query inside
+    // composition, so every character typed in this dialog cost a binder round trip plus a cursor
+    // walk on the UI thread. The screen has already loaded the list, so reuse it. Only a locale
+    // the screen did not load needs a query, and that happens once per locale choice, not per key.
+    val existingWords = remember(newLocale) {
+        (if (newLocale == locale) wordsForScreenLocale else getAll(newLocale, ctx))
+            .mapTo(HashSet()) { it.word }
+    }
+    val wordValid = (newWord.word == word.word && locale == newLocale) || newWord.word !in existingWords
     fun save() {
         if (newWord != word || locale != newLocale) {
             deleteWord(word, locale, ctx.contentResolver)
@@ -227,27 +241,6 @@ private fun deleteWord(wordDetails: Word, locale: Locale?, resolver: ContentReso
     }
 }
 
-private fun doesWordExist(word: String, locale: Locale?, context: Context): Boolean {
-    val hasWordProjection = arrayOf(UserDictionary.Words.WORD, UserDictionary.Words.LOCALE)
-
-    val select: String
-    val selectArgs: Array<String>?
-    if (locale == null) {
-        select = "${UserDictionary.Words.WORD}=? AND ${UserDictionary.Words.LOCALE} is null"
-        selectArgs = arrayOf(word)
-    } else {
-        select = "${UserDictionary.Words.WORD}=? AND ${UserDictionary.Words.LOCALE}=?"
-        // requires use of locale string (as opposed to more useful language tag) for interaction with Android system
-        selectArgs = arrayOf(word, locale.toString())
-    }
-    val cursor = runCatching {
-        context.contentResolver.query(UserDictionary.Words.CONTENT_URI, hasWordProjection, select, selectArgs, null)
-    }.getOrNull()
-    cursor.use {
-        if (null == it) return false
-        return it.count > 0
-    }
-}
 
 private fun getSpecificallySortedLocales(firstLocale: Locale?): List<Locale?> {
     val list: MutableList<Locale?> = getSortedDictionaryLocales().toMutableList()

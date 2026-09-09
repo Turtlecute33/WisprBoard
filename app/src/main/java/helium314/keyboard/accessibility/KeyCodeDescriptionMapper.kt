@@ -36,6 +36,14 @@ internal class KeyCodeDescriptionMapper private constructor() {
         put(KeyCode.ACTION_PREVIOUS, R.string.spoken_description_action_previous)
         put(KeyCode.EMOJI, R.string.spoken_description_emoji)
         put(KeyCode.EMOJI_SEARCH, R.string.spoken_description_search)
+        // Without these, TalkBack announces the fork's own keys as "Unknown character". With
+        // stock settings two of them are reachable (clipboard and the AI keys in the long-press
+        // Return popup), so a screen-reader user meets that straight away.
+        put(KeyCode.CLIPBOARD, R.string.spoken_description_clipboard)
+        put(KeyCode.VOICE_STT_INPUT, R.string.spoken_description_voice_stt)
+        put(KeyCode.TEXT_FIX, R.string.spoken_description_text_fix)
+        put(KeyCode.TEXT_FIX_2, R.string.spoken_description_text_fix_2)
+        put(KeyCode.TRANSLATE, R.string.spoken_description_translate)
         // Because the upper-case and lower-case mappings of the following letters is depending on
         // the locale, the upper case descriptions should be defined here. The lower case
         // descriptions are handled in {@link #getSpokenLetterDescriptionId(Context,int)}.

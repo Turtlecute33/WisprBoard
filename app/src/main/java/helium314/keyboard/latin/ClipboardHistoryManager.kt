@@ -141,11 +141,16 @@ class ClipboardHistoryManager(
         if (!latinIME.mSettings.current.mSuggestClipboardContent) return null
         if (dontShowCurrentSuggestion) return null
         if (parent == null) return null
+        // Check the description before fetching the clip. This runs once per keystroke for anyone
+        // with clipboard suggestions on, and getPrimaryClip() copies the entire clip across a
+        // binder boundary, whereas getPrimaryClipDescription() does not — so for a clip older than
+        // the recency window (the overwhelmingly common case) that copy was pure waste.
+        val description = clipboardManager.primaryClipDescription ?: return null
+        if (!description.hasMimeType("text/*")) return null
+        if (System.currentTimeMillis() - ClipboardManagerCompat.getClipTimestamp(description) > RECENT_TIME_MILLIS) return null
         val clipData = clipboardManager.primaryClip ?: return null
-        if (clipData.itemCount == 0 || clipData.description?.hasMimeType("text/*") == false) return null
+        if (clipData.itemCount == 0) return null
         val clipItem = clipData.getItemAt(0) ?: return null
-        val timeStamp = ClipboardManagerCompat.getClipTimestamp(clipData)
-        if (System.currentTimeMillis() - timeStamp > RECENT_TIME_MILLIS) return null
         val content = clipItem.coerceToText(latinIME)
         if (TextUtils.isEmpty(content)) return null
         val inputType = editorInfo?.inputType ?: InputType.TYPE_NULL

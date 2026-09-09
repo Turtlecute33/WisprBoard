@@ -62,8 +62,15 @@ class RichInputMethodManager private constructor() {
     fun hasMultipleEnabledIMEsOrSubtypes(shouldIncludeAuxiliarySubtypes: Boolean) =
         hasMultipleEnabledSubtypes(shouldIncludeAuxiliarySubtypes, inputMethodInfoCache.enabledInputMethods)
 
-    fun hasMultipleEnabledSubtypesInThisIme(shouldIncludeAuxiliarySubtypes: Boolean) =
-        SubtypeSettings.getEnabledSubtypes(shouldIncludeAuxiliarySubtypes).size > 1
+    /**
+     * `getEnabledSubtypes` takes a *fallback* flag, not an auxiliary-subtypes flag, so forwarding
+     * `shouldIncludeAuxiliarySubtypes` into it filled the wrong slot. With `false` the list comes
+     * back empty for anyone who has never opened language settings, which hid the comma-popup
+     * language switcher on multi-system-locale devices. Always allow the fallback: the question
+     * being asked is "are there several languages to switch between", and the implicit ones count.
+     */
+    fun hasMultipleEnabledSubtypesInThisIme(@Suppress("UNUSED_PARAMETER") shouldIncludeAuxiliarySubtypes: Boolean) =
+        SubtypeSettings.getEnabledSubtypes(true).size > 1
 
     fun getNextSubtypeInThisIme(onlyCurrentIme: Boolean): InputMethodSubtype? {
         val currentSubtype = currentSubtype.rawSubtype

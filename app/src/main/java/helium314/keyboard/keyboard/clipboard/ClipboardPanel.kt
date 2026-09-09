@@ -50,6 +50,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -83,6 +84,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
 import helium314.keyboard.latin.R
 import kotlinx.coroutines.delay
+
+/** How long the bin stays armed before it reverts to its safe state. */
+private const val CLEAR_ALL_ARMED_MS = 3_500L
 
 private val ICON_LINK = R.drawable.ic_link
 private val ICON_MAIL = R.drawable.ic_mail
@@ -184,10 +188,32 @@ private fun PanelTopBar(state: ClipboardPanelState, actions: ClipboardPanelActio
             }
         }
         if (state.clips.any { !it.isPinned }) {
+            // Arm-then-confirm rather than a dialog: there is no window token in the IME window,
+            // so a Compose Dialog here would throw BadTokenException. The armed state reverts
+            // itself after a few seconds, which is load-bearing — the ComposeView content is
+            // created once and reused across panel sessions, so a bare `remember` flag would
+            // survive a close and reopen and the next single tap would delete everything.
+            var armed by remember { mutableStateOf(false) }
+            LaunchedEffect(armed) {
+                if (armed) {
+                    delay(CLEAR_ALL_ARMED_MS)
+                    armed = false
+                }
+            }
             RoundIconButton(
                 iconRes = R.drawable.ic_bin,
-                description = stringResource(R.string.clipboard_clear_all),
-                onClick = actions::onClearHistory
+                description = stringResource(
+                    if (armed) R.string.clipboard_clear_all_confirm else R.string.clipboard_clear_all
+                ),
+                danger = armed,
+                onClick = {
+                    if (armed) {
+                        armed = false
+                        actions.onClearHistory()
+                    } else {
+                        armed = true
+                    }
+                }
             )
         }
         RoundIconButton(
@@ -815,13 +841,27 @@ private fun RoundIconButton(
     iconRes: Int,
     description: String,
     tonal: Boolean = false,
+    danger: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
-        color = if (tonal) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
-        contentColor = if (tonal) MaterialTheme.colorScheme.onSurface else LocalContentColor.current,
+        color = when {
+            danger -> MaterialTheme.colorScheme.errorContainer
+            tonal -> MaterialTheme.colorScheme.surfaceContainerHigh
+            else -> Color.Transparent
+        },
+        contentColor = when {
+            danger -> MaterialTheme.colorScheme.onErrorContainer
+            tonal -> MaterialTheme.colorScheme.onSurface
+            else -> LocalContentColor.current
+        },
         shape = CircleShape,
-        modifier = Modifier.size(36.dp).clickable(onClick = onClick)
+        // 36dp is below the 48dp minimum touch target, and these sit shoulder to shoulder with
+        // Close — which is how a mis-tap used to wipe the whole history.
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .size(36.dp)
+            .clickable(onClick = onClick)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(painterResource(iconRes), description, Modifier.size(19.dp))

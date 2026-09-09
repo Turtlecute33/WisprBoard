@@ -221,6 +221,8 @@
     <string name="clipboard_search">Search clips</string>
     <!-- Clipboard panel: button that removes all clips that are not pinned -->
     <string name="clipboard_clear_all">Clear history</string>
+    <!-- Content description for the clear-all button once it is armed and one more tap will wipe the history -->
+    <string name="clipboard_clear_all_confirm">Tap again to clear all clips</string>
     <!-- Clipboard panel: button that opens the actions of a clip -->
     <string name="clipboard_actions">Clip actions</string>
     <!-- Clipboard panel: button that shows the full text of a clip -->
@@ -1389,6 +1391,14 @@ New dictionary:
     <string name="translate_working">Translating…</string>
     <string name="translate_cancel">Cancel</string>
     <string name="translate_retry">Retry</string>
+    <!-- Spoken descriptions for the fork's own keys. Kept in values/strings.xml rather than
+         strings-talkback-descriptions.xml: that file has no MissingTranslation exemption, so
+         un-baselined keys there fail the lint gate. -->
+    <string name="spoken_description_clipboard">Clipboard</string>
+    <string name="spoken_description_voice_stt">Fast dictation</string>
+    <string name="spoken_description_text_fix">Fix text</string>
+    <string name="spoken_description_text_fix_2">Rewrite text</string>
+    <string name="spoken_description_translate">Translate</string>
     <string name="translate_error_not_enabled">Enable Translate in settings</string>
     <string name="translate_error_no_selection">Select text, or copy some, then long-press Return to translate</string>
     <string name="translate_error_no_text">There is no text to translate</string>

@@ -20,6 +20,9 @@ import android.view.View;
 import androidx.annotation.NonNull;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
+import helium314.keyboard.event.HapticEvent;
+import helium314.keyboard.latin.AudioAndHapticFeedbackManager;
+import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.accessibility.PopupKeysKeyboardAccessibilityDelegate;
 import helium314.keyboard.keyboard.emoji.EmojiViewCallback;
 import helium314.keyboard.keyboard.internal.KeyDrawParams;
@@ -256,6 +259,14 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         if (newKey != null) {
             updatePressKeyGraphics(newKey);
             invalidateKey(newKey);
+            // PREF_POPUP_DRAG_HAPTIC has been shipped and surfaced in Settings — its summary even
+            // names long-press Return, the fork's main AI surface — while this method ignored its
+            // own allowHaptic parameter, so the switch did nothing at all. A tick per icon crossed
+            // is what makes sliding across that popup usable without looking.
+            if (allowHaptic && Settings.getValues().mPopupDragHaptic) {
+                AudioAndHapticFeedbackManager.getInstance().performHapticFeedback(
+                        this, HapticEvent.GESTURE_MOVE);
+            }
         }
         return newKey;
     }

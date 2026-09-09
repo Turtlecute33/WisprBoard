@@ -23,8 +23,17 @@ public class ClipboardManagerCompat {
     }
 
     public static Long getClipTimestamp(ClipData cd) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            final long timestamp = cd.getDescription().getTimestamp();
+        return getClipTimestamp(cd.getDescription());
+    }
+
+    /**
+     * Overload taking just the description, so callers can decide whether a clip is recent enough
+     * to bother with before fetching the clip itself. `ClipboardManager.getPrimaryClip()` copies
+     * the whole clip across a binder boundary; `getPrimaryClipDescription()` does not.
+     */
+    public static Long getClipTimestamp(ClipDescription cd) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && cd != null) {
+            final long timestamp = cd.getTimestamp();
             if (timestamp > 0) // timestamp is 0 if not set
                 return timestamp;
         }

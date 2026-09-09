@@ -20,6 +20,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -917,14 +919,19 @@ private fun VoiceExpectedLanguagesPreference(setting: Setting) {
 private fun VoiceTestKeyPreference(setting: Setting) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
-    val scope = rememberCoroutineScope()
-    // Deliberately not rememberSaveable: the probe can't survive process death, so restoring
-    // busy=true would leave the UI stuck. rememberCoroutineScope() cancels on dispose, which
-    // is enough to abandon the in-flight request on navigation.
-    var busy by remember { mutableStateOf(false) }
+    // Activity-scoped, not composition-scoped. This row lives inside a LazyColumn, so
+    // rememberCoroutineScope() was cancelled as soon as the row scrolled out of view — scrolling
+    // while the probe ran silently abandoned it and no result or toast ever appeared. The
+    // lifecycle scope is cancelled when the settings screen really goes away, which is the
+    // behaviour that was intended.
+    val scope = LocalLifecycleOwner.current.lifecycleScope
+    // Deliberately not rememberSaveable for `busy`: the probe can't survive process death, so
+    // restoring busy=true would leave the UI stuck.
+    var busy by rememberSaveable { mutableStateOf(false) }
     // The outcome used to be a toast only, which is easy to miss and gone a few seconds later —
-    // leaving no way to tell whether the key was ever validated. Keep it under the row as well.
-    var lastResult by remember { mutableStateOf<TestResult?>(null) }
+    // leaving no way to tell whether the key was ever validated. Keep it under the row as well,
+    // and keep it across a scroll, which is when the row is disposed and recreated.
+    var lastResult by rememberSaveable { mutableStateOf<TestResult?>(null) }
     Preference(
         name = setting.title,
         description = when {

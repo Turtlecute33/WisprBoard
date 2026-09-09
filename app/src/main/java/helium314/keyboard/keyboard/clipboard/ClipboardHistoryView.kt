@@ -310,12 +310,33 @@ class ClipboardHistoryView @JvmOverloads constructor(
      * leaving it in place sends every later key press into the panel buffer instead of the app.
      */
     private fun hideTypingKeyboard() {
+        // Dropped before the early return on purpose: keyboard width, subtype, split and
+        // one-handed mode can all have changed by the next panel session, and a stale set would
+        // lay the panel keyboard out to the old geometry.
+        typingKeyboardLayoutSet = null
         if (bottomRowKeyboardView.visibility != VISIBLE) return
         bottomRowKeyboardView.visibility = GONE
         bottomRowKeyboardView.setKeyboardActionListener(keyboardActionListener)
     }
 
+    /**
+     * Cached across element switches within one panel session.
+     *
+     * `KeyboardLayoutSet.Builder.build()` is not cheap — among other things it constructs a
+     * `KeyboardId`, which on API 35+ calls `WindowManager.getCurrentWindowMetrics()` and also a
+     * `KeyguardManager` binder method. Rebuilding the whole set for every Shift, Caps Lock and
+     * symbols press inside the panel paid all of that per key press. The individual elements are
+     * still fetched (and internally cached) per switch.
+     */
+    private var typingKeyboardLayoutSet: KeyboardLayoutSet? = null
+
     private fun buildTypingKeyboard(elementId: Int): Keyboard? {
+        typingKeyboardLayoutSet?.let { set ->
+            // The per-element getKeyboard() can still throw, and this runs on a key-press path.
+            return runCatching { set.getKeyboard(elementId) }
+                .onFailure { Log.e(TAG, "can't build keyboard element for the clipboard panel", it) }
+                .getOrNull()
+        }
         val sv = Settings.getValues()
         val res = context.resources
         val width = ResourceUtils.getKeyboardWidth(context, sv)
@@ -329,7 +350,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
             packageName = context.packageName
         }
         return runCatching {
-            KeyboardLayoutSet.Builder(context, info)
+            val set = KeyboardLayoutSet.Builder(context, info)
                 .setKeyboardGeometry(width, height)
                 .setSubtype(RichInputMethodManager.getInstance().currentSubtype)
                 .setVoiceInputKeyEnabled(false)
@@ -340,7 +361,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
                 .setSplitLayoutEnabled(sv.mIsSplitKeyboardEnabled)
                 .setOneHandedModeEnabled(sv.mOneHandedModeEnabled)
                 .build()
-                .getKeyboard(elementId)
+            typingKeyboardLayoutSet = set
+            set.getKeyboard(elementId)
         }.onFailure { Log.e(TAG, "can't build keyboard for the clipboard panel", it) }.getOrNull()
     }
 

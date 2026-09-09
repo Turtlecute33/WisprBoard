@@ -220,7 +220,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mCurrentInputView.setKeyboardTopPadding(newKeyboard.mTopPadding);
         keyboardView.setKeyPreviewPopupEnabled(currentSettingsValues.mKeyPreviewPopupOn);
         keyboardView.setKeyPressRippleEnabled(currentSettingsValues.mKeyPressRippleEnabled);
-        keyboardView.updateShortcutKey(mRichImm.isShortcutImeReady());
+        // Was mRichImm.isShortcutImeReady(), i.e. "does some other IME offer a voice shortcut" —
+        // which has nothing to do with whether this keyboard should draw its own mic key.
+        keyboardView.updateShortcutKey(currentSettingsValues.mShowsVoiceInputKey);
         final boolean subtypeChanged = (oldKeyboard == null) || !newKeyboard.mId.mSubtype.equals(oldKeyboard.mId.mSubtype);
         final int languageOnSpacebarFormatType = LanguageOnSpacebarUtils.getLanguageOnSpacebarFormatType(newKeyboard.mId.mSubtype);
         final boolean hasMultipleEnabledIMEsOrSubtypes = mRichImm.hasMultipleEnabledIMEsOrSubtypes(true);

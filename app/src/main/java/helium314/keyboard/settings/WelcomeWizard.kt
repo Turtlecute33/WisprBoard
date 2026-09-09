@@ -10,6 +10,7 @@ import android.os.Looper
 import android.provider.Settings as AndroidSettings
 import android.widget.Toast
 import android.view.inputmethod.InputMethodManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -166,6 +167,15 @@ fun WelcomeWizard(
         onDispose {
             ctx.contentResolver.unregisterContentObserver(inputMethodObserver)
         }
+    }
+    // Back used to fall through to SearchScreen's handler and finish the whole Activity from any
+    // of the eight steps. Now it walks back a step, and only closes the wizard from the first
+    // step the user can actually be parked on. The clamp at providerStep matters: below it,
+    // switchStep re-arms a LaunchedEffect that pushes forward again, so stepping back there would
+    // bounce. `>=` rather than `>` so the handler stays enabled at providerStep and swallows the
+    // Back that would otherwise close Settings.
+    BackHandler(step >= providerStep) {
+        if (step > providerStep) step-- else close()
     }
     LaunchedEffect(step) {
         if (step == switchStep) {
