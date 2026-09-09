@@ -76,6 +76,23 @@ internal fun applySpacing(text: String, ctx: VoiceInputManager.SpacingContext?):
     return prefix + text + suffix
 }
 
+/**
+ * Turns the handful of provider statuses that mean something specific into an instruction the user
+ * can act on. Without this they reach the strip as the raw, untranslated literal "API error: 402",
+ * which tells a non-developer nothing at all.
+ *
+ * Deliberately narrow. 403 is **not** mapped: on OpenRouter it means the request was refused by
+ * moderation, not that the credentials are bad, and confidently sending the user to check their
+ * API key would be worse than an opaque number. 429/503 are handled by the caller as rate limits.
+ */
+@StringRes
+internal fun actionableErrorResId(statusCode: Int): Int? = when (statusCode) {
+    401 -> R.string.ai_error_bad_key
+    402 -> R.string.ai_error_out_of_credit
+    404 -> R.string.ai_error_model_not_found
+    else -> null
+}
+
 private val SENSITIVE_USER_FACING_PATTERNS: List<Pair<Regex, String>> = listOf(
     Regex("(?i)Bearer\\s+\\S+") to "Bearer ***",
     Regex("(?i)(\"?api[_-]?key\"?\\s*[:=]\\s*\"?)[^\"\\s,}]+") to "$1***",
@@ -92,6 +109,7 @@ internal fun safeUserFacingError(context: Context, e: Throwable, @StringRes fall
         // An empty transcript describes the recording, not the service. Saying so keeps the user
         // from re-recording to work around what reads like a provider outage.
         if (e.statusCode == OpenRouterClient.STATUS_NO_SPEECH) return context.getString(R.string.voice_error_silent)
+        actionableErrorResId(e.statusCode)?.let { return context.getString(it) }
         val raw = e.message?.takeIf { it.isNotBlank() }
         if (raw != null) {
             return SENSITIVE_USER_FACING_PATTERNS.fold(raw) { acc, (regex, replacement) ->

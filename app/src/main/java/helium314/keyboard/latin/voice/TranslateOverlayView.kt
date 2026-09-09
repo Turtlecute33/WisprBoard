@@ -31,11 +31,14 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
     private val statusText: TextView
     private val languageScroller: HorizontalScrollView
     private val languageRow: LinearLayout
+    private val retryButton: TextView
     private val cancelButton: TextView
 
     /** Invoked with the language the user picked in the middle menu. */
     var onLanguageClick: ((String) -> Unit)? = null
     var onCancelClick: (() -> Unit)? = null
+    /** Re-runs the failed translation with the same source and language. Null hides the pill. */
+    var onRetryClick: (() -> Unit)? = null
 
     private var textColor = 0
     private var lastClickMs = 0L
@@ -74,6 +77,9 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
                 )
             )
         }
+        retryButton = makePill(context.getString(R.string.translate_retry), primary = true) {
+            onRetryClick?.invoke()
+        }.apply { visibility = View.GONE }
         cancelButton = makePill(context.getString(R.string.translate_cancel), primary = false) {
             onCancelClick?.invoke()
         }
@@ -81,6 +87,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         addView(pulseView)
         addView(statusText)
         addView(languageScroller)
+        addView(retryButton)
         addView(cancelButton)
     }
 
@@ -88,6 +95,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         textColor = color
         pulseView.meterColor = color
         statusText.setTextColor(color)
+        applyPillColors(retryButton, primary = true)
         applyPillColors(cancelButton, primary = false)
         for (i in 0 until languageRow.childCount) {
             (languageRow.getChildAt(i) as? TextView)?.let { applyPillColors(it, primary = true) }
@@ -106,6 +114,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         languageScroller.scrollTo(0, 0)
         statusText.visibility = View.GONE
         languageScroller.visibility = View.VISIBLE
+        retryButton.visibility = View.GONE
         cancelButton.visibility = View.VISIBLE
         announceForAccessibility(context.getString(R.string.translate_pick_language))
     }
@@ -118,15 +127,23 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         pulseView.resetToIdlePulse()
         statusText.visibility = View.VISIBLE
         languageScroller.visibility = View.GONE
+        retryButton.visibility = View.GONE
         cancelButton.visibility = View.VISIBLE
         announceForAccessibility(statusText.text)
     }
 
-    fun showError(message: String) {
+    /**
+     * @param canRetry whether the source text and target language are still known, so the request
+     *   can simply be repeated. Most translate failures are transient (rate limit, provider
+     *   hiccup); without this the user has to reselect the text and walk the long-press-Return
+     *   menu again just to try the same thing twice.
+     */
+    fun showError(message: String, canRetry: Boolean) {
         stopPulse()
         statusText.text = message
         statusText.visibility = View.VISIBLE
         languageScroller.visibility = View.GONE
+        retryButton.visibility = if (canRetry) View.VISIBLE else View.GONE
         cancelButton.visibility = View.VISIBLE
         announceForAccessibility(message)
     }

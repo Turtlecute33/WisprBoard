@@ -445,6 +445,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private var translateOverlay: TranslateOverlayView? = null
     private var onPickTranslateLanguage: ((String) -> Unit)? = null
     private var onCancelTranslate: Runnable? = null
+    private var onRetryTranslate: Runnable? = null
 
     fun setOnPickTranslateLanguage(callback: ((String) -> Unit)?) {
         onPickTranslateLanguage = callback
@@ -452,6 +453,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
     fun setOnCancelTranslate(callback: Runnable?) {
         onCancelTranslate = callback
+    }
+
+    fun setOnRetryTranslate(callback: Runnable?) {
+        onRetryTranslate = callback
     }
 
     fun showTranslateLanguages(languages: List<String>) {
@@ -462,8 +467,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         ensureTranslateOverlay().showWorking()
     }
 
-    fun showTranslateError(message: String) {
-        ensureTranslateOverlay().showError(message)
+    fun showTranslateError(message: String, canRetry: Boolean) {
+        ensureTranslateOverlay().showError(message, canRetry)
     }
 
     private fun ensureTranslateOverlay(): TranslateOverlayView {
@@ -471,6 +476,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             it.setColors(Settings.getValues().mColors.get(ColorType.KEY_TEXT))
             it.onLanguageClick = { language -> onPickTranslateLanguage?.invoke(language) }
             it.onCancelClick = { onCancelTranslate?.run() }
+            it.onRetryClick = { onRetryTranslate?.run() }
             translateOverlay = it
         }
         if (overlay.parent == null) showOverlay(overlay)

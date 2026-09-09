@@ -491,7 +491,6 @@ class VoiceInputManager(
         }
         val localeHint = if (languageHintEnabled) callbacks.getLocaleHint() else null
         val prompt = resolveVoicePrompt(savedPrompt, localeHint, transcriptionDictionary, expectedLanguages)
-        val spacingContext = if (spaceHeuristicEnabled) callbacks.getSpacingContext() else null
 
         val allowReasoning = prefs.getBoolean(Settings.PREF_AI_ALLOW_REASONING, Defaults.PREF_AI_ALLOW_REASONING)
         val client = OpenRouterClient(
@@ -563,8 +562,15 @@ class VoiceInputManager(
                         transcriptionClient = client
                     }
                 } else transcription
-                val finalText = applySpacing(polished, spacingContext)
-                finishTranscription(requestToken = requestToken, result = finalText)
+                // Spacing is decided from the text around the caret, so it has to be read when the
+                // transcript is committed, not when the upload started. Typing during the upload is
+                // allowed, so a snapshot taken before the request can easily describe a caret that
+                // no longer exists and produce "andhello".
+                finishTranscription(
+                    requestToken = requestToken,
+                    result = polished,
+                    spaceHeuristicEnabled = spaceHeuristicEnabled,
+                )
             } catch (e: CancellationException) {
                 if (BuildConfig.DEBUG) Log.i(TAG, "Transcription cancelled")
                 finishTranscription(requestToken = requestToken)
@@ -665,10 +671,16 @@ class VoiceInputManager(
     private fun sanitizeTranscription(raw: String): String =
         sanitizeModelOutput(raw, MAX_TRANSCRIPTION_LENGTH)
 
+    /**
+     * @param spaceHeuristicEnabled when true, [applySpacing] is evaluated here — on the main
+     *   thread, immediately before delivery — so the surrounding-text snapshot describes the caret
+     *   as it is now rather than as it was before the network round trip.
+     */
     private fun finishTranscription(
         requestToken: Long,
         result: String? = null,
         error: String? = null,
+        spaceHeuristicEnabled: Boolean = false,
     ) {
         mainHandler.post {
             if (activeTranscriptionToken.get() != requestToken) {
@@ -682,7 +694,12 @@ class VoiceInputManager(
             state = State.IDLE
             callbacks.onFinished()
             if (!result.isNullOrEmpty()) {
-                callbacks.onTranscriptionResult(result)
+                val spaced = if (spaceHeuristicEnabled) {
+                    applySpacing(result, callbacks.getSpacingContext())
+                } else {
+                    result
+                }
+                callbacks.onTranscriptionResult(spaced)
             } else if (!error.isNullOrEmpty()) {
                 callbacks.onError(error)
             }

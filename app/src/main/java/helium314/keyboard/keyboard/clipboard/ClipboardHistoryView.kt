@@ -205,7 +205,12 @@ class ClipboardHistoryView @JvmOverloads constructor(
     }
 
     override fun onCancelTranslate() {
-        translateManager?.cancel()
+        // TranslateManager is a single IME-owned instance lent to this panel, so an unconditional
+        // cancel here aborts whatever it happens to be running — including a translation the user
+        // started from the long-press-Return strip. `translating` is set only for the panel's own
+        // request, so it is the right thing to gate on. Closing the panel reaches this path via
+        // stopClipboardHistory, and the automatic ALPHA switch after a paste reaches it too.
+        if (panelState.translating) translateManager?.cancel()
         panelState.translating = false
     }
 

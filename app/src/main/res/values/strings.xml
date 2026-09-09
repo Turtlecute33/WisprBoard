@@ -1230,6 +1230,10 @@ New dictionary:
     <string name="voice_error_on_device_language">No offline language pack for this language. Install it in the system speech recognition settings, or switch the speech engine to Cloud AI.</string>
     <string name="voice_error_on_device_failed">On-device recognition failed</string>
     <string name="voice_error_transcription_failed">Transcription failed</string>
+    <!-- Provider failures that the user can actually do something about -->
+    <string name="ai_error_bad_key">Your API key was rejected. Check it in WisprBoard Settings.</string>
+    <string name="ai_error_out_of_credit">Your provider account is out of credit. Top it up to keep using AI features.</string>
+    <string name="ai_error_model_not_found">That model is no longer available. Pick another one in WisprBoard Settings.</string>
     <string name="voice_error_rate_limited">AI provider rate limit reached — try again in a moment</string>
     <string name="voice_max_duration_reached">Maximum recording length reached — transcribing&#8230;</string>
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
@@ -1384,11 +1388,14 @@ New dictionary:
     <string name="translate_pick_language">Pick a language</string>
     <string name="translate_working">Translating…</string>
     <string name="translate_cancel">Cancel</string>
+    <string name="translate_retry">Retry</string>
     <string name="translate_error_not_enabled">Enable Translate in settings</string>
     <string name="translate_error_no_selection">Select text, or copy some, then long-press Return to translate</string>
     <string name="translate_error_no_text">There is no text to translate</string>
     <string name="translate_error_no_language">Add a target language in settings</string>
     <string name="translate_error_too_long">The text is too long to translate</string>
+    <!-- Shown when a finished translation cannot be written back, so it is put on the clipboard instead -->
+    <string name="translate_copied_selection_changed">The text moved, so the translation was copied to your clipboard. Paste it where you want it.</string>
     <string name="translate_error_selection_changed">Selection changed; select the same text and try again</string>
     <string name="translate_error_sensitive_field">Translate is unavailable in sensitive fields</string>
     <string name="translate_error_unsupported_field">Translate is unavailable in this field</string>
