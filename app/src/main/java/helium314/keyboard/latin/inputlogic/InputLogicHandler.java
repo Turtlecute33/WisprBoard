@@ -13,11 +13,14 @@ import android.os.Message;
 import helium314.keyboard.latin.LatinIME;
 import helium314.keyboard.latin.SuggestedWords;
 import helium314.keyboard.latin.common.InputPointers;
+import helium314.keyboard.latin.define.DebugFlags;
+import helium314.keyboard.latin.utils.Log;
 
 /**
  * A helper to manage deferred tasks for the input logic.
  */
 class InputLogicHandler implements Handler.Callback {
+    private static final String TAG = "InputLogicHandler";
     final Handler mNonUIThreadHandler;
     final LatinIME.UIHandler mLatinIMEHandler;
     final InputLogic mInputLogic;
@@ -52,9 +55,35 @@ class InputLogicHandler implements Handler.Callback {
     // Called on the Non-UI handler thread by the Handler code.
     @Override
     public boolean handleMessage(final Message msg) {
-        if (msg.what == MSG_GET_SUGGESTED_WORDS)
-            ((Runnable)msg.obj).run();
+        if (msg.what == MSG_GET_SUGGESTED_WORDS) {
+            try {
+                ((Runnable) msg.obj).run();
+            } catch (final RuntimeException e) {
+                // This is a bare HandlerThread, so an escaping exception here takes the whole IME
+                // process down and the user loses their keyboard system-wide, in every app. The
+                // fork moved suggestion fetching onto this thread, which made the path far more
+                // reachable: it now runs concurrently with typing and touches shared editor state.
+                // A wrong or missing suggestion is a vastly better outcome than no keyboard.
+                Log.e(TAG, "Suggestion worker failed", e);
+                if (DebugFlags.DEBUG_ENABLED) throw e; // stay loud in debug builds and tests
+                recoverFromWorkerFailure();
+            }
+        }
         return true;
+    }
+
+    /**
+     * Puts the batch-input state machine back somewhere usable after a throw.
+     *
+     * Without clearing {@code mInBatchInput}, {@link #updateBatchInput} keeps believing a gesture
+     * is in progress, so {@code InputLogic.restartSuggestionsOnWordTouchedByCursor} bails out for
+     * the rest of the session and the floating gesture preview stays painted on screen.
+     */
+    private void recoverFromWorkerFailure() {
+        synchronized (mLock) {
+            mInBatchInput = false;
+        }
+        mLatinIMEHandler.showGesturePreviewAndSetSuggestions(SuggestedWords.getEmptyInstance(), true);
     }
 
     // Called on the UI thread by InputLogic.

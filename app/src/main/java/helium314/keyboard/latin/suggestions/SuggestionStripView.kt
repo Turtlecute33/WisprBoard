@@ -140,6 +140,23 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private val enabledToolKeyBackground = GradientDrawable()
     private var direction = 1 // 1 if LTR, -1 if RTL
 
+    /**
+     * Cached lock-screen state. [isDeviceLocked] is a synchronous binder round trip to
+     * system_server, and it was called once from [setToolbarVisibility] and once from [updateKeys]
+     * on *every* suggestion refresh — up to two IPCs per keystroke at the strip's 100 ms cadence,
+     * on the typing thread.
+     *
+     * Declared here rather than after the init blocks on purpose: `init` calls both of those
+     * methods, and a field initialised later would read `false` during construction and hide the
+     * toolbar on a locked device.
+     *
+     * Refreshed from [refreshLockedState], not on a TTL — the value gates a privacy check, so it
+     * must never be allowed to go stale by accident.
+     */
+    private var deviceLocked = isDeviceLocked(context)
+    /** Last requested toolbar visibility, so an unlock can restore what the user actually had. */
+    private var toolbarWanted = false
+
     private val toolbarKeyLayoutParams = LinearLayout.LayoutParams(
         resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
         LinearLayout.LayoutParams.MATCH_PARENT
@@ -242,8 +259,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun setToolbarVisibility(toolbarVisible: Boolean) {
+        toolbarWanted = toolbarVisible
         // avoid showing toolbar keys when locked
-        val locked = isDeviceLocked(context)
+        val locked = deviceLocked
         pinnedKeys.isVisible = !locked && !toolbarVisible
         suggestionsStrip.isVisible = locked || !toolbarVisible
         toolbarContainer.isVisible = !locked && toolbarVisible
@@ -744,10 +762,26 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
 
         // hide pinned keys if device is locked, and avoid expanding toolbar
-        val hideToolbarKeys = isDeviceLocked(context)
+        val hideToolbarKeys = deviceLocked
         toolbarExpandKey.setOnClickListener(if (hideToolbarKeys || !toolbarIsExpandable) null else this)
         pinnedKeys.visibility = if (hideToolbarKeys) GONE else suggestionsStrip.visibility
         isExternalSuggestionVisible = false
+    }
+
+    /**
+     * Re-reads the lock-screen state. Called from `LatinIME.onWindowShown`, which is the only
+     * moment the keyguard can change while this view is alive — it covers replying from the lock
+     * screen and then unlocking.
+     */
+    fun refreshLockedState() {
+        val locked = isDeviceLocked(context)
+        if (locked == deviceLocked) return
+        deviceLocked = locked
+        // An AI overlay owns the strip while it is installed; re-applying visibility underneath it
+        // would tear it down.
+        if (hasOverlay) return
+        setToolbarVisibility(toolbarWanted)
+        updateKeys()
     }
 
     private fun addKeyToPinnedKeys(pinnedKey: ToolbarKey) {

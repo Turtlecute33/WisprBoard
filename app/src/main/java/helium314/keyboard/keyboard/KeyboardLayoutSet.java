@@ -16,7 +16,6 @@ import helium314.keyboard.keyboard.internal.KeyboardIconsSet;
 import helium314.keyboard.keyboard.internal.KeyboardParams;
 import helium314.keyboard.keyboard.internal.UniqueKeysCache;
 import helium314.keyboard.keyboard.internal.keyboard_parser.LayoutParser;
-import helium314.keyboard.keyboard.internal.keyboard_parser.LocaleKeyboardInfos;
 import helium314.keyboard.keyboard.internal.keyboard_parser.LocaleKeyboardInfosKt;
 import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.RichInputMethodSubtype;
@@ -48,7 +47,6 @@ public final class KeyboardLayoutSet {
     private final Context mContext;
     @NonNull
     private final Params mParams;
-    public final LocaleKeyboardInfos mLocaleKeyboardInfos;
 
     // How many layouts we forcibly keep in cache. This only includes ALPHABET (default) and
     // ALPHABET_AUTOMATIC_SHIFTED layouts - other layouts may stay in memory in the map of
@@ -123,7 +121,6 @@ public final class KeyboardLayoutSet {
     KeyboardLayoutSet(final Context context, @NonNull final Params params) {
         mContext = context;
         mParams = params;
-        mLocaleKeyboardInfos = LocaleKeyboardInfosKt.getOrCreate(context, params.mSubtype.getLocale());
     }
 
     @NonNull

@@ -112,10 +112,16 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         final boolean themeUpdated = updateKeyboardThemeAndContextThemeWrapper(
                 displayContext, KeyboardTheme.getKeyboardTheme(displayContext));
         if (themeUpdated) {
-            Settings settings = Settings.getInstance();
-            settings.loadSettings(displayContext, settings.getCurrent().mLocale, settings.getCurrent().mInputAttributes);
-            if (mKeyboardView != null)
+            // Reloading the settings is only worth it when there is a view to rebuild from them.
+            // With no view yet — i.e. cold start — nothing has been built from the settings, and
+            // both later entry points reload anyway (onCreateInputView when mThemeNeedsReload is
+            // set, and onStartInputViewInternal for the first field), so this was one whole
+            // SettingsValues construction, colour table and punctuation tab thrown away.
+            if (mKeyboardView != null) {
+                Settings settings = Settings.getInstance();
+                settings.loadSettings(displayContext, settings.getCurrent().mLocale, settings.getCurrent().mInputAttributes);
                 mLatinIME.setInputView(onCreateInputView(displayContext, mIsHardwareAcceleratedDrawingEnabled));
+            }
         } else if (mCurrentInputView != null && mLatinIME.hasSuggestionStripView()
                     == (Settings.getValues().mToolbarMode == ToolbarMode.HIDDEN || mLatinIME.isEmojiSearch())) {
             mLatinIME.updateSuggestionStripView(mCurrentInputView);
@@ -222,7 +228,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
         if (currentSettingsValues.needsToLookupSuggestions()
                                     && (currentSettingsValues.mInlineEmojiSearch || currentSettingsValues.mSuggestEmojis)) {
-            EmojiParserKt.loadEmojiDefaultVersionsAndPopupSpecs(mThemeContext);
+            EmojiParserKt.preloadEmojiSkinToneVersions(mThemeContext);
         }
     }
 

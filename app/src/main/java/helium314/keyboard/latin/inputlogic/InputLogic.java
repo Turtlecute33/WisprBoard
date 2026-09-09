@@ -2438,7 +2438,12 @@ public final class InputLogic {
     private void commitCurrentAutoCorrection(final SettingsValues settingsValues,
             final String separator, final LatinIME.UIHandler handler) {
         // Complete any pending suggestions query first
-        if (handler.hasPendingUpdateSuggestions() || hasInFlightSuggestionStripUpdate()) {
+        // hasPendingSetSuggestions() closes the last gap: the worker decrements the in-flight
+        // counter when it *posts* its result, so between that post and this thread applying it
+        // neither of the other two terms is true, and a space landing in that window committed the
+        // raw typed word instead of the auto-correction.
+        if (handler.hasPendingUpdateSuggestions() || hasInFlightSuggestionStripUpdate()
+                || handler.hasPendingSetSuggestions()) {
             handler.cancelUpdateSuggestionStrip();
             // To know the input style here, we should retrieve the in-flight "update suggestions"
             // message and read its arg1 member here. However, the Handler class does not let

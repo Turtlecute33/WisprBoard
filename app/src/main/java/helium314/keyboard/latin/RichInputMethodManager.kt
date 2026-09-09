@@ -60,7 +60,7 @@ class RichInputMethodManager private constructor() {
         inputMethodInfoCache.getEnabledInputMethodSubtypeList(imi, allowsImplicitlySelectedSubtypes)
 
     fun hasMultipleEnabledIMEsOrSubtypes(shouldIncludeAuxiliarySubtypes: Boolean) =
-        hasMultipleEnabledSubtypes(shouldIncludeAuxiliarySubtypes, imm.enabledInputMethodList)
+        hasMultipleEnabledSubtypes(shouldIncludeAuxiliarySubtypes, inputMethodInfoCache.enabledInputMethods)
 
     fun hasMultipleEnabledSubtypesInThisIme(shouldIncludeAuxiliarySubtypes: Boolean) =
         SubtypeSettings.getEnabledSubtypes(shouldIncludeAuxiliarySubtypes).size > 1
@@ -247,7 +247,7 @@ class RichInputMethodManager private constructor() {
         fun canSwitchLanguage(): Boolean {
             if (!isInitialized()) return false
             if (Settings.getValues().mLanguageSwitchKeyToOtherSubtypes && instance.hasMultipleEnabledSubtypesInThisIme(false)) return true
-            if (Settings.getValues().mLanguageSwitchKeyToOtherImes && instance.imm.enabledInputMethodList.size > 1) return true
+            if (Settings.getValues().mLanguageSwitchKeyToOtherImes && instance.inputMethodInfoCache.enabledInputMethods.size > 1) return true
             return false
         }
     }
@@ -255,6 +255,7 @@ class RichInputMethodManager private constructor() {
 
 private class InputMethodInfoCache(private val imm: InputMethodManager, private val imePackageName: String) {
     private var cachedThisImeInfo: InputMethodInfo? = null
+    private var cachedEnabledInputMethods: List<InputMethodInfo>? = null
     private val cachedSubtypeListWithImplicitlySelected = HashMap<InputMethodInfo, List<InputMethodSubtype>>()
 
     private val cachedSubtypeListOnlyExplicitlySelected = HashMap<InputMethodInfo, List<InputMethodSubtype>>()
@@ -267,6 +268,24 @@ private class InputMethodInfoCache(private val imm: InputMethodManager, private 
         throw RuntimeException("Input method id for $imePackageName not found, only found " +
                 imm.inputMethodList.map { it.packageName })
     }
+
+    /**
+     * The enabled IME list, cached.
+     *
+     * `imm.enabledInputMethodList` is a synchronous binder round trip to system_server, and it was
+     * called from `hasMultipleEnabledIMEsOrSubtypes` — which `KeyboardSwitcher.setKeyboard` reaches
+     * on every keyboard element change, so on every Shift press, every symbols switch and every
+     * auto-caps flip, on the typing thread.
+     *
+     * The *list* is cached rather than the derived boolean on purpose: callers pass both `true` and
+     * `false` for `shouldIncludeAuxiliarySubtypes`, so a single cached boolean would serve the
+     * wrong answer to one of them. Invalidation is free — [clear] already runs from
+     * `refreshSubtypeCaches`, which fires on every `onStartInputView` and whenever a subtype is
+     * enabled or disabled.
+     */
+    @get:Synchronized
+    val enabledInputMethods: List<InputMethodInfo> get() =
+        cachedEnabledInputMethods ?: imm.enabledInputMethodList.also { cachedEnabledInputMethods = it }
 
     @Synchronized
     fun getEnabledInputMethodSubtypeList(imi: InputMethodInfo, allowsImplicitlySelectedSubtypes: Boolean): List<InputMethodSubtype> {
@@ -287,6 +306,7 @@ private class InputMethodInfoCache(private val imm: InputMethodManager, private 
     @Synchronized
     fun clear() {
         cachedThisImeInfo = null
+        cachedEnabledInputMethods = null
         cachedSubtypeListWithImplicitlySelected.clear()
         cachedSubtypeListOnlyExplicitlySelected.clear()
     }

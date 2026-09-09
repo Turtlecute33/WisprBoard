@@ -31,6 +31,7 @@ import android.view.inputmethod.InputMethodManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.StringUtils;
@@ -113,6 +114,17 @@ public final class RichInputConnection implements PrivateCommandPerformer {
      * This contains the currently composing text, as LatinIME thinks the TextView is seeing it.
      */
     private final StringBuilder mComposingText = new StringBuilder();
+    /**
+     * Guards {@link #mCommittedTextBeforeComposingText}, {@link #mComposingText} and the expected
+     * selection. Needed because the fork made suggestion fetching asynchronous, so the
+     * InputLogicHandler thread reads this cache while the main thread rewrites it on every
+     * keystroke.
+     *
+     * <p><b>Invariant: never hold this across an {@link InputConnection} call.</b> Those are binder
+     * round trips that this class itself budgets up to a second for
+     * ({@link #SLOW_INPUT_CONNECTION_ON_FULL_RELOAD_MS}), and blocking the typing thread behind a
+     * laggy host app would be far worse than the race this lock closes.
+     */
     private final Object mCacheLock = new Object();
 
     /**
@@ -437,11 +449,20 @@ public final class RichInputConnection implements PrivateCommandPerformer {
                         + "Setting caps mode without knowing text.");
             }
         }
-        // This never calls InputConnection#getCapsMode - in fact, it's a static method that
-        // never blocks or initiates IPC.
-        // TODO: don't call #toString() here. Instead, all accesses to
-        //  mCommittedTextBeforeComposingText should be done on the main thread.
-        return CapsModeUtils.getCapsMode(mCommittedTextBeforeComposingText.toString(), inputType,
+        // This runs on the InputLogicHandler thread as well as the main thread (the fork made
+        // suggestion fetching async), so the cache has to be snapshotted under the lock. Reading
+        // the StringBuilder while the main thread appends to or wipes it is a torn read: at best a
+        // wrong caps decision, at worst a StringIndexOutOfBoundsException on this thread, which
+        // has no exception barrier above it.
+        final String textBeforeCursor;
+        synchronized (mCacheLock) {
+            textBeforeCursor = mCommittedTextBeforeComposingText.toString();
+        }
+        // Deliberately outside the lock, and the reloadTextCache() above is too: that is a binder
+        // round trip this class itself budgets a full second for, and holding mCacheLock across it
+        // would let a laggy host app stall the typing thread. getCapsMode is a pure static that
+        // never blocks or does IPC.
+        return CapsModeUtils.getCapsMode(textBeforeCursor, inputType,
                 spacingAndPunctuations, hasSpaceBefore);
     }
 
@@ -481,19 +502,43 @@ public final class RichInputConnection implements PrivateCommandPerformer {
             // test for this explicitly)
             if (INVALID_CURSOR_POSITION != mExpectedSelStart
                     && (cachedLength >= n || cachedLength >= mExpectedSelStart)) {
-                final StringBuilder s = new StringBuilder(
-                        mCommittedTextBeforeComposingText.toString());
-                s.append(mComposingText.toString());
-                if (s.length() > n) {
-                    s.delete(0, s.length() - n);
-                }
-                return s;
+                return buildTailFromCache(mCommittedTextBeforeComposingText, mComposingText, n);
             }
         }
         return getTextBeforeCursorAndDetectLaggyConnection(
                 OPERATION_GET_TEXT_BEFORE_CURSOR,
                 SLOW_INPUT_CONNECTION_ON_PARTIAL_RELOAD_MS,
                 n, flags);
+    }
+
+    /**
+     * The last {@code n} characters of {@code committed + composing}.
+     *
+     * Builds only the tail that was asked for. The previous implementation copied both buffers in
+     * full and then deleted the front, so asking for the usual 40 characters allocated and copied
+     * the whole cache — which grows to about a kilobyte during a typing run — three times, on every
+     * call, on the typing thread.
+     *
+     * The clamp is load-bearing rather than defensive: {@code n} can legitimately arrive negative,
+     * because {@code setComposingRegion} derives it from a caret offset, and
+     * {@code new StringBuilder(negative)} throws {@link NegativeArraySizeException} — which on this
+     * path would take the keyboard down.
+     */
+    @VisibleForTesting
+    static CharSequence buildTailFromCache(final CharSequence committed,
+            final CharSequence composing, final int n) {
+        final int cachedLength = committed.length() + composing.length();
+        final int wanted = Math.max(0, Math.min(n, cachedLength));
+        final StringBuilder s = new StringBuilder(wanted);
+        final int fromComposing = Math.min(wanted, composing.length());
+        final int fromCommitted = wanted - fromComposing;
+        if (fromCommitted > 0) {
+            s.append(committed, committed.length() - fromCommitted, committed.length());
+        }
+        if (fromComposing > 0) {
+            s.append(composing, composing.length() - fromComposing, composing.length());
+        }
+        return s;
     }
 
     @Nullable private CharSequence getTextBeforeCursorAndDetectLaggyConnection(
@@ -607,24 +652,31 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         //  come here in this case, but we need to fix this.
         if (DebugFlags.DEBUG_ENABLED)
             Log.d(TAG, "deleting "+beforeLength+" characters before cursor");
-        final int remainingChars = mComposingText.length() - beforeLength;
-        if (remainingChars >= 0) {
-            mComposingText.setLength(remainingChars);
-        } else {
-            mComposingText.setLength(0);
-            // Never cut under 0
-            final int len = Math.max(mCommittedTextBeforeComposingText.length()
-                    + remainingChars, 0);
-            mCommittedTextBeforeComposingText.setLength(len);
-        }
-        if (mExpectedSelStart > beforeLength) {
-            mExpectedSelStart -= beforeLength;
-            mExpectedSelEnd -= beforeLength;
-        } else {
-            // There are fewer characters before the cursor in the buffer than we are being asked to
-            // delete. Only delete what is there, and update the end with the amount deleted.
-            mExpectedSelEnd -= mExpectedSelStart;
-            mExpectedSelStart = 0;
+        // The cache readers already lock; the hot mutators did not, so a concurrent reader on the
+        // InputLogicHandler thread could observe a half-truncated buffer. mIC.deleteSurroundingText
+        // stays outside the lock — it is a binder call, and mCacheLock must never be held across
+        // one (see the invariant on the field).
+        synchronized (mCacheLock) {
+            final int remainingChars = mComposingText.length() - beforeLength;
+            if (remainingChars >= 0) {
+                mComposingText.setLength(remainingChars);
+            } else {
+                mComposingText.setLength(0);
+                // Never cut under 0
+                final int len = Math.max(mCommittedTextBeforeComposingText.length()
+                        + remainingChars, 0);
+                mCommittedTextBeforeComposingText.setLength(len);
+            }
+            if (mExpectedSelStart > beforeLength) {
+                mExpectedSelStart -= beforeLength;
+                mExpectedSelEnd -= beforeLength;
+            } else {
+                // There are fewer characters before the cursor in the buffer than we are being
+                // asked to delete. Only delete what is there, and update the end with the amount
+                // deleted.
+                mExpectedSelEnd -= mExpectedSelStart;
+                mExpectedSelStart = 0;
+            }
         }
         if (isConnected()) {
             mIC.deleteSurroundingText(beforeLength, 0);
@@ -651,6 +703,9 @@ public final class RichInputConnection implements PrivateCommandPerformer {
             // racy and has unpredictable results, but for backward compatibility we continue
             // sending the key events for only Enter and Backspace because some applications
             // mistakenly catch them to do some stuff.
+            // Locked for the same reason as deleteTextBeforeCursor: these are cache mutations on
+            // the typing path, and the readers take mCacheLock. mIC.sendKeyEvent below stays out.
+            synchronized (mCacheLock) {
             switch (keyEvent.getKeyCode()) {
             case KeyEvent.KEYCODE_ENTER:
                 mCommittedTextBeforeComposingText.append("\n");
@@ -689,6 +744,7 @@ public final class RichInputConnection implements PrivateCommandPerformer {
                 mExpectedSelStart += text.length();
                 mExpectedSelEnd = mExpectedSelStart;
                 break;
+            }
             }
         }
         if (isConnected()) {

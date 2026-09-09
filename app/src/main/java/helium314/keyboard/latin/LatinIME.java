@@ -407,6 +407,19 @@ public class LatinIME extends InputMethodService implements
             return hasMessages(MSG_UPDATE_SUGGESTION_STRIP);
         }
 
+        /**
+         * True while a suggestion result computed on the worker thread is queued for this thread
+         * but has not been applied yet.
+         *
+         * The in-flight counter that {@code commitCurrentAutoCorrection} also consults is
+         * decremented by the worker as soon as it posts, so it does not cover this interval — and
+         * input events are dispatched ahead of queued messages, so a fast space really can land
+         * inside it and commit the raw typed word instead of the correction.
+         */
+        public boolean hasPendingSetSuggestions() {
+            return hasMessages(MSG_SHOW_GESTURE_PREVIEW_AND_SET_SUGGESTIONS);
+        }
+
         public boolean hasPendingResumeSuggestions() {
             return hasMessages(MSG_RESUME_SUGGESTIONS);
         }
@@ -1681,6 +1694,10 @@ public class LatinIME extends InputMethodService implements
     @Override
     public void onWindowShown() {
         super.onWindowShown();
+        // The only point at which the keyguard can have changed while the strip was alive, so it
+        // is where the cached lock state is refreshed instead of re-querying system_server on
+        // every suggestion update.
+        if (mSuggestionStripView != null) mSuggestionStripView.refreshLockedState();
         if (isInputViewShown()) {
             setNavigationBarColor();
             workaroundForHuaweiStatusBarIssue();

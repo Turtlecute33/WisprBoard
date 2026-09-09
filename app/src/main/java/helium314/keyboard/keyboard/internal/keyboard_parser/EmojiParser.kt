@@ -101,13 +101,42 @@ fun loadEmojiDefaultVersionsAndPopupSpecs(context: Context) {
     loadEmojiDefaultVersionsAndPopupSpecs(context, null)
 }
 
+/**
+ * Preload for the *main* keyboard, called from the first `setKeyboard`.
+ *
+ * The main keyboard only ever reads [emojiDefaultVersions] (through the emoji suggestion path),
+ * and with the default yellow skin tone that map stays empty — so the 32 KB PEOPLE_AND_BODY parse
+ * that used to run here produced nothing usable while blocking the first frame. [emojiPopupSpecs]
+ * is read only by the emoji palette and emoji search, both of which load it themselves from lines
+ * they have already read.
+ *
+ * Deliberately a separate entry point rather than a skip inside
+ * [loadEmojiDefaultVersionsAndPopupSpecs]: EmojiSearchActivity depends on that function's current
+ * behaviour, and moving the condition into it would strip the skin-tone variants and the popup
+ * hint from every searched emoji. The `emojiDefaultVersions.isEmpty()` term is what still forces a
+ * reload when a tone had been set and has just been reset back to yellow.
+ */
+fun preloadEmojiSkinToneVersions(context: Context) {
+    val tone = context.prefs().getString(Settings.PREF_EMOJI_SKIN_TONE, Defaults.PREF_EMOJI_SKIN_TONE)
+    if (tone == "" && emojiDefaultVersions.isEmpty()) return
+    loadEmojiDefaultVersionsAndPopupSpecs(context, null)
+}
+
 private fun loadEmojiDefaultVersionsAndPopupSpecs(context: Context, category2EmojiLines: List<String>?) {
     val defaultTone = context.prefs().getString(Settings.PREF_EMOJI_SKIN_TONE, Defaults.PREF_EMOJI_SKIN_TONE)
-    if (defaultSkinTone == defaultTone) {
+    val generation = SupportedEmojis.loadGeneration
+    // The skin-tone check alone was not enough. This parse filters every popup entry through
+    // SupportedEmojis, which App.onCreate fills on a background thread — so the first parse could
+    // run against a half-loaded (or empty) set and cache the result for the life of the process.
+    // It also never re-ran when the user changed "Emoji max SDK" or restored a backup, both of
+    // which call SupportedEmojis.load() without touching the skin tone: 110 of 323 emoji
+    // permanently lost their long-press popups that way.
+    if (defaultSkinTone == defaultTone && loadedEmojiSupportGeneration == generation) {
         return
     }
 
     defaultSkinTone = defaultTone
+    loadedEmojiSupportGeneration = generation
     emojiDefaultVersions.clear()
     emojiNeutralVersions.clear()
     emojiPopupSpecs.clear()
@@ -151,6 +180,8 @@ private fun loadEmojiFile(emojiFileName: String, context: Context): List<String>
 const val EMOJI_HINT_LABEL = "◥"
 
 private var defaultSkinTone: String? = null
+/** -1 so the very first parse always runs, whatever generation SupportedEmojis is on. */
+private var loadedEmojiSupportGeneration: Int = -1
 private val emojiDefaultVersions: MutableMap<String, String> = mutableMapOf()
 private val emojiNeutralVersions: MutableMap<String, String> = mutableMapOf()
 private val emojiPopupSpecs: MutableMap<String, String> = mutableMapOf()

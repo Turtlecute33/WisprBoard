@@ -63,6 +63,8 @@ public class KeyboardView extends View {
     private final Drawable mSpacebarBackground;
     private final float mSpacebarIconWidthRatio;
     private final Rect mKeyBackgroundPadding = new Rect();
+    /** Scratch for {@link #onDrawKeyBackground}, so it does not allocate per key per draw. */
+    private final Rect mKeyBackgroundPaddingScratch = new Rect();
     private static final float KET_TEXT_SHADOW_RADIUS_DISABLED = -1.0f;
     private final Colors mColors;
     private float mKeyScaleForText;
@@ -364,7 +366,12 @@ public class KeyboardView extends View {
             bgX = (keyWidth - bgWidth) / 2;
             bgY = (keyHeight - bgHeight) / 2;
         } else {
-            final Rect padding = new Rect();
+            // Reused scratch rather than a fresh Rect per key per draw — that was ~26 allocations
+            // on every repaint of a default qwerty, and repaints happen on every key press and
+            // every gesture frame. No reset needed: getPadding() overwrites all four fields when
+            // it returns true, and the fallback below overwrites them when it returns false.
+            // UI thread only, like the rest of onDraw.
+            final Rect padding = mKeyBackgroundPaddingScratch;
             if (!background.getPadding(padding)) {
                 padding.set(mKeyBackgroundPadding);
             }
