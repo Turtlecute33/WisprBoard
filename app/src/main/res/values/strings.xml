@@ -1183,6 +1183,9 @@ New dictionary:
     <string name="openrouter_api_key_summary">Required before long-pressing Return to use voice input with your OpenRouter account</string>
     <string name="payperq_api_key">PayPerQ API Key</string>
     <string name="payperq_api_key_summary">Required before using voice input or Text Fix with your PayPerQ account</string>
+    <!-- Voice/AI: let the model spend time on hidden reasoning before answering -->
+    <string name="ai_allow_reasoning">Let the model think first</string>
+    <string name="ai_allow_reasoning_summary">Allow the model to reason before it answers. Slower — often several seconds, occasionally much longer — and it rarely helps transcription or copy-editing. Turn it on only if you picked a model where you want the extra thinking.</string>
     <string name="openrouter_zdr_enabled">Use zero data retention</string>
     <string name="openrouter_zdr_enabled_summary">Prefer models that promise not to store your data. The ZDR badge in the model picker shows which ones qualify; other models still work, but the request will go through standard routing.</string>
     <string name="voice_model">Voice Model</string>
@@ -1214,6 +1217,7 @@ New dictionary:
     <string name="voice_transcribing">Transcribing…</string>
     <string name="voice_error_no_api_key">Set provider API key in settings</string>
     <string name="voice_error_no_model">Choose a voice model in settings</string>
+    <string name="voice_error_recording_interrupted">Recording stopped unexpectedly. Try again.</string>
     <string name="voice_error_no_audio">No audio captured</string>
     <string name="voice_error_too_short">Recording too short</string>
     <string name="voice_error_silent">No speech detected</string>
@@ -1222,7 +1226,6 @@ New dictionary:
     <string name="voice_error_no_network">No internet connection</string>
     <string name="voice_error_sensitive_field">Voice input is unavailable in sensitive fields</string>
     <string name="voice_error_unsupported_field">Voice input is unavailable in this field</string>
-    <string name="voice_error_stt_openrouter_only">Dedicated STT is only available with OpenRouter</string>
     <string name="voice_error_on_device_unavailable">On-device speech recognition is unavailable on this device. It needs Android 12 or newer and a system speech service with an offline model.</string>
     <string name="voice_error_on_device_language">No offline language pack for this language. Install it in the system speech recognition settings, or switch the speech engine to Cloud AI.</string>
     <string name="voice_error_on_device_failed">On-device recognition failed</string>

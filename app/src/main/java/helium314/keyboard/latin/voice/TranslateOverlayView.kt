@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.SystemClock
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -26,6 +27,7 @@ import helium314.keyboard.latin.R
  */
 class TranslateOverlayView(context: Context) : LinearLayout(context) {
 
+    private val pulseView: AiPulseView
     private val statusText: TextView
     private val languageScroller: HorizontalScrollView
     private val languageRow: LinearLayout
@@ -44,8 +46,14 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         setPadding(dp(12), 0, dp(12), 0)
 
+        pulseView = AiPulseView(context).apply {
+            layoutParams = LayoutParams(dp(44), dp(20)).apply { marginEnd = dp(12) }
+            visibility = View.GONE
+        }
         statusText = TextView(context).apply {
             textSize = 13f
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
             layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(12) }
             visibility = View.GONE
         }
@@ -70,6 +78,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
             onCancelClick?.invoke()
         }
 
+        addView(pulseView)
         addView(statusText)
         addView(languageScroller)
         addView(cancelButton)
@@ -77,6 +86,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
 
     fun setColors(color: Int) {
         textColor = color
+        pulseView.meterColor = color
         statusText.setTextColor(color)
         applyPillColors(cancelButton, primary = false)
         for (i in 0 until languageRow.childCount) {
@@ -86,6 +96,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
 
     /** Shows the middle menu. [languages] is already de-duplicated and trimmed. */
     fun showLanguages(languages: List<String>) {
+        stopPulse()
         languageRow.removeAllViews()
         for (language in languages) {
             val pill = makePill(language, primary = true) { onLanguageClick?.invoke(language) }
@@ -101,6 +112,10 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
 
     fun showWorking() {
         statusText.text = context.getString(R.string.translate_working)
+        // A translation is committed straight into the editor, so this status line is the only
+        // signal the user gets that anything is happening. Keep it alive.
+        pulseView.visibility = View.VISIBLE
+        pulseView.resetToIdlePulse()
         statusText.visibility = View.VISIBLE
         languageScroller.visibility = View.GONE
         cancelButton.visibility = View.VISIBLE
@@ -108,11 +123,23 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
     }
 
     fun showError(message: String) {
+        stopPulse()
         statusText.text = message
         statusText.visibility = View.VISIBLE
         languageScroller.visibility = View.GONE
         cancelButton.visibility = View.VISIBLE
         announceForAccessibility(message)
+    }
+
+    /** Every state that is not "waiting" must stop the animator, or the IME window never idles. */
+    private fun stopPulse() {
+        pulseView.stopPulse()
+        pulseView.visibility = View.GONE
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        pulseView.stopPulse()
     }
 
     private fun makePill(label: String, primary: Boolean, onClick: () -> Unit): TextView =

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.voice
 
+import android.os.SystemClock
 import android.util.Base64
 import androidx.annotation.VisibleForTesting
 import helium314.keyboard.latin.BuildConfig
@@ -36,8 +37,36 @@ class OpenRouterClient(
     private val transcriptionLanguage: String? = null,
     private val connectTimeoutMs: Int = DEFAULT_CONNECT_TIMEOUT_MS,
     private val readTimeoutMs: Int = DEFAULT_READ_TIMEOUT_MS,
+    /**
+     * Ask the provider not to spend completion tokens on hidden reasoning. Reasoning is on by
+     * default for most routes and costs seconds: measured against the shipped default voice model,
+     * a 13.6 s clip answered in 5.9–13.8 s with reasoning and 2.7–8.9 s without, and
+     * `~google/gemini-pro-latest` took up to 226 s. Transcribing and copy-editing do not benefit
+     * from a scratchpad, so this defaults to true and users who deliberately picked a reasoning
+     * model can switch it back off in Voice settings.
+     */
+    private val disableReasoning: Boolean = true,
+    /**
+     * Wall-clock ceiling for the whole request including retries and backoff, or null for the
+     * legacy unbounded behaviour. Only shortens *later* attempts, so it can never turn a request
+     * that succeeds today into a timeout.
+     */
+    private val totalBudgetMs: Long? = null,
 ) {
     @Volatile private var activeConnection: HttpURLConnection? = null
+    @Volatile private var deadlineMs: Long = Long.MAX_VALUE
+    /**
+     * True once the provider has answered a tuned request with "reasoning cannot be disabled".
+     * Mirrored into a process-wide TTL cache so the next request skips the doomed attempt instead
+     * of paying for another audio upload to learn the same thing.
+     */
+    @Volatile private var suppressReasoningControl = false
+    /**
+     * Flipped once the request body is fully on the wire. Distinguishes a connect-phase
+     * [SocketTimeoutException] (nothing sent, retrying is pointless) from a read-phase one (the
+     * whole payload was already uploaded).
+     */
+    @Volatile private var responseStarted = false
 
     /**
      * Set by [cancel] before the connection is torn down. Disconnecting an in-flight request
@@ -66,9 +95,16 @@ class OpenRouterClient(
         private const val APP_REFERER = "https://github.com/Turtlecute33/WisprBoard"
         private const val APP_TITLE = "WisprBoard"
         private const val APP_CATEGORIES = "writing-assistant"
-        const val DEFAULT_CONNECT_TIMEOUT_MS = 15_000
+        /**
+         * A TCP+TLS handshake that has not completed in 8 s on a working mobile network will not
+         * complete. Was 15 s, which — multiplied by [MAX_ATTEMPTS] — made a captive portal or a
+         * black-holed route cost the user 46 s of dead waiting before any error appeared.
+         */
+        const val DEFAULT_CONNECT_TIMEOUT_MS = 8_000
         const val DEFAULT_READ_TIMEOUT_MS = 90_000
         private const val MAX_ATTEMPTS = 3
+        /** Floor for a budget-shortened read timeout, so an almost-spent budget still gets a chance. */
+        private const val MIN_BUDGETED_READ_TIMEOUT_MS = 1_000L
         /**
          * Sentinel status for "HTTP 200 with a body we cannot use" — a JSON body we can't parse, a
          * `{"error": …}` envelope served with a 200 (PayPerQ does this when its upstream fails), no
@@ -106,6 +142,69 @@ class OpenRouterClient(
         @VisibleForTesting
         internal fun isRetryableStatus(statusCode: Int): Boolean = statusCode in RETRYABLE_STATUSES
 
+        private val prewarmExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "AiPrewarm").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
+        }
+        private val prewarmInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
+        /** Stamped by the pre-warm *and* by every real request, so the two never fight for a socket. */
+        @Volatile private var lastContactUptimeMs = 0L
+        private const val PREWARM_MIN_GAP_MS = 90_000L
+        private const val PREWARM_TIMEOUT_MS = 5_000
+
+        /**
+         * Opens a pooled TCP+TLS connection to the provider ahead of the real request, so the
+         * handshake overlaps with the user's own think time instead of being charged to the wait.
+         * Worth 30–200 ms on OpenRouter and 300–500 ms on PayPerQ, which is 10–30 % of a
+         * text-only Translate.
+         *
+         * Call this ONLY where a request is already committed — when the Translate language menu
+         * opens, or when a Text Fix starts. It is deliberately NOT called on the voice path: today
+         * a recording the user cancels, or one too short or too quiet to send, produces no packets
+         * at all, and pre-warming there would make "the user pressed the mic key" observable to
+         * the network via SNI. That guarantee is worth more than 3–10 % of a dictation.
+         *
+         * Sends no Authorization header and no payload: nothing that identifies the user leaves
+         * the device, only a handshake to a host they have already chosen to use.
+         */
+        @JvmStatic
+        fun prewarm(provider: AiProvider) {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastContactUptimeMs < PREWARM_MIN_GAP_MS) return
+            if (!prewarmInFlight.compareAndSet(false, true)) return
+            prewarmExecutor.execute {
+                try {
+                    val url = if (provider == AiProvider.PAYPERQ) PAYPERQ_MODELS_ENDPOINT else KEY_ENDPOINT
+                    val c = (URL(url).openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        connectTimeout = PREWARM_TIMEOUT_MS
+                        readTimeout = PREWARM_TIMEOUT_MS
+                    }
+                    try {
+                        c.responseCode
+                        // Draining the body is what returns the socket to the pool. Without this
+                        // the whole exercise is a no-op. Unauthenticated, so expect the error
+                        // stream, not the input stream.
+                        (c.errorStream ?: runCatching { c.inputStream }.getOrNull())?.use { stream ->
+                            val sink = ByteArray(2048)
+                            while (stream.read(sink) != -1) { /* discard */ }
+                        }
+                        lastContactUptimeMs = SystemClock.elapsedRealtime()
+                    } finally {
+                        c.disconnect()
+                    }
+                } catch (_: Throwable) {
+                    // Speculative by definition. Never surface it, and never log the URL.
+                } finally {
+                    prewarmInFlight.set(false)
+                }
+            }
+        }
+
+        /** Marks the pool as freshly used so a pre-warm cannot interfere with a live request. */
+        private fun markContacted() {
+            lastContactUptimeMs = SystemClock.elapsedRealtime()
+        }
+
         fun applyOpenRouterAttributionHeaders(connection: HttpURLConnection) {
             connection.setRequestProperty("HTTP-Referer", APP_REFERER)
             connection.setRequestProperty("X-OpenRouter-Title", APP_TITLE)
@@ -119,7 +218,7 @@ class OpenRouterClient(
      * regardless of recording length. Throws [OpenRouterException] on non-retryable failures
      * or after retries are exhausted. The caller owns the file and must delete it.
      */
-    fun transcribe(audioFile: File): String = withOptionalZdr("Transcription") { enforceZdr ->
+    fun transcribe(audioFile: File): String = withOptionalZdr("Transcription", retryTimeouts = false) { enforceZdr ->
         val dedicatedStt = transcriptionMode == VoiceTranscriptionMode.DEDICATED_STT
         when {
             provider == AiProvider.OPENROUTER && dedicatedStt ->
@@ -150,22 +249,49 @@ class OpenRouterClient(
      * reply. Uses [systemPrompt] as the system message. Retries transient failures with the
      * same policy as [transcribe].
      */
-    fun fixText(userText: String): String = withOptionalZdr("Request") { enforceZdr ->
+    fun fixText(userText: String): String = withOptionalZdr("Request", retryTimeouts = true) { enforceZdr ->
         performTextRequest(userText, enforceZdr)
     }
 
-    private inline fun <T> withOptionalZdr(label: String, request: (Boolean) -> T): T {
+    private inline fun <T> withOptionalZdr(label: String, retryTimeouts: Boolean, request: (Boolean) -> T): T {
+        // Stamped once here, not inside withRetries: the ZDR fallback below enters withRetries a
+        // second time and would otherwise be handed a fresh full budget.
+        deadlineMs = totalBudgetMs?.let { SystemClock.elapsedRealtime() + it } ?: Long.MAX_VALUE
+        if (disableReasoning && isReasoningControlKnownRejected(model)) suppressReasoningControl = true
         val requestZdr = provider == AiProvider.OPENROUTER
             && useZeroDataRetention
+            // A model whose ZDR route we have already found missing would otherwise re-upload the
+            // whole clip on every single dictation just to rediscover it.
+            && !isZdrRouteKnownUnavailable(model)
         return try {
-            withRetries(label, requestZdr) { request(requestZdr) }
+            withReasoningFallback(label, requestZdr, retryTimeouts) { request(requestZdr) }
         } catch (e: OpenRouterException) {
             if (!requestZdr || !e.isZdrRouteUnavailable()) throw e
             // ZDR is a preference, not a hard requirement. Retry once through normal routing so
             // unsupported, custom, or temporarily unavailable ZDR routes do not break the feature.
+            markZdrRouteUnavailable(model)
             didFallbackFromZdr = true
-            withRetries(label, false) { request(false) }
+            withReasoningFallback(label, false, retryTimeouts) { request(false) }
         }
+    }
+
+    /**
+     * A handful of routes reject `reasoning: {enabled: false}` outright rather than ignoring it.
+     * That answer is a non-retryable 400, so this costs at most one attempt, and the verdict is
+     * remembered per model so the next request does not pay for another upload to relearn it.
+     */
+    private inline fun <T> withReasoningFallback(
+        label: String,
+        enforceZdr: Boolean,
+        retryTimeouts: Boolean,
+        request: () -> T,
+    ): T = try {
+        withRetries(label, enforceZdr, retryTimeouts, request)
+    } catch (e: OpenRouterException) {
+        if (!chatTuningApplies() || !isReasoningControlRejected(e.statusCode, e.errorBody)) throw e
+        suppressReasoningControl = true
+        markReasoningControlRejected(model)
+        withRetries(label, enforceZdr, retryTimeouts, request)
     }
 
     /**
@@ -174,13 +300,20 @@ class OpenRouterClient(
      * sleeps. Throws on the final attempt or non-retryable failures. The [label] is used only
      * for the terminal error message ("$label failed [after retries]").
      */
-    private inline fun <T> withRetries(label: String, enforceZdr: Boolean, request: () -> T): T {
+    private inline fun <T> withRetries(
+        label: String,
+        enforceZdr: Boolean,
+        retryTimeouts: Boolean,
+        request: () -> T,
+    ): T {
         var lastError: Exception? = null
         var nextDelayOverrideMs: Long = -1L
+        var skipBackoff = false
         var attempt = 0
         while (attempt < MAX_ATTEMPTS) {
             if (cancelled) throw InterruptedException()
             if (Thread.currentThread().isInterrupted) throw InterruptedException()
+            responseStarted = false
             try {
                 return request()
             } catch (e: OpenRouterException) {
@@ -196,9 +329,19 @@ class OpenRouterClient(
                 if (e.statusCode !in RETRYABLE_STATUSES || attempt == MAX_ATTEMPTS - 1) throw e
                 lastError = e
                 nextDelayOverrideMs = if ((e.statusCode == 429 || e.statusCode == 503) && e.retryAfterMs > 0) e.retryAfterMs else -1L
+                // A 200 with an unusable body is an upstream hiccup, not congestion. Backing off
+                // 0.5–2 s before repeating it is dead time the user spends staring at a spinner.
+                skipBackoff = e.statusCode == STATUS_UNUSABLE_RESPONSE
             } catch (e: SocketTimeoutException) {
                 if (cancelled) throw InterruptedException()
-                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Request timed out")
+                // Connect phase: the route is black-holed or behind a captive portal, and
+                // isNetworkAvailable() already passed. Two more 8 s handshakes will not find a
+                // path, they just make the user wait 24 s instead of 8 s for the same error.
+                if (!responseStarted) throw OpenRouterException("Request timed out")
+                // Read phase: the body is already on the wire. Text bodies are cheap to resend;
+                // an audio body is megabytes, and a server that stayed silent for the whole
+                // window will stay silent for the next one.
+                if (!retryTimeouts || attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Request timed out")
                 lastError = e
                 nextDelayOverrideMs = -1L
             } catch (e: InterruptedIOException) {
@@ -215,9 +358,19 @@ class OpenRouterClient(
                 lastError = e
                 nextDelayOverrideMs = -1L
             }
-            val delayMs = if (nextDelayOverrideMs > 0) nextDelayOverrideMs else (500L shl attempt).coerceAtMost(4_000L)
+            val delayMs = when {
+                skipBackoff -> 0L
+                nextDelayOverrideMs > 0 -> nextDelayOverrideMs
+                else -> (500L shl attempt).coerceAtMost(4_000L)
+            }
+            skipBackoff = false
+            // Sleeping past the budget would burn the user's remaining wait on doing nothing, and
+            // a Retry-After longer than the budget can never be honoured anyway.
+            if (SystemClock.elapsedRealtime() + delayMs >= deadlineMs) {
+                throw (lastError as? OpenRouterException ?: OpenRouterException("Request timed out"))
+            }
             if (BuildConfig.DEBUG) Log.i(TAG, "Retrying after ${delayMs}ms (attempt ${attempt + 1})")
-            try { Thread.sleep(delayMs) } catch (e: InterruptedException) {
+            try { if (delayMs > 0) Thread.sleep(delayMs) } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
                 throw e
             }
@@ -226,16 +379,22 @@ class OpenRouterClient(
         throw OpenRouterException(if (lastError == null) "$label failed" else "$label failed after retries")
     }
 
-    private fun performTextRequest(userText: String, enforceZdr: Boolean): String {
+    @VisibleForTesting
+    internal fun buildTextRequestBody(userText: String, enforceZdr: Boolean): JSONObject {
         val messages = JSONArray().apply {
             put(buildSystemMessage())
             put(buildTextMessage(userText))
         }
-        val body = JSONObject().apply {
+        return JSONObject().apply {
             put("model", model)
             put("messages", messages)
             putProviderPreferences(this, enforceZdr)
-        }.toString().toByteArray(Charsets.UTF_8)
+            putChatTuning(this)
+        }
+    }
+
+    private fun performTextRequest(userText: String, enforceZdr: Boolean): String {
+        val body = buildTextRequestBody(userText, enforceZdr).toString().toByteArray(Charsets.UTF_8)
 
         val connection = (URL(chatEndpoint()).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -243,13 +402,14 @@ class OpenRouterClient(
             setRequestProperty("Content-Type", "application/json")
             if (provider == AiProvider.OPENROUTER) applyOpenRouterAttributionHeaders(this)
             connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
+            readTimeout = effectiveReadTimeoutMs()
             doOutput = true
             setFixedLengthStreamingMode(body.size)
         }
         activeConnection = connection
         try {
             connection.outputStream.use { it.write(body) }
+            responseStarted = true
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 val errorBody = readErrorBodyCapped(connection.errorStream)
@@ -261,6 +421,7 @@ class OpenRouterClient(
             return parseContent(responseBody)
         } finally {
             activeConnection = null
+            markContacted()
             connection.disconnect()
         }
     }
@@ -270,7 +431,8 @@ class OpenRouterClient(
      * streamed separately. The placeholder sentinel is split in half so both halves can be
      * emitted verbatim around the live base64 stream.
      */
-    private fun buildRequestEnvelope(enforceZdr: Boolean): Pair<String, String> {
+    @VisibleForTesting
+    internal fun buildRequestEnvelope(enforceZdr: Boolean): Pair<String, String> {
         val messages = JSONArray().apply {
             put(buildSystemMessage())
             put(buildTextMessage(STABLE_AUDIO_INSTRUCTION))
@@ -281,10 +443,37 @@ class OpenRouterClient(
             put("model", model)
             put("messages", messages)
             putProviderPreferences(this, enforceZdr)
+            putChatTuning(this)
         }.toString()
         val placeholderIndex = body.indexOf(AUDIO_PLACEHOLDER)
         check(placeholderIndex >= 0) { "Audio placeholder not found in request body" }
         return body.substring(0, placeholderIndex) to body.substring(placeholderIndex + AUDIO_PLACEHOLDER.length)
+    }
+
+    private fun chatTuningApplies(): Boolean =
+        provider == AiProvider.OPENROUTER && disableReasoning && !suppressReasoningControl
+
+    /**
+     * Chat-only request tuning. Deliberately separate from [putProviderPreferences], which returns
+     * early when ZDR is off — folding the two together would silently drop the tuning on every
+     * non-ZDR request, including the ZDR-fallback attempt.
+     *
+     * Only `reasoning` is sent. `temperature` is deliberately absent: the shipped default text
+     * model rejects a non-default temperature with a 400, which is non-retryable here and would
+     * take Text Fix down entirely.
+     */
+    @VisibleForTesting
+    internal fun putChatTuning(body: JSONObject) {
+        if (!chatTuningApplies()) return
+        body.put("reasoning", JSONObject().apply { put("enabled", false) })
+    }
+
+    /** Remaining read budget, or the configured timeout when no budget is set. */
+    private fun effectiveReadTimeoutMs(): Int {
+        if (deadlineMs == Long.MAX_VALUE) return readTimeoutMs
+        val remaining = deadlineMs - SystemClock.elapsedRealtime()
+        if (remaining >= readTimeoutMs) return readTimeoutMs
+        return remaining.coerceAtLeast(MIN_BUDGETED_READ_TIMEOUT_MS).toInt()
     }
 
     internal fun putProviderPreferences(body: JSONObject, enforceZdr: Boolean) {
@@ -346,7 +535,7 @@ class OpenRouterClient(
             setRequestProperty("Content-Type", "application/json")
             if (provider == AiProvider.OPENROUTER) applyOpenRouterAttributionHeaders(this)
             connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
+            readTimeout = effectiveReadTimeoutMs()
             doOutput = true
             // Chunked streaming keeps the upload out of HttpURLConnection's internal buffer;
             // without it the entire body (including audio) would be buffered in memory before
@@ -362,6 +551,7 @@ class OpenRouterClient(
                 out.write(suffix.toByteArray(Charsets.UTF_8))
                 out.flush()
             }
+            responseStarted = true
 
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
@@ -375,6 +565,7 @@ class OpenRouterClient(
             return parseContent(responseBody)
         } finally {
             activeConnection = null
+            markContacted()
             connection.disconnect()
         }
     }
@@ -420,7 +611,7 @@ class OpenRouterClient(
             setRequestProperty("Content-Type", "application/json")
             applyOpenRouterAttributionHeaders(this)
             connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
+            readTimeout = effectiveReadTimeoutMs()
             doOutput = true
             setChunkedStreamingMode(0)
         }
@@ -432,6 +623,7 @@ class OpenRouterClient(
                 out.write(suffix.toByteArray(Charsets.UTF_8))
                 out.flush()
             }
+            responseStarted = true
 
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
@@ -445,6 +637,7 @@ class OpenRouterClient(
             return parseTranscriptionContent(responseBody)
         } finally {
             activeConnection = null
+            markContacted()
             connection.disconnect()
         }
     }
@@ -458,7 +651,7 @@ class OpenRouterClient(
             setRequestProperty("Authorization", "Bearer $apiKey")
             setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             connectTimeout = connectTimeoutMs
-            readTimeout = readTimeoutMs
+            readTimeout = effectiveReadTimeoutMs()
             doOutput = true
             setChunkedStreamingMode(0)
         }
@@ -476,6 +669,7 @@ class OpenRouterClient(
                 out.writeBytes("--$boundary--\r\n")
                 out.flush()
             }
+            responseStarted = true
 
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
@@ -489,6 +683,7 @@ class OpenRouterClient(
             return parseTranscriptionContent(responseBody)
         } finally {
             activeConnection = null
+            markContacted()
             connection.disconnect()
         }
     }
@@ -706,6 +901,25 @@ class OpenRouterClient(
     private fun OpenRouterException.isZdrRouteUnavailable(): Boolean {
         return isZdrRouteUnavailable(statusCode, errorBody)
     }
+}
+
+/**
+ * True when the provider refused the request *because* we asked it not to reason. A few routes
+ * treat reasoning as mandatory and answer 400 instead of ignoring the field. Deliberately narrow:
+ * a generic 400 must not be read as a reasoning complaint, or a malformed request would be retried
+ * untuned forever and the real error hidden.
+ */
+internal fun isReasoningControlRejected(statusCode: Int, errorBody: String): Boolean {
+    if (statusCode != 400 && statusCode != 422) return false
+    val body = errorBody.lowercase(Locale.US)
+    if (!body.contains("reasoning") && !body.contains("thinking")) return false
+    return body.contains("cannot be disabled") ||
+        body.contains("can't be disabled") ||
+        body.contains("must be enabled") ||
+        body.contains("is mandatory") ||
+        body.contains("does not support") ||
+        body.contains("not supported") ||
+        body.contains("unsupported")
 }
 
 internal fun isZdrRouteUnavailable(statusCode: Int, errorBody: String): Boolean {

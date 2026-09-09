@@ -22,6 +22,7 @@ import kotlin.reflect.KMutableProperty0
  */
 class TextFixOverlayView(context: Context) : LinearLayout(context) {
 
+    private val pulseView: AiPulseView
     private val statusText: TextView
     private val resultText: TextView
     private val replaceButton: TextView
@@ -38,9 +39,18 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         setPadding(dp(12), 0, dp(12), 0)
 
+        pulseView = AiPulseView(context).apply {
+            layoutParams = LayoutParams(dp(44), dp(20)).apply { marginEnd = dp(12) }
+            visibility = View.GONE
+        }
         statusText = TextView(context).apply {
             textSize = 13f
-            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            // Weighted like every sibling overlay's status line. With WRAP_CONTENT it was the only
+            // weightless child in the error state, so a long provider message soaked up the whole
+            // strip and squeezed Discard — the one button that state offers — to zero width.
+            layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginEnd = dp(12)
             }
             visibility = View.GONE
@@ -60,6 +70,7 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
             debounceClick(::lastReplaceClickMs) { onReplaceClick?.invoke() }
         }
 
+        addView(pulseView)
         addView(statusText)
         addView(resultText)
         addView(discardButton)
@@ -93,6 +104,7 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     }
 
     fun setColors(textColor: Int) {
+        pulseView.meterColor = textColor
         statusText.setTextColor(textColor)
         resultText.setTextColor(textColor)
         // Primary (Replace): strong filled background with full-opacity text.
@@ -107,6 +119,10 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
 
     fun showWorking() {
         statusText.text = context.getString(R.string.text_fix_working)
+        // Something has to move while the provider thinks, or a multi-second wait behind static
+        // text reads as a dead keyboard.
+        pulseView.visibility = View.VISIBLE
+        pulseView.resetToIdlePulse()
         statusText.visibility = View.VISIBLE
         resultText.visibility = View.GONE
         replaceButton.visibility = View.GONE
@@ -115,6 +131,7 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     }
 
     fun showResult(proposed: String) {
+        stopPulse()
         statusText.visibility = View.GONE
         resultText.text = proposed
         resultText.visibility = View.VISIBLE
@@ -124,12 +141,24 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     }
 
     fun showError(message: String) {
+        stopPulse()
         statusText.text = message
         statusText.visibility = View.VISIBLE
         resultText.visibility = View.GONE
         replaceButton.visibility = View.GONE
         discardButton.visibility = View.VISIBLE
         announceForAccessibility(message)
+    }
+
+    /** Every state that is not "waiting" must stop the animator, or the IME window never idles. */
+    private fun stopPulse() {
+        pulseView.stopPulse()
+        pulseView.visibility = View.GONE
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        pulseView.stopPulse()
     }
 
     private fun debounceClick(lastClickMs: KMutableProperty0<Long>, action: () -> Unit) {

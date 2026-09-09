@@ -41,13 +41,19 @@ internal fun ModelListPreference(
     setting: Setting,
     entries: List<ModelEntry>,
     defaultSlug: String,
+    /**
+     * Whether to offer the free-text "Custom" entry. False where the provider's endpoint ignores
+     * the model field, so picking Custom would leave the user with no slug field and no working
+     * model — see [helium314.keyboard.latin.voice.supportsSttSlug].
+     */
+    allowCustom: Boolean = true,
 ) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
     val customLabel = ctx.getString(R.string.voice_custom_model)
-    val items = remember(entries, defaultSlug) {
+    val items = remember(entries, defaultSlug, allowCustom) {
         entries.map { it.toPickerItem(isDefault = it.slug == defaultSlug) } +
-            PickerItem(customLabel, "custom", emptyList())
+            if (allowCustom) listOf(PickerItem(customLabel, "custom", emptyList())) else emptyList()
     }
     val selectedSlug = rememberStringPreferenceState(setting.key, defaultSlug).value
     val selected = items.firstOrNull { it.slug == selectedSlug }

@@ -7,6 +7,7 @@ import android.media.MediaRecorder
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
 import android.os.SystemClock
+import androidx.annotation.VisibleForTesting
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.utils.Log
 import java.io.File
@@ -76,6 +77,9 @@ class AudioRecorder(
     @Volatile private var pcmBytesWritten: Long = 0L
     @Volatile private var amplitudeSum: Long = 0L
     @Volatile private var amplitudeCount: Long = 0L
+    @Volatile private var amplitudePeak: Double = 0.0
+    /** Elapsed time at the moment capture ended, so the UI timer stops instead of resetting to 0. */
+    @Volatile private var stoppedDurationMs: Long = 0L
     private var noiseSuppressor: NoiseSuppressor? = null
     private var agc: AutomaticGainControl? = null
     @Volatile private var isRecording = false
@@ -97,13 +101,42 @@ class AudioRecorder(
     @Volatile var lastMeanAmplitude: Double = 0.0
         private set
 
+    /**
+     * Loudest chunk of the last completed recording (0..32767). This, not [lastMeanAmplitude], is
+     * what the "did anyone actually speak?" gate should use: a mean is diluted linearly by silence,
+     * so 3 s of clear speech inside a 60 s clip averages down to roughly 55 and gets thrown away
+     * as silence even though its peak is 900.
+     */
+    @Volatile var lastPeakAmplitude: Double = 0.0
+        private set
+
     /** Rolling mean amplitude of the most recent audio chunk, read-safe from any thread. */
     @Volatile var currentAmplitude: Double = 0.0
         private set
 
-    /** Live elapsed time since start(), 0 when idle. */
+    /**
+     * Live elapsed time while recording, and the final duration once capture has ended, so a UI
+     * timer freezes at the value the user last saw instead of snapping back to 0:00 during the
+     * finalize-and-upload window.
+     */
     val currentDurationMs: Long
-        get() = if (isRecording && recordingStartMs > 0) SystemClock.elapsedRealtime() - recordingStartMs else 0L
+        get() = if (isRecording && recordingStartMs > 0) {
+            SystemClock.elapsedRealtime() - recordingStartMs
+        } else {
+            stoppedDurationMs
+        }
+
+    /**
+     * The in-flight recording's completion, or null when nothing is running. Unlike [stop] this
+     * does not request a stop — it lets a caller observe a recording that ended on its own.
+     */
+    fun completionOrNull(): Deferred<File?>? = if (recordingJob != null) completion else null
+
+    /** Captures the elapsed time before [recordingStartMs] is cleared. Idempotent per session. */
+    private fun freezeDuration() {
+        val start = recordingStartMs
+        if (start > 0L) stoppedDurationMs = SystemClock.elapsedRealtime() - start
+    }
 
     var onMaxDurationReached: (() -> Unit)? = null
     var onAutoStopSilence: (() -> Unit)? = null
@@ -150,6 +183,8 @@ class AudioRecorder(
             pcmBytesWritten = 0L
             amplitudeSum = 0L
             amplitudeCount = 0L
+            amplitudePeak = 0.0
+            stoppedDurationMs = 0L
             currentAmplitude = 0.0
             cancelRequested = false
             isRecording = true
@@ -159,25 +194,32 @@ class AudioRecorder(
             val deferred = CompletableDeferred<File?>()
             completion = deferred
             recordingJob = recordingScope.launch(CoroutineName("AudioRecorder")) {
-                val file = try {
+                try {
+                    // Finalize and hand the file over BEFORE tearing the microphone down. The WAV
+                    // header depends only on the byte counters, so making the upload wait for
+                    // AudioRecord.stop() + release() + two effect releases — all serialized behind
+                    // teardownLock, and documented at stop() as 150–500 ms on some OEM HALs — was
+                    // pure dead time between the user pressing Stop and the first byte going out.
                     try {
-                        runRecordingLoop(bufferSize)
+                        runRecordingLoop(readChunkBytes(bufferSize))
                     } finally {
-                        // Resource release and file finalization happen on the recording thread,
-                        // so callers (including the IME main thread) never have to block waiting
-                        // for the loop to drain.
-                        cleanupAudioRecord()
+                        freezeDuration()
                     }
-                    finalizeOutputFile()
+                    deferred.complete(finalizeOutputFile())
                 } catch (_: CancellationException) {
                     cleanupRecordingFailure()
-                    null
+                    deferred.complete(null)
                 } catch (t: Throwable) {
                     Log.e(TAG, "Recording failed", t)
                     cleanupRecordingFailure()
-                    null
+                    deferred.complete(null)
+                } finally {
+                    cleanupAudioRecord()
+                    // A loop that exits on its own — audioserver death, a cache write failure —
+                    // never reaches stop(), so nobody would ever await this deferred. Completing
+                    // it unconditionally is what lets the watchdog in VoiceInputManager notice.
+                    deferred.complete(null)
                 }
-                deferred.complete(file)
             }
             true
         } catch (e: SecurityException) {
@@ -198,6 +240,18 @@ class AudioRecorder(
             false
         }
     }
+
+    /**
+     * How much to ask for per blocking read. Deliberately smaller than the AudioRecord ring
+     * buffer: the 3-argument [AudioRecord.read] does not return until it has filled the array, so
+     * reading `bufferSize` bytes means every read waits for the ring buffer to be 100 % full and
+     * the "2x headroom over the minimum" at the allocation site buys nothing against overrun. One
+     * 40 ms slice keeps a full buffer of slack at all times and, as a bonus, lifts the amplitude
+     * meter's update rate to match the UI ticker instead of trailing it.
+     */
+    @VisibleForTesting
+    internal fun readChunkBytes(bufferSize: Int): Int =
+        ((SAMPLE_RATE / 25) * 2).coerceAtMost(bufferSize).coerceAtLeast(2)
 
     private suspend fun runRecordingLoop(bufferSize: Int) {
         val buffer = ByteArray(bufferSize)
@@ -227,10 +281,11 @@ class AudioRecorder(
                         break
                     }
                     currentAmplitude = amp
-                    // Running mean for post-stop gate — avoids re-reading the whole file.
+                    // Running mean and peak for the post-stop gate — avoids re-reading the file.
                     val samples = read / 2
                     amplitudeSum += (amp * samples).toLong()
                     amplitudeCount += samples
+                    if (amp > amplitudePeak) amplitudePeak = amp
                     if (autoStopSilenceMs > 0L) {
                         val now = SystemClock.elapsedRealtime()
                         if (amp >= SPEECH_AMPLITUDE_THRESHOLD) {
@@ -267,6 +322,7 @@ class AudioRecorder(
      * Callers own the returned file and must delete it.
      */
     fun stop(): Deferred<File?> {
+        freezeDuration()
         isRecording = false
         // AudioRecord.stop() is documented as safe from any thread, but on some OEMs it can
         // block 150–500ms while the audio HAL drains. Always dispatch it off-thread so callers
@@ -281,6 +337,7 @@ class AudioRecorder(
      * is in flight, its `finally` block deletes the partial file once it observes the cancel.
      */
     fun cancel() {
+        freezeDuration()
         cancelRequested = true
         isRecording = false
         // Same rationale as stop(): never call AudioRecord.stop() on the caller's thread.
@@ -334,6 +391,7 @@ class AudioRecorder(
         val pcmBytes = pcmBytesWritten
         lastDurationMs = if (pcmBytes >= 2) (pcmBytes * 1000L) / (SAMPLE_RATE.toLong() * 2L) else 0L
         lastMeanAmplitude = if (amplitudeCount > 0) amplitudeSum.toDouble() / amplitudeCount else 0.0
+        lastPeakAmplitude = amplitudePeak
         currentAmplitude = 0.0
         val raf = pcmOutputFile
         pcmOutputFile = null
@@ -361,8 +419,11 @@ class AudioRecorder(
         pcmBytesWritten = 0L
         amplitudeSum = 0L
         amplitudeCount = 0L
+        amplitudePeak = 0.0
+        stoppedDurationMs = 0L
         lastDurationMs = 0L
         lastMeanAmplitude = 0.0
+        lastPeakAmplitude = 0.0
         currentAmplitude = 0.0
     }
 
@@ -419,7 +480,8 @@ class AudioRecorder(
     }
 
     /** Scales each 16-bit little-endian sample in place by [gain], clipping to the PCM16 range. */
-    private fun applyGain(buf: ByteArray, length: Int, gain: Float) {
+    @VisibleForTesting
+    internal fun applyGain(buf: ByteArray, length: Int, gain: Float) {
         var i = 0
         val end = length - 1
         while (i < end) {
@@ -433,7 +495,8 @@ class AudioRecorder(
         }
     }
 
-    private fun chunkMeanAmplitude(buf: ByteArray, length: Int): Double {
+    @VisibleForTesting
+    internal fun chunkMeanAmplitude(buf: ByteArray, length: Int): Double {
         if (length < 2) return 0.0
         var sum = 0L
         var count = 0

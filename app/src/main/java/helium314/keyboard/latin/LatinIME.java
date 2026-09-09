@@ -87,6 +87,8 @@ import helium314.keyboard.latin.utils.SubtypeLocaleUtils;
 import helium314.keyboard.latin.utils.SubtypeSettings;
 import helium314.keyboard.latin.utils.SubtypeState;
 import helium314.keyboard.latin.utils.ToolbarMode;
+import helium314.keyboard.latin.voice.AiProvider;
+import helium314.keyboard.latin.voice.OpenRouterClient;
 import helium314.keyboard.latin.voice.TextFixManager;
 import helium314.keyboard.latin.voice.TranslateManager;
 import helium314.keyboard.latin.voice.VoiceDestinationGuard;
@@ -923,6 +925,12 @@ public class LatinIME extends InputMethodService implements
         clearPendingTranslateState();
         mPendingTranslateSource = source.toString();
         mPendingTranslateFromClipboard = fromClipboard;
+        // Every precondition has passed, so a request is committed bar the language choice. Use
+        // the seconds the user spends reading the chips to get the TCP+TLS handshake out of the
+        // way — it is 10-30% of a text-only translation.
+        OpenRouterClient.prewarm(AiProvider.fromPref(
+                DeviceProtectedUtils.getSharedPreferences(this)
+                        .getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)));
         showTranslateLanguageMenu();
     }
 

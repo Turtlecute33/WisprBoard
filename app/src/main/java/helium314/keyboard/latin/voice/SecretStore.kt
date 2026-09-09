@@ -33,22 +33,32 @@ object SecretStore {
     }
 
     fun getApiKey(context: Context, prefKey: String, default: String): String {
-        val secure = securePrefs(context)
-        if (secure != null) {
-            val encrypted = secure.getString(prefKey, null)
-            if (encrypted != null) return encrypted
-            // First-run migration: if a plaintext value exists in normal prefs, move it here
-            // and scrub the original.
-            val legacy = context.prefs().getString(prefKey, null)
-            if (!legacy.isNullOrBlank()) {
-                // Commit the secure copy to disk before scrubbing the plaintext one. If the process
-                // dies in between, the worst case is a leftover plaintext key that gets re-scrubbed on
-                // the next read — never a lost key.
-                secure.edit(commit = true) { putString(prefKey, legacy) }
-                context.prefs().edit { remove(prefKey) }
-                return legacy
-            }
+        val secure = securePrefs(context) ?: return default
+        // EncryptedSharedPreferences throws an unchecked SecurityException when a stored blob
+        // cannot be decrypted with the current AndroidKeyStore master key — which happens after
+        // some restores and OS updates. Every caller of this is on the IME main thread, and an
+        // escaping SecurityException kills the whole keyboard process on every mic tap, then again
+        // on every retry. Report "no key" instead: re-entering it in Settings overwrites the bad
+        // blob and self-heals. Deliberately does NOT fall through to the plaintext-legacy branch.
+        val encrypted = runCatching { secure.getString(prefKey, null) }.getOrElse { e ->
+            Log.w(TAG, "Failed to read stored key", e)
             return default
+        }
+        if (encrypted != null) return encrypted
+        // First-run migration: if a plaintext value exists in normal prefs, move it here
+        // and scrub the original.
+        val legacy = context.prefs().getString(prefKey, null)
+        if (!legacy.isNullOrBlank()) {
+            // Commit the secure copy to disk before scrubbing the plaintext one. If the process
+            // dies in between, the worst case is a leftover plaintext key that gets re-scrubbed on
+            // the next read — never a lost key.
+            val migrated = runCatching {
+                secure.edit(commit = true) { putString(prefKey, legacy) }
+            }.isSuccess
+            // Only scrub the plaintext copy once the encrypted one is actually on disk, or the
+            // migration would destroy the user's key.
+            if (migrated) context.prefs().edit { remove(prefKey) }
+            return legacy
         }
         return default
     }

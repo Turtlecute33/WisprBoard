@@ -288,7 +288,8 @@ sealed interface KeyData : AbstractKeyData {
             }
             val stt = "!icon/stt_action_key|!code/key_voice_stt_input"
             if (onDeviceEngine) {
-                // OpenRouter's transcription endpoint is unreachable on this engine by design.
+                // Both providers' transcription endpoints are unreachable on this engine by
+                // design: picking on-device means nothing spoken leaves the phone.
                 present.remove(stt)
             } else if (sttEnabled) {
                 if (stt !in present) present.add(stt)

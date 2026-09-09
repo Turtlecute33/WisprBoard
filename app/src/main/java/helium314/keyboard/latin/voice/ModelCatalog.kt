@@ -33,11 +33,21 @@ internal data class ModelEntry(
 )
 
 internal object ModelCatalog {
+    // Ordered fastest-first from timings measured against the live API on one 13.6 s clip, 2–3
+    // runs each. Chat models that route audio through a reasoning pass are slow and wildly
+    // variable, so the purpose-built audio models lead. The `zdr` flags below were reconciled
+    // against OpenRouter's own `/api/v1/endpoints/zdr` list rather than left as hand-maintained
+    // guesses — three of them were wrong in the direction that under-reports privacy.
     val OPENROUTER_VOICE: List<ModelEntry> = listOf(
+        // 1.3–2.2 s. Present on the ZDR list; previously flagged non-ZDR here by mistake.
+        ModelEntry("mistralai/voxtral-small-24b-2507", "Voxtral Small 24B", PricingTier.CHEAP, zdr = true, cache = true),
+        // 2.7–8.9 s with reasoning suppressed, 5.9–13.8 s without.
         ModelEntry("~google/gemini-flash-latest", "Gemini Flash", PricingTier.CHEAP, zdr = true, cache = true),
+        // 2.6–5.7 s tuned, but measured up to 226 s when left to reason. Keep reasoning off.
         ModelEntry("~google/gemini-pro-latest", "Gemini Pro", PricingTier.MEDIUM, zdr = true, cache = true),
-        ModelEntry("mistralai/voxtral-small-24b-2507", "Voxtral Small 24B", PricingTier.CHEAP, cache = true),
-        ModelEntry("xiaomi/mimo-v2.5", "MiMo V2.5", PricingTier.CHEAP, cache = true),
+        // A reasoning model: 7.4–10.5 s tuned, 89–171 s untuned, and it strands the answer in
+        // `reasoning` often enough that ModelCatalog already dropped it from the PayPerQ list.
+        ModelEntry("xiaomi/mimo-v2.5", "MiMo V2.5", PricingTier.CHEAP, zdr = true, cache = true),
         ModelEntry(
             "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
             "Nemotron Nano Omni",
@@ -46,18 +56,30 @@ internal object ModelCatalog {
     )
 
     val OPENROUTER_STT: List<ModelEntry> = listOf(
-        ModelEntry("google/chirp-3", "Chirp 3", PricingTier.CHEAP, zdr = true),
+        // 1.2–2.4 s and the most accurate of the four on the measured clip.
         ModelEntry("openai/whisper-large-v3-turbo", "Whisper Large V3 Turbo", PricingTier.CHEAP, zdr = true),
+        // 1.9–3.1 s.
         ModelEntry("openai/whisper-large-v3", "Whisper Large V3", PricingTier.MEDIUM, zdr = true),
+        // 4.0–4.3 s, and it misheard "OAuth" as "off" where every other entry got it right.
+        // Was the default until 7.9.0.
+        ModelEntry("google/chirp-3", "Chirp 3", PricingTier.CHEAP, zdr = true),
+        // 1.7–2.7 s but genuinely absent from the ZDR list, unlike its siblings.
         ModelEntry("openai/whisper-1", "Whisper 1", PricingTier.CHEAP),
     )
 
+    // Also fastest-first, measured on one Text-Fix request over 2 runs with reasoning suppressed.
     val OPENROUTER_TEXT_FIX: List<ModelEntry> = listOf(
+        // 1.3–1.4 s, and it does not reason on this task either way.
         ModelEntry("~openai/gpt-mini-latest", "GPT Mini", PricingTier.MEDIUM, zdr = true, cache = true),
-        ModelEntry("x-ai/grok-4.3", "Grok 4.3", PricingTier.MEDIUM, cache = true),
+        // 1.3–1.5 s, likewise reasoning-neutral.
         ModelEntry("~anthropic/claude-haiku-latest", "Claude Haiku", PricingTier.MEDIUM, zdr = true, cache = true),
-        ModelEntry("~google/gemini-flash-latest", "Gemini Flash", PricingTier.CHEAP, zdr = true, cache = true),
+        // 1.2–1.6 s tuned, 2.9–3.6 s untuned. Present on the ZDR list.
         ModelEntry("deepseek/deepseek-v4-flash", "DeepSeek V4 Flash", PricingTier.CHEAP, zdr = true, cache = true),
+        // 1.1–1.7 s tuned, 3.2–4.8 s untuned. Present on the ZDR list; previously flagged
+        // non-ZDR here by mistake.
+        ModelEntry("x-ai/grok-4.3", "Grok 4.3", PricingTier.MEDIUM, zdr = true, cache = true),
+        // 2.7–3.6 s tuned, 5.2–6.1 s untuned — the slowest of the five for plain copy-editing.
+        ModelEntry("~google/gemini-flash-latest", "Gemini Flash", PricingTier.CHEAP, zdr = true, cache = true),
     )
 
     // PayPerQ has its own model namespace (api.ppq.ai/v1/models) and does not honor OpenRouter's

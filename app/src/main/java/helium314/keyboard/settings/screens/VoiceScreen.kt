@@ -164,6 +164,7 @@ internal fun buildVoiceScreenItems(
         if (cloud) Settings.PREF_AI_PROVIDER else null,
         if (cloud) provider.apiKeyPrefKey() else null,
         if (cloud && provider == AiProvider.OPENROUTER) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
+        if (cloud && provider == AiProvider.OPENROUTER) Settings.PREF_AI_ALLOW_REASONING else null,
         if (cloud) Settings.PREF_VOICE_ACTION_TEST_KEY else null,
         // Traditional voice (chat-audio) subsection — independent of STT below.
         if (cloud) R.string.voice_traditional_category else null,
@@ -333,6 +334,9 @@ fun createVoiceSettings(context: Context) = listOf(
             }
         }
     },
+    Setting(context, Settings.PREF_AI_ALLOW_REASONING, R.string.ai_allow_reasoning, R.string.ai_allow_reasoning_summary) {
+        SwitchPreference(it, Defaults.PREF_AI_ALLOW_REASONING)
+    },
     Setting(context, Settings.PREF_OPENROUTER_ZDR_ENABLED, R.string.openrouter_zdr_enabled, R.string.openrouter_zdr_enabled_summary) {
         SwitchPreference(it, Defaults.PREF_OPENROUTER_ZDR_ENABLED)
     },
@@ -383,7 +387,12 @@ fun createVoiceSettings(context: Context) = listOf(
             AiProvider.OPENROUTER -> ModelCatalog.OPENROUTER_STT
             AiProvider.PAYPERQ -> ModelCatalog.PAYPERQ_STT
         }
-        ModelListPreference(setting, entries, provider.defaultSttModel())
+        ModelListPreference(
+            setting,
+            entries,
+            provider.defaultSttModel(),
+            allowCustom = provider == AiProvider.OPENROUTER,
+        )
     },
     Setting(context, Settings.PREF_VOICE_STT_MODEL_CUSTOM, R.string.voice_stt_model_custom, R.string.voice_stt_model_custom_summary) {
         TextInputPreference(it, Defaults.PREF_VOICE_STT_MODEL_CUSTOM, checkTextValid = ::isValidCustomModelSlug)

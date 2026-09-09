@@ -25,7 +25,7 @@ import kotlin.reflect.KMutableProperty0
  */
 class RecordingOverlayView(context: Context) : LinearLayout(context) {
 
-    private val meterView: AmplitudeMeterView
+    private val meterView: AiPulseView
     private val timerText: TextView
     private val statusText: TextView
     private val cancelButton: ImageView
@@ -36,6 +36,8 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
     // quick succession would silently swallow the Cancel.
     private var lastStopClickMs = 0L
     private var lastCancelClickMs = 0L
+    private var lastShownSecond = -1L
+    private val elapsedBuilder = StringBuilder(8)
 
     var onStopClick: (() -> Unit)? = null
     var onCancelClick: (() -> Unit)? = null
@@ -49,7 +51,7 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         setPadding(dp(12), 0, dp(12), 0)
 
-        meterView = AmplitudeMeterView(context).apply {
+        meterView = AiPulseView(context).apply {
             layoutParams = LayoutParams(dp(44), dp(20)).apply { marginEnd = dp(12) }
         }
         timerText = TextView(context).apply {
@@ -66,7 +68,13 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
             debounceClick(::lastCancelClickMs) { onCancelClick?.invoke() }
         }
         stopButton = makeRoundButton(isCancel = false, descRes = R.string.voice_stop_recording) {
-            debounceClick(::lastStopClickMs) { onStopClick?.invoke() }
+            debounceClick(::lastStopClickMs) {
+                // Finalizing the WAV takes a moment, and until it lands showTranscribing() has not
+                // run yet. Leaving Stop on screen through that window made a second tap look
+                // ignored, because stopRecording() is already a no-op by then.
+                stopButton.visibility = View.GONE
+                onStopClick?.invoke()
+            }
         }
 
         addView(meterView)
@@ -116,7 +124,7 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
     fun showRecording() {
         statusText.text = context.getString(R.string.voice_recording)
         meterView.visibility = View.VISIBLE
-        meterView.startAnimation()
+        meterView.startPulse()
         timerText.visibility = View.VISIBLE
         stopButton.visibility = View.VISIBLE
         cancelButton.visibility = View.VISIBLE
@@ -126,8 +134,12 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
 
     fun showTranscribing() {
         statusText.text = context.getString(R.string.voice_transcribing)
-        meterView.stopAnimation()
-        meterView.visibility = View.GONE
+        // Keep the meter on screen and animating. There is no audio to display any more, so it
+        // falls back to its idle pulse — which is exactly what tells the user the upload is still
+        // running rather than wedged. Hiding it here left the strip completely static for the
+        // whole round trip.
+        meterView.visibility = View.VISIBLE
+        meterView.resetToIdlePulse()
         timerText.visibility = View.GONE
         stopButton.visibility = View.GONE
         // Cancel remains visible so the user can abort the upload.
@@ -137,18 +149,25 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
     }
 
     fun stopAnimation() {
-        meterView.stopAnimation()
+        meterView.stopPulse()
         stopTicking()
     }
 
     private fun startTicking() {
         stopTicking()
+        lastShownSecond = -1L
         val r = object : Runnable {
             override fun run() {
                 val telemetry = telemetryProvider?.invoke()
                 if (telemetry != null) {
                     meterView.setAmplitude(telemetry.first)
-                    timerText.text = formatElapsed(telemetry.second)
+                    // The timer only changes once a second, but this runs at 12.5 Hz. Writing the
+                    // same text back would relayout the strip 12 times a second for nothing.
+                    val second = telemetry.second / 1000L
+                    if (second != lastShownSecond) {
+                        lastShownSecond = second
+                        timerText.text = formatElapsed(second)
+                    }
                 } else {
                     // Nothing to display — stop self-posting instead of waking up at 12.5 Hz for nothing.
                     stopTicking()
@@ -181,79 +200,14 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
         stopAnimation()
     }
 
-    private fun formatElapsed(ms: Long): String {
-        val totalSec = ms / 1000
-        val m = totalSec / 60
+    private fun formatElapsed(totalSec: Long): String {
         val s = totalSec % 60
-        return "%d:%02d".format(m, s)
+        elapsedBuilder.setLength(0)
+        elapsedBuilder.append(totalSec / 60).append(':')
+        if (s < 10) elapsedBuilder.append('0')
+        elapsedBuilder.append(s)
+        return elapsedBuilder.toString()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-
-    /**
-     * Draws three horizontal bars whose height follows the live amplitude. Falls back to a
-     * gentle pulse while amplitude stays at zero (e.g., right at startup) so the UI never
-     * looks frozen.
-     */
-    private class AmplitudeMeterView(context: Context) : View(context) {
-        var meterColor: Int = Color.LTGRAY
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private var level: Float = 0f // 0..1
-        private var animator: ValueAnimator? = null
-        private var pulsePhase: Float = 0f
-
-        fun startAnimation() {
-            animator?.cancel()
-            animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 1200
-                repeatCount = ValueAnimator.INFINITE
-                interpolator = LinearInterpolator()
-                addUpdateListener {
-                    pulsePhase = it.animatedValue as Float
-                    invalidate()
-                }
-                start()
-            }
-        }
-
-        fun stopAnimation() {
-            animator?.cancel()
-            animator = null
-        }
-
-        fun setAmplitude(meanAbs: Double) {
-            // Map 0..~6000 to 0..1 with a gentle curve so quiet speech still moves the needle.
-            val normalized = (meanAbs / 6000.0).coerceIn(0.0, 1.0)
-            val curved = Math.sqrt(normalized).toFloat()
-            // Smooth toward target to avoid jitter.
-            level = level + (curved - level) * 0.35f
-            invalidate()
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            val barCount = 3
-            val gap = width / 14f
-            val barWidth = (width - gap * (barCount + 1)) / barCount
-            val maxBarHeight = height.toFloat() * 0.85f
-            val centerY = height / 2f
-            paint.color = meterColor
-            for (i in 0 until barCount) {
-                val phase = (pulsePhase + i * 0.2f) % 1f
-                val pulse = (kotlin.math.sin(phase * Math.PI * 2).toFloat() * 0.5f + 0.5f)
-                val mix = (level * 0.85f + pulse * 0.15f).coerceIn(0.15f, 1f)
-                val h = maxBarHeight * mix
-                val left = gap + i * (barWidth + gap)
-                val top = centerY - h / 2f
-                val bottom = centerY + h / 2f
-                paint.alpha = (120 + 135 * mix).toInt().coerceAtMost(255)
-                canvas.drawRoundRect(left, top, left + barWidth, bottom, barWidth / 2f, barWidth / 2f, paint)
-            }
-        }
-
-        override fun onDetachedFromWindow() {
-            super.onDetachedFromWindow()
-            stopAnimation()
-        }
-    }
 }

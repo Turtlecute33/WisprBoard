@@ -8,8 +8,10 @@ enum class AiProvider(val prefValue: String) {
     PAYPERQ("payperq");
 
     companion object {
+        /** @JvmStatic so LatinIME (Java) can resolve the provider without a Companion hop. */
+        @JvmStatic
         fun fromPref(value: String?): AiProvider =
-            values().firstOrNull { it.prefValue == value } ?: OPENROUTER
+            entries.firstOrNull { it.prefValue == value } ?: OPENROUTER
     }
 }
 
@@ -53,7 +55,11 @@ internal fun AiProvider.supportsVoiceSlug(slug: String): Boolean {
 }
 
 internal fun AiProvider.supportsSttSlug(slug: String): Boolean {
-    if (slug == MODEL_CUSTOM) return true
+    // PayPerQ's transcription endpoint routes by capability and ignores the `model` field, so
+    // "Custom" there is a dead end: the picker offers it, no slug field is ever shown, and the
+    // resolved model comes back null. Refusing it here makes both existing coercion sites in
+    // VoiceScreen reset a slug carried over from OpenRouter automatically.
+    if (slug == MODEL_CUSTOM) return this == AiProvider.OPENROUTER
     return slug in when (this) {
         AiProvider.OPENROUTER -> OPENROUTER_STT_SLUGS
         AiProvider.PAYPERQ -> PAYPERQ_STT_SLUGS

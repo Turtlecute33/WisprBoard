@@ -185,16 +185,36 @@ object Defaults {
     const val PREF_AI_PROVIDER = "openrouter"
     const val PREF_OPENROUTER_API_KEY = ""
     const val PREF_OPENROUTER_ZDR_ENABLED = true
+
+    /**
+     * Off by default: hidden reasoning tokens are pure latency for transcription and copy-editing.
+     * Measured on the shipped default voice model, a 13.6 s clip answered in 5.9–13.8 s with
+     * reasoning and 2.7–8.9 s without, at identical accuracy. Users who deliberately pick a
+     * reasoning model can turn it back on.
+     */
+    const val PREF_AI_ALLOW_REASONING = false
     const val PREF_PAYPERQ_API_KEY = ""
     // Must be a slug the voice picker actually offers for both providers — the previous
     // default ("google/gemini-3-flash-preview") is a text-fix model that the OpenRouter and
     // PayPerQ voice pickers don't expose, so it would silently leave the picker without a
     // valid selection on fresh installs.
-    const val PREF_VOICE_MODEL = "~google/gemini-flash-latest"
+    /**
+     * Voxtral is a purpose-built audio model rather than a general chat model that happens to
+     * accept audio, and it shows: measured against the live API on a 13.6 s clip, it answered in
+     * 1.3–2.2 s where `~google/gemini-flash-latest` (the previous default) took 5.9–13.8 s, at
+     * identical transcription accuracy. It has a verified OpenRouter zero-data-retention route and
+     * is offered by both providers, so switching provider still resolves cleanly.
+     */
+    const val PREF_VOICE_MODEL = "mistralai/voxtral-small-24b-2507"
     const val PREF_VOICE_MODEL_CUSTOM = ""
     const val PREF_VOICE_TRADITIONAL_BUTTON_ENABLED = true
     const val PREF_VOICE_STT_ENABLED = false
-    const val PREF_VOICE_STT_MODEL = "google/chirp-3"
+    /**
+     * Was `google/chirp-3`, which measured 4.0–4.3 s on a 13.6 s clip *and* transcribed it worse
+     * (it heard "off callback" for "OAuth"). Whisper Large V3 Turbo answered the same clip in
+     * 1.2–2.4 s with the OAuth term intact, and also has a verified ZDR route.
+     */
+    const val PREF_VOICE_STT_MODEL = "openai/whisper-large-v3-turbo"
     const val PREF_VOICE_STT_MODEL_CUSTOM = ""
     // Default transcription prompts: stronger, model-independent instructions for high-quality
     // verbatim output with natural punctuation and casing. Drives quality uniformly across STT

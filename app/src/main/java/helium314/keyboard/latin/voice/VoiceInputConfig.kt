@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.annotation.StringRes
 import helium314.keyboard.latin.R
@@ -113,6 +114,48 @@ internal fun warnAfterZdrFallback(context: Context, model: String) {
         Toast.LENGTH_LONG,
     ).show()
 }
+
+/**
+ * Routing facts learned the expensive way, remembered briefly so the next request does not repeat
+ * a doomed attempt. Both are deliberately short-lived rather than process-lifetime: an IME process
+ * lives for days, and both conditions are recoverable — a ZDR route that was momentarily down
+ * comes back, and a floating `~author/model-latest` alias can resolve to a different endpoint
+ * tomorrow. Caching either verdict forever would silently and permanently downgrade the request.
+ */
+/**
+ * Wall-clock ceiling for a text-only AI request, retries and backoff included. Text Fix, Translate
+ * and auto-polish previously inherited the audio read timeout, so a stalled provider could hold
+ * the user for 4.5 minutes across three attempts. 90 s is generous for a copy-edit and still
+ * leaves a slow model room to finish its first attempt untouched.
+ */
+internal const val AI_TEXT_REQUEST_BUDGET_MS = 90_000L
+
+private const val ROUTE_FACT_TTL_MS = 30 * 60 * 1000L
+private val zdrUnavailableSince = ConcurrentHashMap<String, Long>()
+private val reasoningControlRejectedSince = ConcurrentHashMap<String, Long>()
+
+private fun isRouteFactFresh(map: ConcurrentHashMap<String, Long>, model: String): Boolean {
+    val since = map[model] ?: return false
+    if (SystemClock.elapsedRealtime() - since < ROUTE_FACT_TTL_MS) return true
+    map.remove(model)
+    return false
+}
+
+internal fun markZdrRouteUnavailable(model: String) {
+    zdrUnavailableSince[model] = SystemClock.elapsedRealtime()
+}
+
+/** True while this model is known to have no ZDR route, so asking again would waste an upload. */
+internal fun isZdrRouteKnownUnavailable(model: String): Boolean =
+    isRouteFactFresh(zdrUnavailableSince, model)
+
+internal fun markReasoningControlRejected(model: String) {
+    reasoningControlRejectedSince[model] = SystemClock.elapsedRealtime()
+}
+
+/** True while this model is known to reject `reasoning: {enabled: false}` with a hard error. */
+internal fun isReasoningControlKnownRejected(model: String): Boolean =
+    isRouteFactFresh(reasoningControlRejectedSince, model)
 
 internal fun isNetworkAvailable(context: Context): Boolean {
     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false

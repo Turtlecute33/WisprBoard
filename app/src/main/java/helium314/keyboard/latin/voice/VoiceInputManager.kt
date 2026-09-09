@@ -46,7 +46,14 @@ class VoiceInputManager(
         private const val MAX_TRANSCRIPTION_LENGTH = 10_000
         private const val AUDIO_CACHE_SUBDIR = "voice_audio"
         private const val MIN_RECORDING_DURATION_MS = 500L
-        private const val MIN_SPEECH_MEAN_AMPLITUDE = 80.0
+        /**
+         * Loudest chunk a clip must contain before we believe someone spoke. Gates on the peak
+         * rather than the whole-clip mean, which silence dilutes linearly: 3 s of clear speech at
+         * amplitude 900 inside a 60 s clip means 55, so a real dictation was deleted with "no
+         * speech detected". Peak is >= mean by construction, so nothing that passes today can
+         * start failing.
+         */
+        private const val MIN_SPEECH_PEAK_AMPLITUDE = 80.0
         // Only sweep recordings old enough that they cannot belong to an in-flight session — a
         // rapid stop→record could otherwise delete the previous recording's file mid-finalize.
         private const val ORPHAN_RECORDING_MAX_AGE_MS = 60_000L
@@ -114,10 +121,18 @@ class VoiceInputManager(
     @Volatile private var transcriptionClient: OpenRouterClient? = null
     private val activeTranscriptionToken = AtomicLong(0L)
     @Volatile private var stopFinalizeJob: Job? = null
+    @Volatile private var recordingWatchdogJob: Job? = null
     @Volatile private var isStopFinalizing = false
     @Volatile private var currentUseDedicatedStt = false
     /** Non-null only while the on-device engine owns the microphone; the cloud path never sets it. */
     @Volatile private var onDeviceRecognizer: OnDeviceRecognizer? = null
+
+    init {
+        // A process killed mid-recording leaves a partial rec_*.wav behind, and the only other
+        // sweep runs when a recording starts — so a user who then switches to the on-device
+        // engine, loses network, or removes their key would never sweep again.
+        backgroundScope.launch { sweepOrphanRecordings() }
+    }
 
     fun getState() = state
 
@@ -195,12 +210,6 @@ class VoiceInputManager(
             return
         }
 
-        if (currentUseDedicatedStt && provider != AiProvider.OPENROUTER) {
-            currentUseDedicatedStt = false
-            Toast.makeText(context, R.string.voice_error_stt_openrouter_only, Toast.LENGTH_SHORT).show()
-            return
-        }
-
         val maxDurationSec = prefs.getInt(Settings.PREF_VOICE_MAX_DURATION_SECONDS, Defaults.PREF_VOICE_MAX_DURATION_SECONDS)
             .coerceIn(15, 300)
         val autoStopEnabled = prefs.getBoolean(Settings.PREF_VOICE_AUTO_STOP_SILENCE, Defaults.PREF_VOICE_AUTO_STOP_SILENCE)
@@ -210,13 +219,16 @@ class VoiceInputManager(
             prefs.getString(Settings.PREF_VOICE_MIC_SENSITIVITY, Defaults.PREF_VOICE_MIC_SENSITIVITY)
         )
 
-        // Fresh cache file per recording; older ones are swept on every start so a process
-        // killed mid-recording can't leak audio across sessions.
-        sweepOrphanRecordings()
+        // Fresh cache file per recording. Sweeping older ones is pure IO with no bearing on this
+        // recording (the 60 s age cutoff cannot touch a live file), so it runs off the main thread
+        // rather than making the user wait for a directory listing before the mic opens.
+        backgroundScope.launch { sweepOrphanRecordings() }
         val audioFile = File(cacheAudioDir(), "rec_${System.currentTimeMillis()}.wav")
         currentAudioFile = audioFile
         // Tear down the previous recorder (including the placeholder created at construction) so its
         // coroutine scope doesn't leak for the lifetime of the IME process.
+        recordingWatchdogJob?.cancel()
+        recordingWatchdogJob = null
         audioRecorder.release()
         audioRecorder = AudioRecorder(
             outputFile = audioFile,
@@ -243,6 +255,37 @@ class VoiceInputManager(
 
         state = State.RECORDING
         callbacks.onRecordingStarted()
+        watchForSelfAbortedRecording(audioRecorder)
+    }
+
+    /**
+     * The recording loop can end without anybody asking it to: the audio server dies, another app
+     * takes the microphone, or writing a chunk to the cache fails. None of those paths reach
+     * [stopRecording], so [state] would stay [State.RECORDING] with a dead microphone — the
+     * overlay sits at "Recording…" forever and, because [isCapturing] is true, the next key press
+     * is swallowed to "stop recording" instead of typing a character.
+     *
+     * Awaiting the recorder's own completion covers every exit, including the ones that throw,
+     * without adding a callback per failure branch.
+     */
+    private fun watchForSelfAbortedRecording(recorder: AudioRecorder) {
+        val completion = recorder.completionOrNull() ?: return
+        recordingWatchdogJob = backgroundScope.launch(CoroutineName("VoiceRecordWatchdog")) {
+            val file = completion.await()
+            withContext(Dispatchers.Main.immediate) {
+                // A normal stop() already owns the outcome; only step in when nothing did.
+                if (audioRecorder !== recorder || state != State.RECORDING || isStopFinalizing) return@withContext
+                if (file != null) {
+                    onRecordingFinalized(file)
+                } else {
+                    currentAudioFile = null
+                    currentUseDedicatedStt = false
+                    state = State.IDLE
+                    callbacks.onFinished()
+                    callbacks.onError(context.getString(R.string.voice_error_recording_interrupted))
+                }
+            }
+        }
     }
 
     /**
@@ -358,7 +401,7 @@ class VoiceInputManager(
         if (BuildConfig.DEBUG) {
             Log.i(
                 TAG,
-                "Uploading voice clip: durationMs=${audioRecorder.lastDurationMs}, meanAmplitude=${audioRecorder.lastMeanAmplitude}, bytes=${wavFile.length()}"
+                "Uploading voice clip: durationMs=${audioRecorder.lastDurationMs}, meanAmplitude=${audioRecorder.lastMeanAmplitude}, peakAmplitude=${audioRecorder.lastPeakAmplitude}, bytes=${wavFile.length()}"
             )
         }
         if (audioRecorder.lastDurationMs < MIN_RECORDING_DURATION_MS) {
@@ -370,7 +413,7 @@ class VoiceInputManager(
             callbacks.onError(context.getString(R.string.voice_error_too_short))
             return
         }
-        if (audioRecorder.lastMeanAmplitude < MIN_SPEECH_MEAN_AMPLITUDE) {
+        if (audioRecorder.lastPeakAmplitude < MIN_SPEECH_PEAK_AMPLITUDE) {
             wavFile.delete()
             currentAudioFile = null
             currentUseDedicatedStt = false
@@ -450,6 +493,7 @@ class VoiceInputManager(
         val prompt = resolveVoicePrompt(savedPrompt, localeHint, transcriptionDictionary, expectedLanguages)
         val spacingContext = if (spaceHeuristicEnabled) callbacks.getSpacingContext() else null
 
+        val allowReasoning = prefs.getBoolean(Settings.PREF_AI_ALLOW_REASONING, Defaults.PREF_AI_ALLOW_REASONING)
         val client = OpenRouterClient(
             apiKey = apiKey,
             model = model,
@@ -459,6 +503,13 @@ class VoiceInputManager(
             useZeroDataRetention = useZdr,
             transcriptionMode = if (useDedicatedStt) VoiceTranscriptionMode.DEDICATED_STT else VoiceTranscriptionMode.CHAT_AUDIO,
             transcriptionLanguage = localeHint?.toOpenRouterSttLanguage(),
+            disableReasoning = !allowReasoning,
+            // The read clock only starts once the whole clip has been flushed, so this covers
+            // server processing rather than upload. A clip up to 30 s keeps the historical 90 s;
+            // a 5-minute clip gets 180 s instead of timing out at 90 s and being re-uploaded.
+            readTimeoutMs = (30_000L + 2L * audioRecorder.lastDurationMs)
+                .coerceIn(OpenRouterClient.DEFAULT_READ_TIMEOUT_MS.toLong(), 180_000L)
+                .toInt(),
         )
         val requestToken = activeTranscriptionToken.incrementAndGet()
         transcriptionClient = client
@@ -488,6 +539,8 @@ class VoiceInputManager(
                         runtimeInstruction = null,
                         provider = provider,
                         useZeroDataRetention = useZdr,
+                        disableReasoning = !allowReasoning,
+                        totalBudgetMs = AI_TEXT_REQUEST_BUDGET_MS,
                     )
                     transcriptionClient = polishClient
                     try {
@@ -550,6 +603,8 @@ class VoiceInputManager(
         }
         when (state) {
             State.RECORDING -> {
+                recordingWatchdogJob?.cancel()
+                recordingWatchdogJob = null
                 audioRecorder.cancel()
                 // If a stop() was already in flight, its finalize callback will see state==IDLE
                 // and discard the resulting file. Otherwise, the loop's finally deletes it.
@@ -582,6 +637,8 @@ class VoiceInputManager(
     /** Cancel any in-flight work and tear down the background scope. Call from IME onDestroy. */
     fun release() {
         cancelRecording()
+        recordingWatchdogJob?.cancel()
+        recordingWatchdogJob = null
         audioRecorder.release()
         backgroundScope.cancel()
     }

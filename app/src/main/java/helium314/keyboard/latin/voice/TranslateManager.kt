@@ -186,6 +186,8 @@ class TranslateManager(
             runtimeInstruction = "Target language: $language.",
             provider = provider,
             useZeroDataRetention = useZdr,
+            disableReasoning = !prefs.getBoolean(Settings.PREF_AI_ALLOW_REASONING, Defaults.PREF_AI_ALLOW_REASONING),
+            totalBudgetMs = AI_TEXT_REQUEST_BUDGET_MS,
         )
         val token = activeToken + 1
         activeToken = token
