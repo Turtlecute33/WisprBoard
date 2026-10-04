@@ -1,6 +1,7 @@
 package helium314.keyboard.settings.preferences
 
 import helium314.keyboard.latin.settings.Settings
+import kotlinx.serialization.json.Json
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -54,11 +55,39 @@ class BackupRestorePreferenceTest {
     }
 
     @Test
-    fun backupFileAllowlistExcludesLearnedAndHistoryData() {
+    fun backupFileAllowlistIncludesLearnedWordsButNotAddedDictionaries() {
         assertTrue(isAllowedBackupFile("blacklists/example.txt"))
         assertTrue(isAllowedBackupFile("custom_background_image.jpg"))
+        assertTrue(isAllowedBackupFile("UserHistoryDictionary.en-US.dict/UserHistoryDictionary.en-US.dict.body"))
+        assertTrue(isAllowedBackupFile("UserHistoryDictionary.en-US.dict/UserHistoryDictionary.en-US.dict.header"))
         assertFalse(isAllowedBackupFile("dicts/en/example.user.dict"))
-        assertFalse(isAllowedBackupFile("UserHistoryDictionary.en/UserHistoryDictionary.en.body"))
+    }
+
+    @Test
+    fun apiKeysRestoreOnlyKnownNonBlankKeys() {
+        val keys = parseApiKeys(
+            """{"${Settings.PREF_OPENROUTER_API_KEY}":"secret","${Settings.PREF_PAYPERQ_API_KEY}":" ","other_pref":"value"}"""
+        )
+
+        assertEquals(mapOf(Settings.PREF_OPENROUTER_API_KEY to "secret"), keys)
+    }
+
+    @Test
+    fun malformedBackupEntriesDoNotQuoteTheirContent() {
+        val keysError = assertFailsWith<IllegalArgumentException> { parseApiKeys("""{"key":"secret-value"""") }
+        val clipsError = assertFailsWith<IllegalArgumentException> { parsePinnedClips("""[{"text":"private clip"""") }
+
+        assertFalse(keysError.message.orEmpty().contains("secret-value"))
+        assertFalse(clipsError.message.orEmpty().contains("private clip"))
+        assertEquals(null, keysError.cause)
+        assertEquals(null, clipsError.cause)
+    }
+
+    @Test
+    fun pinnedClipsRoundTrip() {
+        val clips = listOf(BackupClip(1L, "first"), BackupClip(2L, "second\nline"))
+
+        assertEquals(clips, parsePinnedClips(Json.encodeToString(clips)))
     }
 
     @Test

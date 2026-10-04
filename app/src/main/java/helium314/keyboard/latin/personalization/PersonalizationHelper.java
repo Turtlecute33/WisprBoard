@@ -77,6 +77,18 @@ public class PersonalizationHelper {
         }
     }
 
+    /** Closes the loaded dictionaries, so that they load their files again when next used. */
+    public static void closeAllUserHistoryDictionaries() {
+        synchronized (sLangUserHistoryDictCache) {
+            for (final SoftReference<UserHistoryDictionary> ref : sLangUserHistoryDictCache.values()) {
+                final UserHistoryDictionary dict = ref == null ? null : ref.get();
+                if (dict != null) {
+                    dict.close();
+                }
+            }
+        }
+    }
+
     private static class DictFilter implements FilenameFilter {
         private final String mName;
 

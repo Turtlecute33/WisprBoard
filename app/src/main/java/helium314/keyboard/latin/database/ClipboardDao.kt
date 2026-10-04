@@ -63,6 +63,22 @@ class ClipboardDao private constructor(private val db: Database) {
         insertNewEntry(timestamp, pinned, text)
     }
 
+    /** Adds a pinned clip, or pins the existing clip with the same text. Used when restoring a backup. */
+    fun addPinnedClip(timestamp: Long, text: String) {
+        val existing = cache.firstOrNull { it.text == text }
+        if (existing == null) {
+            insertNewEntry(timestamp, true, text)
+            return
+        }
+        if (existing.isPinned) return
+        existing.isPinned = true
+        cache.sort()
+        listener?.onClipboardHistoryChanged()
+        val cv = ContentValues(1)
+        cv.put(COLUMN_PINNED, true)
+        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${existing.id}", null)
+    }
+
     private fun insertNewEntry(timestamp: Long, pinned: Boolean, text: String) {
         val cv = ContentValues(3)
         cv.put(COLUMN_TIMESTAMP, timestamp)

@@ -288,6 +288,14 @@
     <string name="button_restore">Restore</string>
     <!-- Message when backup is restored successfully -->
     <string name="backup_restored">Backup restored</string>
+    <!-- Title of the dialog that asks whether the backup should include the AI provider API keys -->
+    <string name="backup_include_keys_title">Include API keys?</string>
+    <!-- Message of the dialog that asks whether the backup should include the AI provider API keys -->
+    <string name="backup_include_keys_message">The OpenRouter and PayPerQ keys are saved in the backup file as plain text. Anyone who has the file can use them.</string>
+    <!-- Button to include the API keys in the backup -->
+    <string name="button_include_keys">Include keys</string>
+    <!-- Button to make the backup without the API keys -->
+    <string name="button_exclude_keys">Without keys</string>
     <!-- Preferences item for format for timestamp keycode -->
     <string name="timestamp_format_title">Format for timestamp key</string>
     <!-- Message in preferences how to get timestamp key -->

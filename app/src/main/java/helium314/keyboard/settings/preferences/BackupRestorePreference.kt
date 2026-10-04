@@ -10,6 +10,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -21,6 +22,8 @@ import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
+import helium314.keyboard.latin.database.ClipboardDao
+import helium314.keyboard.latin.personalization.PersonalizationHelper
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -30,11 +33,15 @@ import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.protectedPrefs
+import helium314.keyboard.latin.voice.AiProvider
+import helium314.keyboard.latin.voice.SecretStore
+import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.InfoDialog
 import helium314.keyboard.settings.filePicker
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileInputStream
@@ -53,10 +60,25 @@ import helium314.keyboard.latin.transferOldPinnedClips
 @Composable
 fun BackupRestorePreference(setting: Setting) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
+    var showKeysDialog by rememberSaveable { mutableStateOf(false) }
+    val includeApiKeys = rememberSaveable { mutableStateOf(false) }
     val ctx = LocalContext.current
     var error: String? by rememberSaveable { mutableStateOf(null) }
-    val backupLauncher = backupLauncher { error = it }
+    val backupLauncher = backupLauncher(includeApiKeys) { error = it }
     val restoreLauncher = restoreLauncher { error = it }
+    fun launchBackup(withKeys: Boolean) {
+        includeApiKeys.value = withKeys
+        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Calendar.getInstance().time)
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+            .addCategory(Intent.CATEGORY_OPENABLE)
+            .putExtra(
+                Intent.EXTRA_TITLE,
+                ctx.getString(R.string.english_ime_name)
+                    .replace(" ", "_") + "_backup_$currentDate.zip"
+            )
+            .setType("application/zip")
+        backupLauncher.launch(intent)
+    }
     Preference(name = setting.title, onClick = { showDialog = true })
     if (showDialog) {
         ConfirmationDialog(
@@ -72,18 +94,21 @@ fun BackupRestorePreference(setting: Setting) {
                     .setType("application/zip")
                 restoreLauncher.launch(intent)
             },
-            onConfirmed = {
-                val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Calendar.getInstance().time)
-                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
-                    .addCategory(Intent.CATEGORY_OPENABLE)
-                    .putExtra(
-                        Intent.EXTRA_TITLE,
-                        ctx.getString(R.string.english_ime_name)
-                            .replace(" ", "_") + "_backup_$currentDate.zip"
-                    )
-                    .setType("application/zip")
-                backupLauncher.launch(intent)
-            }
+            onConfirmed = { showKeysDialog = true }
+        )
+    }
+    if (showKeysDialog) {
+        ConfirmationDialog(
+            onDismissRequest = { showKeysDialog = false },
+            title = { Text(stringResource(R.string.backup_include_keys_title)) },
+            content = { Text(stringResource(R.string.backup_include_keys_message)) },
+            confirmButtonText = stringResource(R.string.button_include_keys),
+            neutralButtonText = stringResource(R.string.button_exclude_keys),
+            onNeutral = {
+                showKeysDialog = false
+                launchBackup(withKeys = false)
+            },
+            onConfirmed = { launchBackup(withKeys = true) }
         )
     }
     if (error != null) {
@@ -96,12 +121,23 @@ fun BackupRestorePreference(setting: Setting) {
 }
 
 @Composable
-private fun backupLauncher(onError: (String) -> Unit): ManagedActivityResultLauncher<Intent, ActivityResult> {
+private fun backupLauncher(
+    includeApiKeys: State<Boolean>,
+    onError: (String) -> Unit,
+): ManagedActivityResultLauncher<Intent, ActivityResult> {
     val ctx = LocalContext.current
     return filePicker { uri ->
+        val withKeys = includeApiKeys.value
+        // read on the main thread, like all other users of ClipboardDao
+        val pinnedClips = ClipboardDao.getInstance(ctx)?.getAll().orEmpty()
+            .filter { it.isPinned }
+            .map { BackupClip(it.timeStamp, it.text) }
         ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
             try {
                 val backupPayload = collectBackupFiles(ctx)
+                val apiKeys = if (withKeys) {
+                    API_KEY_PREFS.associateWith { SecretStore.getApiKey(ctx, it, "") }.filterValues { it.isNotBlank() }
+                } else emptyMap()
                 val outputStream = requireNotNull(ctx.getActivity()?.contentResolver?.openOutputStream(uri)) {
                     "Unable to open backup destination"
                 }
@@ -128,6 +164,16 @@ private fun backupLauncher(onError: (String) -> Unit): ManagedActivityResultLaun
                     zipStream.putNextEntry(ZipEntry(PROTECTED_PREFS_FILE_NAME))
                     settingsToJsonStream(ctx.protectedPrefs().all, zipStream)
                     zipStream.closeEntry()
+                    if (pinnedClips.isNotEmpty()) {
+                        zipStream.putNextEntry(ZipEntry(PINNED_CLIPS_FILE_NAME))
+                        zipStream.write(Json.encodeToString(pinnedClips).toByteArray())
+                        zipStream.closeEntry()
+                    }
+                    if (apiKeys.isNotEmpty()) {
+                        zipStream.putNextEntry(ZipEntry(API_KEYS_FILE_NAME))
+                        zipStream.write(Json.encodeToString(apiKeys).toByteArray())
+                        zipStream.closeEntry()
+                    }
                     zipStream.close()
                 }
             } catch (t: Throwable) {
@@ -156,8 +202,16 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                 Settings.getInstance().stopListener()
                 listenerStopped = true
                 stagedBackup?.let { applyStagedBackup(ctx, it) }
+                val pinnedClips = stagedBackup?.pinnedClips.orEmpty()
                 postToMain {
-                    Toast.makeText(ctx, ctx.getString(R.string.backup_restored), Toast.LENGTH_LONG).show()
+                    // on the main thread, like all other users of ClipboardDao
+                    try {
+                        restorePinnedClips(ctx, pinnedClips)
+                        Toast.makeText(ctx, ctx.getString(R.string.backup_restored), Toast.LENGTH_LONG).show()
+                    } catch (t: Throwable) {
+                        onError("r" + (t.message ?: "Unknown error"))
+                        Log.w("AdvancedScreen", "error restoring pinned clips", t)
+                    }
                     refreshAfterRestore(ctx)
                 }
             } catch (t: Throwable) {
@@ -175,14 +229,13 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
     }
 }
 
-// Keys that must never be written to a backup archive. Provider API keys live in an
-// encrypted shared-prefs bucket and is scrubbed from plain prefs by SecretStore, but we filter
-// here as defense-in-depth against pre-migration or future pref leaks.
-private val SENSITIVE_BACKUP_KEYS = setOf(
-    Settings.PREF_OPENROUTER_API_KEY,
-    Settings.PREF_PAYPERQ_API_KEY,
-    LEGACY_PINNED_CLIPS_KEY,
-)
+private val API_KEY_PREFS = AiProvider.entries.map { it.apiKeyPrefKey() }.toSet()
+
+// Keys that must never be written to the preference files of a backup archive. Provider API
+// keys live in an encrypted shared-prefs bucket and are scrubbed from plain prefs by SecretStore,
+// but we filter here as defense-in-depth against pre-migration or future pref leaks. API keys go
+// to the backup only in API_KEYS_FILE_NAME, and only if the user says so.
+private val SENSITIVE_BACKUP_KEYS = API_KEY_PREFS + LEGACY_PINNED_CLIPS_KEY
 
 @Suppress("UNCHECKED_CAST") // it is checked... but whatever (except string set, because can't check for that))
 internal fun settingsToJsonString(settings: Map<String?, Any?>): String {
@@ -268,6 +321,30 @@ private fun SettingsSnapshot.withoutSensitiveKeys() = SettingsSnapshot(
     stringSets = stringSets.filterKeys { it !in SENSITIVE_BACKUP_KEYS },
 )
 
+@Serializable
+internal data class BackupClip(val timestamp: Long, val text: String)
+
+// Parse errors are rethrown without cause: serialization messages quote the input, which here
+// is clip text or API keys, and the message ends up in the error dialog and the log.
+internal fun parsePinnedClips(json: String): List<BackupClip> = try {
+    Json.decodeFromString(json)
+} catch (_: Exception) {
+    throw IllegalArgumentException("Malformed pinned clips in backup")
+}
+
+internal fun parseApiKeys(json: String): Map<String, String> = try {
+    Json.decodeFromString<Map<String, String>>(json)
+        .filter { it.key in API_KEY_PREFS && it.value.isNotBlank() }
+} catch (_: Exception) {
+    throw IllegalArgumentException("Malformed API keys in backup")
+}
+
+private fun restorePinnedClips(ctx: android.content.Context, clips: List<BackupClip>) {
+    if (clips.isEmpty()) return
+    val dao = ClipboardDao.getInstance(ctx) ?: error("Clipboard unavailable")
+    clips.forEach { dao.addPinnedClip(it.timestamp, it.text) }
+}
+
 private data class BackupFiles(
     val files: List<File>,
     val protectedFiles: List<File>,
@@ -281,6 +358,8 @@ private data class StagedBackup(
     val protectedFilesDir: File,
     val prefs: SettingsSnapshot?,
     val protectedPrefs: SettingsSnapshot?,
+    val pinnedClips: List<BackupClip>,
+    val apiKeys: Map<String, String>,
 )
 
 private fun collectBackupFiles(ctx: android.content.Context): BackupFiles {
@@ -306,6 +385,8 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
     val stageProtectedFilesDir = File(stageRoot, "device_protected")
     var prefsSnapshot: SettingsSnapshot? = null
     var protectedPrefsSnapshot: SettingsSnapshot? = null
+    var pinnedClips = emptyList<BackupClip>()
+    var apiKeys = emptyMap<String, String>()
     var restoredFileBytes = 0L
     ZipInputStream(inputStream).use { zip ->
         var entry: ZipEntry? = zip.nextEntry
@@ -330,6 +411,12 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
                 entryName == PROTECTED_PREFS_FILE_NAME -> {
                     protectedPrefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
                 }
+                entryName == PINNED_CLIPS_FILE_NAME -> {
+                    pinnedClips = parsePinnedClips(readSnapshotCapped(zip, MAX_RESTORE_ENTRY_BYTES.toInt()))
+                }
+                entryName == API_KEYS_FILE_NAME -> {
+                    apiKeys = parseApiKeys(readSnapshotCapped(zip))
+                }
             }
             zip.closeEntry()
             entry = zip.nextEntry
@@ -341,6 +428,8 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
         protectedFilesDir = stageProtectedFilesDir,
         prefs = prefsSnapshot,
         protectedPrefs = protectedPrefsSnapshot,
+        pinnedClips = pinnedClips,
+        apiKeys = apiKeys,
     )
 }
 
@@ -357,6 +446,8 @@ private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup
         snapshotAllowedFiles(protectedFilesDir, rollbackProtectedFilesDir)
         copyDirectoryContents(backup.filesDir, filesDir)
         copyDirectoryContents(backup.protectedFilesDir, protectedFilesDir)
+        // loaded learned words still use the old files, make them load the restored ones
+        PersonalizationHelper.closeAllUserHistoryDictionaries()
         backup.prefs?.let { snapshot ->
             ctx.prefs().edit {
                 clear()
@@ -377,6 +468,10 @@ private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup
         }
         ctx.protectedPrefs().edit(commit = true) {
             SENSITIVE_BACKUP_KEYS.forEach { remove(it) }
+        }
+        // Without secure storage (API < 23) the app can't store keys at all, so skip them.
+        if (backup.apiKeys.isNotEmpty() && SecretStore.isSecureStorageAvailable(ctx)) {
+            backup.apiKeys.forEach { (prefKey, value) -> SecretStore.setApiKey(ctx, prefKey, value) }
         }
     } catch (t: Throwable) {
         restoreAllowedFiles(rollbackFilesDir, filesDir)
@@ -425,8 +520,15 @@ private fun copyDirectoryContents(source: File, target: File) {
             if (targetFile.isDirectory) {
                 targetFile.deleteRecursively()
             }
+            // Write a temp file and rename it over the target. Native code memory-maps loaded
+            // learned-words files, and truncating a mapped file in place crashes the keyboard.
+            val tempFile = File(targetFile.path + ".restore_tmp")
             file.inputStream().buffered().use { input ->
-                FileUtils.copyStreamToNewFile(input, targetFile)
+                FileUtils.copyStreamToNewFile(input, tempFile)
+            }
+            if (!tempFile.renameTo(targetFile)) {
+                tempFile.delete()
+                throw java.io.IOException("Could not write ${targetFile.name}")
             }
         }
     }
@@ -475,7 +577,7 @@ private const val MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024
 private const val MAX_RESTORE_ENTRY_BYTES = 32L * 1024L * 1024L
 private const val MAX_RESTORE_TOTAL_BYTES = 64L * 1024L * 1024L
 
-private fun readSnapshotCapped(input: InputStream): String {
+private fun readSnapshotCapped(input: InputStream, maxBytes: Int = MAX_SNAPSHOT_BYTES): String {
     val buf = java.io.ByteArrayOutputStream()
     val chunk = ByteArray(8 * 1024)
     var total = 0
@@ -483,7 +585,7 @@ private fun readSnapshotCapped(input: InputStream): String {
         val n = input.read(chunk)
         if (n == -1) break
         total += n
-        if (total > MAX_SNAPSHOT_BYTES) {
+        if (total > maxBytes) {
             throw IllegalArgumentException("Settings snapshot exceeds size limit")
         }
         buf.write(chunk, 0, n)
@@ -512,11 +614,14 @@ private fun postToMain(action: () -> Unit) {
 
 private const val PREFS_FILE_NAME = "preferences.json"
 private const val PROTECTED_PREFS_FILE_NAME = "protected_preferences.json"
+private const val PINNED_CLIPS_FILE_NAME = "pinned_clips.json"
+private const val API_KEYS_FILE_NAME = "api_keys.json"
 private const val LEGACY_PINNED_CLIPS_KEY = "pinned_clips"
 
 internal val backupFilePatterns by lazy { listOf(
     "blacklists${File.separator}.*\\.txt".toRegex(),
     "layouts${File.separator}.*${LayoutUtilsCustom.CUSTOM_LAYOUT_PREFIX}+\\..{0,4}".toRegex(), // can't expect a period at the end, as this would break restoring older backups
+    "UserHistoryDictionary.*${File.separator}UserHistoryDictionary.*\\.(body|header)".toRegex(),
     "custom_background_image.*".toRegex(),
     "custom_font".toRegex(),
     "custom_emoji_font".toRegex(),
