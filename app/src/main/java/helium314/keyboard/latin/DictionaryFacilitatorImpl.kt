@@ -357,9 +357,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
 
         val words = suggestion.splitOnWhitespace().dropLastWhile { it.isEmpty() }
 
-        // increase / decrease confidence
-        if (words.size == 1) // ignore if more than a single word, which only happens with (badly working) spaceAwareGesture
-            adjustConfidences(suggestion, wasAutoCapitalized)
+        if (wasAutoCapitalized && !ngramContext.isBeginningOfSentenceContext)
+            return // could be word caps text field, too much danger of adding wrong capitalization
 
         // Add word to user dictionary if it is in no other dictionary except user history dictionary (i.e. typed again).
         val sv = Settings.getValues()
@@ -373,20 +372,88 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         }
 
         var ngramContextForCurrentWord = ngramContext
-        val preferredGroup = currentlyPreferredDictionaryGroup
         for (i in words.indices) {
             val currentWord = words[i]
+            val isBeginningOfSentence = ngramContextForCurrentWord.isBeginningOfSentenceContext
             val wasCurrentWordAutoCapitalized = (i == 0) && wasAutoCapitalized
+            val dictGroup = findDictGroupForAddingWord(currentWord, wasCurrentWordAutoCapitalized || isBeginningOfSentence)
+                ?: continue
             // add to history for preferred dictionary group, to avoid mixing languages in history
             addWordToUserHistory(
-                preferredGroup, ngramContextForCurrentWord, currentWord,
+                dictGroup, ngramContextForCurrentWord, currentWord,
                 wasCurrentWordAutoCapitalized, timeStampInSeconds.toInt(), blockPotentiallyOffensive
             )
             ngramContextForCurrentWord = ngramContextForCurrentWord.getNextNgramContext(WordInfo(currentWord))
+        }
 
-            // remove manually entered blacklisted words from blacklist for likely matching languages
-            dictionaryGroups.filter { it.confidence == preferredGroup.confidence }.forEach {
-                it.removeFromBlacklist(currentWord)
+        // increase / decrease confidence (at the end, because we use confidence to determine where to add words)
+        if (words.size == 1) // ignore if more than a single word, which only happens with (badly working) spaceAwareGesture
+            adjustConfidences(suggestion, wasAutoCapitalized)
+    }
+
+    private fun findDictGroupForAddingWord(word: String, wasAutoCapitalizedOrIsBeginningOfSentence: Boolean): DictionaryGroup? {
+        if (dictionaryGroups.size == 1) return dictionaryGroups[0]
+        val requiredConfidence = currentlyPreferredDictionaryGroup.confidence - 1
+        val maybe = dictionaryGroups.filter { it.confidence >= requiredConfidence }
+        if (maybe.isEmpty()) return null
+
+        // if we're considering only a single locale, use that
+        // this will could be unwanted if we're changing language, but also the user might want a foreign word for that language
+        if (maybe.size == 1) return maybe[0]
+
+        // we could try finding the most suitable dict group if the word was capitalized too,
+        // but that's a lot of effort and danger of adding words incorrectly for little gain (todo: maybe later)
+        return if (wasAutoCapitalizedOrIsBeginningOfSentence && Character.isUpperCase(word.codePointAt(0))) null
+        else maybe.filter { isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, it) }
+            .maxByOrNull { it.confidence }
+    }
+
+    private fun determineWordToUse(word: String, wasAutoCapitalizedOrIsBeginningOfSentence: Boolean, dictionaryGroup: DictionaryGroup): String? {
+        // Check for isBeginningOfSentenceContext too, because not all text fields auto-capitalize in this case.
+        // Even if the user capitalizes manually, they most likely don't want the capitalized form suggested.
+        if (wasAutoCapitalizedOrIsBeginningOfSentence && Character.isUpperCase(word.codePointAt(0))) {
+            val decapitalizedWord = word.decapitalize(dictionaryGroup.locale) // try undoing auto-capitalization
+            val wordValid = isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
+            val decapitalizedValid = isValidWord(decapitalizedWord, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
+            if (wordValid && !decapitalizedValid) {
+                // If the word was auto-capitalized and exists only as a capitalized word in the
+                // dictionary, then we must not downcase it before registering it. For example,
+                // the name of the contacts in start-of-sentence position would come here with the
+                // wasAutoCapitalized flag: if we downcase it, we'd register a lower-case version
+                // of that contact's name which would end up popping in suggestions.
+                return word
+            } else if (!wordValid && decapitalizedValid) {
+                // If however the word is not in the dictionary, but exists as a de-capitalized word
+                // only, then we consider that was a lower-case word that had been auto-capitalized.
+                // todo: in this case the capitalized word will still be in the ngram for the following words, which messes with the next word suggestions
+                //  but this should be improved in the native library once we remove loading the google library
+                return decapitalizedWord
+            } else {
+                // if both or neither are valid, we check whether any of those forms were already typed by the user
+                val histDict = dictionaryGroup.getDict(Dictionary.TYPE_USER_HISTORY) ?: return null
+                val wordInHistory = histDict.isInDictionary(word)
+                val decapitalizedInHistory = histDict.isInDictionary(decapitalizedWord)
+                if (wordInHistory && !decapitalizedInHistory) return word
+                else if (!wordInHistory && decapitalizedInHistory) return decapitalizedWord
+            }
+            return null // can't determine reliably enough, better add nothing (wasAutoCapitalizedOrIsBeginningOfSentence is unusual anyway)
+        } else {
+            val lowerCasedWord = word.lowercase(dictionaryGroup.locale)
+            if (lowerCasedWord == word) return word
+
+            // HACK: We'd like to avoid adding the capitalized form of common words to the User
+            // History dictionary in order to avoid suggesting them until the dictionary
+            // consolidation is done.
+            // TODO: Remove this hack when ready.
+            // todo: this is actually pretty bad for languages with a lot of uppercase words like German
+            val lowerCaseFreqInMainDict = dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.getFrequency(lowerCasedWord)
+                ?: Dictionary.NOT_A_PROBABILITY
+            val mainFreq = dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.getFrequency(word) ?: Dictionary.NOT_A_PROBABILITY
+            return if (mainFreq < lowerCaseFreqInMainDict && lowerCaseFreqInMainDict >= CAPITALIZED_FORM_MAX_PROBABILITY_FOR_INSERT) {
+                // Use lower cased word as the word can be a distracter of the popular word.
+                lowerCasedWord
+            } else {
+                word
             }
         }
     }
@@ -402,46 +469,15 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             return
         if (tryChangingWords)
             tryChangingWords = ngramContext.changeWordIfAfterBeginningOfSentence(changeFrom, changeTo)
-
-        val wordToUse: String
-        // Check for isBeginningOfSentenceContext too, because not all text fields auto-capitalize in this case.
-        // Even if the user capitalizes manually, they most likely don't want the capitalized form suggested.
-        if (wasAutoCapitalized || ngramContext.isBeginningOfSentenceContext) {
-            val decapitalizedWord = word.decapitalize(dictionaryGroup.locale) // try undoing auto-capitalization
-            if (isValidWord(word, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
-                && !isValidWord(decapitalizedWord, DictionaryFacilitator.ALL_DICTIONARY_TYPES, dictionaryGroup)
-            ) {
-                // If the word was auto-capitalized and exists only as a capitalized word in the
-                // dictionary, then we must not downcase it before registering it. For example,
-                // the name of the contacts in start-of-sentence position would come here with the
-                // wasAutoCapitalized flag: if we downcase it, we'd register a lower-case version
-                // of that contact's name which would end up popping in suggestions.
-                wordToUse = word
-            } else {
-                // If however the word is not in the dictionary, or exists as a de-capitalized word
-                // only, then we consider that was a lower-case word that had been auto-capitalized.
-                wordToUse = decapitalizedWord
-                tryChangingWords = true
-                changeFrom = word
-                changeTo = wordToUse
-            }
-        } else {
-            // HACK: We'd like to avoid adding the capitalized form of common words to the User
-            // History dictionary in order to avoid suggesting them until the dictionary
-            // consolidation is done.
-            // TODO: Remove this hack when ready.
-            val lowerCasedWord = word.lowercase(dictionaryGroup.locale)
-            val lowerCaseFreqInMainDict = dictionaryGroup.getDict(Dictionary.TYPE_MAIN)?.getFrequency(lowerCasedWord)
-                ?: Dictionary.NOT_A_PROBABILITY
-            wordToUse = if (mainFreq < lowerCaseFreqInMainDict
-                && lowerCaseFreqInMainDict >= CAPITALIZED_FORM_MAX_PROBABILITY_FOR_INSERT
-            ) {
-                // Use lower cased word as the word can be a distracter of the popular word.
-                lowerCasedWord
-            } else {
-                word
-            }
+        val wasAutoCapitalizedOrIsBeginningOfSentence = wasAutoCapitalized || ngramContext.isBeginningOfSentenceContext
+        val wordToUse = determineWordToUse(word, wasAutoCapitalizedOrIsBeginningOfSentence, dictionaryGroup) ?: return
+        if (wasAutoCapitalizedOrIsBeginningOfSentence && wordToUse != word && Character.isUpperCase(word.codePointAt(0))) {
+            // the word goes into history without its capital letter, so the next word must use the same form
+            tryChangingWords = true
+            changeFrom = word
+            changeTo = wordToUse
         }
+
         // We demote unrecognized words (frequency <= 0) by specifying them as "invalid".
         // We don't add words with 0-frequency (assuming they would be profanity etc.).
         val isValid = mainFreq > 0
@@ -453,6 +489,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
                 if (wordsWaitingForHistory[word] == addJob)
                     wordsWaitingForHistory.remove(word)
             }
+            // remove manually entered blacklisted words from blacklist for likely matching languages
+            dictionaryGroups.filter { it.confidence == dictionaryGroup.confidence }.forEach {
+                it.removeFromBlacklist(word)
+            }
+
             // A reset can replace the dictionary during the delay. A write would open the old one again.
             if (dictionaryGroups.none { it.getSubDict(Dictionary.TYPE_USER_HISTORY) === userHistoryDictionary })
                 return@launch
