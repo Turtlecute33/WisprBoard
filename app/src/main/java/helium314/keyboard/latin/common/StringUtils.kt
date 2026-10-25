@@ -14,6 +14,7 @@ import java.text.BreakIterator
 import java.util.Locale
 import kotlin.math.max
 import kotlin.text.indexOfFirst
+import kotlin.text.codePointAt
 
 fun CharSequence.codePointAt(offset: Int) = Character.codePointAt(this, offset)
 fun CharSequence.codePointBefore(offset: Int) = Character.codePointBefore(this, offset)
@@ -204,8 +205,14 @@ fun CharSequence.isValidNumber(): Boolean {
 }
 
 fun String.decapitalize(locale: Locale): String {
-    if (isEmpty() || !this[0].isUpperCase()) return this
-    return replaceFirstChar { it.lowercase(locale) }
+    val firstCp = codePointAt(0)
+    if (isEmpty() || !Character.isUpperCase(firstCp)) return this
+    if (firstCp < 0xffff)
+        return replaceFirstChar { it.lowercase(locale) }
+    // this doesn't consider locale, while String.lowercase would
+    // but anyway were unlikely to arrive here...
+    return String(Character.toChars(Character.toLowerCase(firstCp)))+
+        substring(Character.charCount(firstCp))
 }
 
 fun encodeBase36(string: String): String = BigInteger(string.toByteArray()).toString(36)
