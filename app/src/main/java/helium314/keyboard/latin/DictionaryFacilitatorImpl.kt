@@ -21,14 +21,14 @@ import helium314.keyboard.latin.common.decapitalize
 import helium314.keyboard.latin.common.mightBeEmoji
 import helium314.keyboard.latin.common.splitOnWhitespace
 import helium314.keyboard.latin.dictionary.AppsBinaryDictionary
-import helium314.keyboard.latin.dictionary.ContactsBinaryDictionary
+import helium314.keyboard.latin.dictionary.contacts.ContactsBinaryDictionary
 import helium314.keyboard.latin.dictionary.Dictionary
 import helium314.keyboard.latin.dictionary.DictionaryFactory
 import helium314.keyboard.latin.dictionary.DictionaryStats
 import helium314.keyboard.latin.dictionary.ExpandableBinaryDictionary
 import helium314.keyboard.latin.dictionary.UserBinaryDictionary
 import helium314.keyboard.latin.permissions.PermissionsUtil
-import helium314.keyboard.latin.personalization.UserHistoryDictionary
+import helium314.keyboard.latin.dictionary.history.UserHistoryDictionary
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.settings.SettingsValuesForSuggestion
 import helium314.keyboard.latin.utils.Log
@@ -39,8 +39,10 @@ import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.prefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -49,6 +51,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Facilitates interaction with different kinds of dictionaries. Provides APIs
@@ -84,6 +87,21 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     //  see https://github.com/HeliBorg/HeliBoard/issues/307
     private var mValidSpellingWordReadCache: LruCache<String, Boolean>? = null
     private var mValidSpellingWordWriteCache: LruCache<String, Boolean>? = null
+
+    /*
+     * Adding words to history is delayed by unlearnDuration.
+     * Waiting words and the jobs actually adding the words are placed in a map, so
+     * "unlearning" (caused by the user correcting a word) may cancel adding that word.
+     * Since the map key is the word, this may only stop adding the most recent instance of a word,
+     * but that's the most likely one to be corrected anyway. If necessary we could improve this by storing ngram context.
+     *
+     * The old way of unlearning was removing the word from history dict (except for UnlearnEvent.BACKSPACE),
+     * or at least massively reducing frequency, which is often excessive when rewriting a sentence
+     * or rejecting otherwise fine autocorrect or gestures.
+     * todo: ideally the native library would allow reverting recent additions
+     */
+    private val wordsWaitingForHistory = hashMapOf<String, Job>()
+    private val unlearnDuration = 25.seconds
 
     private val scope = CoroutineScope(Dispatchers.Default)
 
@@ -306,6 +324,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             dictionaryGroups = listOf(DictionaryGroup())
         }
         scope.coroutineContext.cancelChildren()
+        synchronized(wordsWaitingForHistory) { wordsWaitingForHistory.clear() }
         for (dictionaryGroup in dictionaryGroupsToClose) {
             for (dictType in DictionaryFacilitator.ALL_DICTIONARY_TYPES) {
                 dictionaryGroup.closeDict(dictType)
@@ -426,7 +445,21 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // We demote unrecognized words (frequency <= 0) by specifying them as "invalid".
         // We don't add words with 0-frequency (assuming they would be profanity etc.).
         val isValid = mainFreq > 0
-        UserHistoryDictionary.addToDictionary(userHistoryDictionary, ngramContext, wordToUse, isValid, timeStampInSeconds)
+
+        var addJob: Job? = null
+        addJob = scope.launch(Dispatchers.IO) {
+            delay(unlearnDuration)
+            synchronized(wordsWaitingForHistory) {
+                if (wordsWaitingForHistory[word] == addJob)
+                    wordsWaitingForHistory.remove(word)
+            }
+            // A reset can replace the dictionary during the delay. A write would open the old one again.
+            if (dictionaryGroups.none { it.getSubDict(Dictionary.TYPE_USER_HISTORY) === userHistoryDictionary })
+                return@launch
+            UserHistoryDictionary.addToDictionary(userHistoryDictionary, ngramContext, wordToUse, isValid, timeStampInSeconds)
+        }
+        // we use the original word, because that's the one that is "unlearned" when the user corrects the word
+        synchronized(wordsWaitingForHistory) { wordsWaitingForHistory[word] = addJob }
     }
 
     private fun addToPersonalDictionaryIfInvalidButInHistory(word: String) {
@@ -445,7 +478,7 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
         // Words added to dictionaries (user and history) seem to be found only after some delay.
         // This is not too bad, but it delays adding in case a user wants to fill a dictionary using this functionality
         if (userHistoryDict.getFrequency(word) > 120) {
-            scope.launch {
+            scope.launch(Dispatchers.IO) {
                 // adding can throw IllegalArgumentException: Unknown URL content://user_dictionary/words
                 // https://stackoverflow.com/q/41474623 https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/490
                 // apparently some devices don't have a dictionary? or it's just sporadic hiccups?
@@ -515,10 +548,8 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     }
 
     override fun unlearnFromUserHistory(word: String, ngramContext: NgramContext, timeStampInSeconds: Long, eventType: Int) {
-        // TODO: Decide whether or not to remove the word on EVENT_BACKSPACE.
-        if (eventType != Constants.EVENT_BACKSPACE) {
-            currentlyPreferredDictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)?.removeUnigramEntryDynamically(word)
-        }
+        val job = synchronized(wordsWaitingForHistory) { wordsWaitingForHistory.remove(word) } ?: return
+        job.cancel()
 
         // Update the spelling cache after unlearning. Words that are removed from user history
         // and appear in no other language model are not considered valid.
@@ -643,6 +674,11 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
     }
 
     override fun clearUserHistoryDictionary(context: Context) {
+        // Words that wait for the delayed add must not come back after the clear.
+        synchronized(wordsWaitingForHistory) {
+            wordsWaitingForHistory.values.forEach { it.cancel() }
+            wordsWaitingForHistory.clear()
+        }
         for (dictionaryGroup in dictionaryGroups) {
             dictionaryGroup.getSubDict(Dictionary.TYPE_USER_HISTORY)?.clear()
         }
