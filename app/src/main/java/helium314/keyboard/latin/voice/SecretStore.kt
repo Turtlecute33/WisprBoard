@@ -51,10 +51,9 @@ object SecretStore {
         if (!legacy.isNullOrBlank()) {
             // Commit the secure copy to disk before scrubbing the plaintext one. If the process
             // dies in between, the worst case is a leftover plaintext key that gets re-scrubbed on
-            // the next read — never a lost key.
-            val migrated = runCatching {
-                secure.edit(commit = true) { putString(prefKey, legacy) }
-            }.isSuccess
+            // the next read — never a lost key. commit() reports a failed disk write as false, not
+            // as an exception, and the androidx edit(commit = true) extension drops that result.
+            val migrated = runCatching { secure.edit().putString(prefKey, legacy).commit() }.getOrDefault(false)
             // Only scrub the plaintext copy once the encrypted one is actually on disk, or the
             // migration would destroy the user's key.
             if (migrated) context.prefs().edit { remove(prefKey) }
@@ -66,7 +65,8 @@ object SecretStore {
     fun setApiKey(context: Context, prefKey: String, value: String) {
         val secure = securePrefs(context)
         if (secure != null) {
-            secure.edit(commit = true) { putString(prefKey, value) }
+            // A false commit() means the key is not on disk: report it, like a missing store.
+            check(secure.edit().putString(prefKey, value).commit()) { "Secure storage write failed" }
             // Ensure no stale plaintext copy remains (only scrub once the secure write is persisted).
             context.prefs().edit { remove(prefKey) }
         } else {
