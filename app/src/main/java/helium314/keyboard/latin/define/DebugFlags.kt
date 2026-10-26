@@ -56,7 +56,7 @@ Locale: ${Locale.getDefault()}
 Stack trace:
 $stackTrace
 Last log:
-${Log.getLog(100).joinToString("\n")}
+${Log.getLogForExport(100).joinToString("\n")}
 """)
         defaultUncaughtExceptionHandler!!.uncaughtException(t, e)
     }
