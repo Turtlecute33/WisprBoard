@@ -6,6 +6,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
+import android.os.Build
 import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
 import helium314.keyboard.latin.BuildConfig
@@ -158,13 +159,30 @@ class AudioRecorder(
         val bufferSize = minBufferSize * 2
 
         return try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                SAMPLE_RATE,
-                CHANNEL_CONFIG,
-                AUDIO_FORMAT,
-                bufferSize
-            )
+            audioRecord = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Privacy-sensitive capture (PRIV-004): no other app, the assistant included, can
+                // record the microphone at the same time.
+                AudioRecord.Builder()
+                    .setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setSampleRate(SAMPLE_RATE)
+                            .setChannelMask(CHANNEL_CONFIG)
+                            .setEncoding(AUDIO_FORMAT)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(bufferSize)
+                    .setPrivacySensitive(true)
+                    .build()
+            } else {
+                AudioRecord(
+                    MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                    SAMPLE_RATE,
+                    CHANNEL_CONFIG,
+                    AUDIO_FORMAT,
+                    bufferSize
+                )
+            }
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
                 Log.e(TAG, "AudioRecord failed to initialize")
                 audioRecord?.release()
@@ -228,6 +246,11 @@ class AudioRecorder(
             false
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "AudioRecord construction failed", e)
+            cleanupStartFailure()
+            false
+        } catch (e: UnsupportedOperationException) {
+            // AudioRecord.Builder.build() throws this when the device cannot use the parameters.
+            Log.e(TAG, "AudioRecord parameters not supported", e)
             cleanupStartFailure()
             false
         } catch (e: IllegalStateException) {
