@@ -288,6 +288,8 @@
     <string name="button_restore">Restore</string>
     <!-- Message when backup is restored successfully -->
     <string name="backup_restored">Backup restored</string>
+    <!-- Message when the backup file is saved successfully -->
+    <string name="backup_saved">Backup saved</string>
     <!-- Title of the dialog that asks whether the backup should include the AI provider API keys -->
     <string name="backup_include_keys_title">Include API keys?</string>
     <!-- Message of the dialog that asks whether the backup should include the AI provider API keys -->

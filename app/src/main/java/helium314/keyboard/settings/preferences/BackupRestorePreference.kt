@@ -102,13 +102,14 @@ fun BackupRestorePreference(setting: Setting) {
             onDismissRequest = { showKeysDialog = false },
             title = { Text(stringResource(R.string.backup_include_keys_title)) },
             content = { Text(stringResource(R.string.backup_include_keys_message)) },
-            confirmButtonText = stringResource(R.string.button_include_keys),
-            neutralButtonText = stringResource(R.string.button_exclude_keys),
+            // The safe choice is the primary button; plain-text keys need a deliberate tap.
+            confirmButtonText = stringResource(R.string.button_exclude_keys),
+            neutralButtonText = stringResource(R.string.button_include_keys),
             onNeutral = {
                 showKeysDialog = false
-                launchBackup(withKeys = false)
+                launchBackup(withKeys = true)
             },
-            onConfirmed = { launchBackup(withKeys = true) }
+            onConfirmed = { launchBackup(withKeys = false) }
         )
     }
     if (error != null) {
@@ -176,6 +177,7 @@ private fun backupLauncher(
                     }
                     zipStream.close()
                 }
+                postToMain { Toast.makeText(ctx, ctx.getString(R.string.backup_saved), Toast.LENGTH_SHORT).show() }
             } catch (t: Throwable) {
                 postToMain { onError("b" + (t.message ?: "Unknown error")) }
                 Log.w("AdvancedScreen", "error during backup", t)
