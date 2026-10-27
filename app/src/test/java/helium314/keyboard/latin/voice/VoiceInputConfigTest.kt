@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.voice
 
+import helium314.keyboard.latin.R
 import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -69,25 +70,45 @@ class VoiceInputConfigTest {
 
 
     @Test
-    fun onlyTheProviderStatusesWithAClearActionAreTranslated() {
-        // These three tell the user something they can fix, so they get a real message instead of
-        // the raw untranslated literal "API error: 402".
-        assertNotNull(actionableErrorResId(401))
-        assertNotNull(actionableErrorResId(402))
-        assertNotNull(actionableErrorResId(404))
-        // 403 on OpenRouter means the request was refused by moderation, not that the key is bad.
-        // Sending the user to check their API key would be confidently wrong, which is worse than
-        // an opaque status code.
-        assertNull(actionableErrorResId(403))
-        // Handled by safeUserFacingError as rate limits before this is consulted.
-        assertNull(actionableErrorResId(429))
-        assertNull(actionableErrorResId(503))
-        assertNull(actionableErrorResId(500))
-        assertNull(actionableErrorResId(413))
-        // And the three statuses must not collide with each other.
+    fun providerStatusesWithAClearActionAreTranslated() {
+        // These tell the user something they can fix, so they get a real message instead of the
+        // raw untranslated literal "API error: 402".
+        assertEquals(R.string.ai_error_rejected_request, actionableErrorResId(400))
+        assertEquals(R.string.ai_error_bad_key, actionableErrorResId(401))
+        assertEquals(R.string.ai_error_out_of_credit, actionableErrorResId(402))
+        assertEquals(R.string.ai_error_model_not_found, actionableErrorResId(404))
+        assertEquals(R.string.ai_error_too_large, actionableErrorResId(413))
+        assertEquals(R.string.voice_error_rate_limited, actionableErrorResId(429))
+        // And the statuses with different actions must not collide with each other.
         assertEquals(
-            3,
-            setOf(actionableErrorResId(401), actionableErrorResId(402), actionableErrorResId(404)).size,
+            6,
+            setOf(400, 401, 402, 404, 413, 429).map { actionableErrorResId(it) }.toSet().size,
         )
+    }
+
+    @Test
+    fun forbiddenIsAModerationRefusalNotABadKey() {
+        // 403 on OpenRouter means the request was refused by moderation, not that the key is bad.
+        // Sending the user to check their API key would be confidently wrong.
+        assertEquals(R.string.ai_error_refused_content, actionableErrorResId(403))
+        assertNotEquals(R.string.ai_error_bad_key, actionableErrorResId(403))
+    }
+
+    @Test
+    fun serverErrorsReadAsProviderDownNotAsRateLimit() {
+        for (status in listOf(500, 502, 503, 504)) {
+            assertEquals(R.string.ai_error_provider_down, actionableErrorResId(status), "status $status")
+        }
+        assertNotEquals(R.string.voice_error_rate_limited, actionableErrorResId(503))
+    }
+
+    @Test
+    fun timeoutAndNetworkFailuresHaveTheirOwnText() {
+        assertEquals(R.string.ai_error_timeout, actionableErrorResId(OpenRouterClient.STATUS_TIMEOUT))
+        assertEquals(R.string.ai_error_timeout, actionableErrorResId(408))
+        assertEquals(R.string.voice_error_no_network, actionableErrorResId(OpenRouterClient.STATUS_NETWORK))
+        // Unknown statuses fall back to the caller's generic text.
+        assertNull(actionableErrorResId(-1))
+        assertNull(actionableErrorResId(418))
     }
 }

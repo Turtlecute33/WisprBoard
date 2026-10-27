@@ -1264,6 +1264,12 @@ New dictionary:
     <string name="ai_error_bad_key">Your API key was rejected. Check it in WisprBoard Settings.</string>
     <string name="ai_error_out_of_credit">Your provider account is out of credit. Top it up to keep using AI features.</string>
     <string name="ai_error_model_not_found">That model is no longer available. Pick another one in WisprBoard Settings.</string>
+    <string name="ai_error_rejected_request">The model did not accept this request. Try a different model.</string>
+    <!-- HTTP 403: on OpenRouter a moderation refusal, not a bad API key -->
+    <string name="ai_error_refused_content">The AI provider refused this content.</string>
+    <string name="ai_error_too_large">The request is too large for this model. Make it shorter.</string>
+    <string name="ai_error_provider_down">The AI provider has a problem. Try again later.</string>
+    <string name="ai_error_timeout">The AI provider did not reply in time. Try again.</string>
     <string name="voice_error_rate_limited">AI provider rate limit reached — try again in a moment</string>
     <string name="voice_max_duration_reached">Maximum recording length reached — transcribing&#8230;</string>
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>

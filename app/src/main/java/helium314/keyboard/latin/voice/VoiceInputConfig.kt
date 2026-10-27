@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.SystemClock
 import android.widget.Toast
 import androidx.annotation.StringRes
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import java.text.BreakIterator
@@ -87,19 +88,25 @@ internal fun applySpacing(text: String, ctx: VoiceInputManager.SpacingContext?):
 }
 
 /**
- * Turns the handful of provider statuses that mean something specific into an instruction the user
- * can act on. Without this they reach the strip as the raw, untranslated literal "API error: 402",
- * which tells a non-developer nothing at all.
+ * Turns a provider status into an instruction the user can act on. Without this they reach the
+ * strip as the raw, untranslated literal "API error: 402", which tells a non-developer nothing.
  *
- * Deliberately narrow. 403 is **not** mapped: on OpenRouter it means the request was refused by
- * moderation, not that the credentials are bad, and confidently sending the user to check their
- * API key would be worse than an opaque number. 429/503 are handled by the caller as rate limits.
+ * 403 gets its own text: on OpenRouter it means the request was refused by moderation, not that
+ * the credentials are bad, so it must never send the user to check the API key. Only 429 is a
+ * rate limit; 503 means the provider is down (UX-012).
  */
 @StringRes
 internal fun actionableErrorResId(statusCode: Int): Int? = when (statusCode) {
+    400 -> R.string.ai_error_rejected_request
     401 -> R.string.ai_error_bad_key
     402 -> R.string.ai_error_out_of_credit
+    403 -> R.string.ai_error_refused_content
     404 -> R.string.ai_error_model_not_found
+    408, OpenRouterClient.STATUS_TIMEOUT -> R.string.ai_error_timeout
+    413 -> R.string.ai_error_too_large
+    429 -> R.string.voice_error_rate_limited
+    in 500..599 -> R.string.ai_error_provider_down
+    OpenRouterClient.STATUS_NETWORK -> R.string.voice_error_no_network
     else -> null
 }
 
@@ -109,19 +116,19 @@ private val SENSITIVE_USER_FACING_PATTERNS: List<Pair<Regex, String>> = listOf(
 )
 
 /**
- * Resolves a user-facing error message from a transcription/text-fix exception. If the throwable
- * is one of our own [OpenRouterException]s we surface its message after scrubbing tokens; for
- * everything else we fall back to [fallbackResId] so unrelated stack traces never leak.
+ * Resolves a user-facing error message from a transcription/text-fix exception. A known
+ * [OpenRouterException] status gets its mapped text. Other messages are untranslated English, so
+ * only debug builds show them (after scrubbing tokens); release builds and all other throwables
+ * get [fallbackResId], so unrelated stack traces never leak.
  */
 internal fun safeUserFacingError(context: Context, e: Throwable, @StringRes fallbackResId: Int): String {
     if (e is OpenRouterException) {
-        if (e.statusCode == 429 || e.statusCode == 503) return context.getString(R.string.voice_error_rate_limited)
         // An empty transcript describes the recording, not the service. Saying so keeps the user
         // from re-recording to work around what reads like a provider outage.
         if (e.statusCode == OpenRouterClient.STATUS_NO_SPEECH) return context.getString(R.string.voice_error_silent)
         actionableErrorResId(e.statusCode)?.let { return context.getString(it) }
         val raw = e.message?.takeIf { it.isNotBlank() }
-        if (raw != null) {
+        if (BuildConfig.DEBUG && raw != null) {
             return SENSITIVE_USER_FACING_PATTERNS.fold(raw) { acc, (regex, replacement) ->
                 acc.replace(regex, replacement)
             }

@@ -121,6 +121,9 @@ class OpenRouterClient(
         const val STATUS_UNUSABLE_RESPONSE = -2
         /** Sentinel for a transcription that came back empty because the clip held no speech. */
         const val STATUS_NO_SPEECH = -3
+        /** Sentinels for a timeout and a network failure, so that the error text is not found from the message (UX-012). */
+        const val STATUS_TIMEOUT = -4
+        const val STATUS_NETWORK = -5
         private val RETRYABLE_STATUSES = setOf(408, 425, 429, 500, 502, 503, 504, STATUS_UNUSABLE_RESPONSE)
         // Sanity cap to prevent pathological responses from consuming unbounded memory.
         // Real transcription responses are kilobytes; 1 MB is ~3 orders of magnitude of headroom.
@@ -352,11 +355,11 @@ class OpenRouterClient(
                 // Connect phase: the route is black-holed or behind a captive portal, and
                 // isNetworkAvailable() already passed. Two more 8 s handshakes will not find a
                 // path, they just make the user wait 24 s instead of 8 s for the same error.
-                if (!responseStarted) throw OpenRouterException("Request timed out")
+                if (!responseStarted) throw OpenRouterException("Request timed out", STATUS_TIMEOUT)
                 // Read phase: the body is already on the wire. Text bodies are cheap to resend;
                 // an audio body is megabytes, and a server that stayed silent for the whole
                 // window will stay silent for the next one.
-                if (!retryTimeouts || attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Request timed out")
+                if (!retryTimeouts || attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Request timed out", STATUS_TIMEOUT)
                 lastError = e
                 nextDelayOverrideMs = -1L
             } catch (e: InterruptedIOException) {
@@ -369,7 +372,7 @@ class OpenRouterClient(
                 // includes the full request URL plus headers (Authorization: Bearer …). We throw a
                 // bare OpenRouterException with no cause attached on purpose; do NOT pass `cause = e`
                 // here, or a logged stack trace could leak the API key.
-                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Network error")
+                if (attempt == MAX_ATTEMPTS - 1) throw OpenRouterException("Network error", STATUS_NETWORK)
                 lastError = e
                 nextDelayOverrideMs = -1L
             }
@@ -382,7 +385,7 @@ class OpenRouterClient(
             // Sleeping past the budget would burn the user's remaining wait on doing nothing, and
             // a Retry-After longer than the budget can never be honoured anyway.
             if (SystemClock.elapsedRealtime() + delayMs >= deadlineMs) {
-                throw (lastError as? OpenRouterException ?: OpenRouterException("Request timed out"))
+                throw (lastError as? OpenRouterException ?: OpenRouterException("Request timed out", STATUS_TIMEOUT))
             }
             if (BuildConfig.DEBUG) Log.i(TAG, "Retrying after ${delayMs}ms (attempt ${attempt + 1})")
             try { if (delayMs > 0) Thread.sleep(delayMs) } catch (e: InterruptedException) {
