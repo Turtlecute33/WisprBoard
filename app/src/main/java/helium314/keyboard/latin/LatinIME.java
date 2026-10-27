@@ -1026,6 +1026,15 @@ public class LatinIME extends InputMethodService implements
         final String original = mPendingTranslateSource;
         final boolean fromClipboard = mPendingTranslateFromClipboard;
         clearPendingTranslateState();
+        // The field can have changed while the request was in flight. Do the field check again,
+        // and drop the text in a blocked field (no clipboard rescue, like the voice path).
+        final Integer blocked = currentFieldBlockedErrorResId();
+        if (blocked != null) {
+            Toast.makeText(this, blocked == R.string.text_fix_error_sensitive_field
+                    ? R.string.translate_error_sensitive_field
+                    : R.string.translate_error_unsupported_field, Toast.LENGTH_LONG).show();
+            return;
+        }
         if (original == null) {
             rescueTranslation(translated);
             return;
@@ -1624,6 +1633,8 @@ public class LatinIME extends InputMethodService implements
         // that the selection still matches before replacing anything.
         if (isDifferentTextField) {
             clearPendingTextFixState();
+            // restartInput() to a new field does not call onFinishInput, so drop Translate here too.
+            clearPendingTranslateState();
         }
 
         StatsUtils.onStartInputView(editorInfo.inputType,
