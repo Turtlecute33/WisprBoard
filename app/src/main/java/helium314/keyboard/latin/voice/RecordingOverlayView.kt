@@ -3,6 +3,7 @@ package helium314.keyboard.latin.voice
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -93,13 +94,17 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
             val bg = GradientDrawable().apply { shape = GradientDrawable.OVAL }
             background = bg
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            val innerSize = dp(11)
-            val icon = GradientDrawable().apply {
-                shape = if (isCancel) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
-                if (!isCancel) cornerRadius = dp(2).toFloat()
-                setSize(innerSize, innerSize)
+            if (isCancel) {
+                // An X, not a dot: a filled dot reads as "record" (UX-011).
+                setImageResource(R.drawable.ic_close_rounded)
+            } else {
+                val innerSize = dp(11)
+                setImageDrawable(GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(2).toFloat()
+                    setSize(innerSize, innerSize)
+                })
             }
-            setImageDrawable(icon)
             setPadding(dp(14), dp(14), dp(14), dp(14))
             isClickable = true
             isFocusable = true
@@ -118,7 +123,7 @@ class RecordingOverlayView(context: Context) : LinearLayout(context) {
         (stopButton.drawable as? GradientDrawable)?.setColor(textColor)
         (cancelButton.background as? GradientDrawable)
             ?.setColor((textColor and 0x00FFFFFF) or 0x11000000)
-        (cancelButton.drawable as? GradientDrawable)?.setColor((textColor and 0x00FFFFFF) or 0x99000000.toInt())
+        cancelButton.imageTintList = ColorStateList.valueOf((textColor and 0x00FFFFFF) or 0x99000000.toInt())
     }
 
     fun showRecording() {
