@@ -115,7 +115,7 @@
     <!-- Option name for adding learned words to personal dictionary -->
     <string name="add_to_personal_dictionary">Add words to personal dictionary</string>
     <!-- Description for option to add learned words to system-wide user dictionary -->
-    <string name="add_to_personal_dictionary_summary">Use device personal dictionary to store learned words</string>
+    <string name="add_to_personal_dictionary_summary">Learned words go to the shared device dictionary. They stay after uninstall, and the system can back them up.</string>
     <!-- Option name for enabling or disabling the double-space period feature that lets double tap on spacebar insert a period followed by a space -->
     <string name="use_double_space_period">Double-space period</string>
     <!-- Description for option enabling or disabling the double-space period feature that lets double tap on spacebar insert a period followed by a space -->
