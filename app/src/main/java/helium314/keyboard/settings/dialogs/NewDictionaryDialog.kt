@@ -123,9 +123,14 @@ fun NewDictionaryDialog(
     }
 }
 
+/** The dictionary type from the file header becomes part of a file name, so it must not hold a path. */
+internal fun isSafeDictType(type: String) = '/' !in type && '\u0000' !in type
+
 private fun checkDict(file: File): Pair<Int?, DictionaryHeader?> {
     val newHeader = DictionaryInfoUtils.getDictionaryFileHeaderOrNull(file)
         ?: return R.string.dictionary_file_error to null
+    if (!isSafeDictType(newHeader.mIdString.substringBefore(":")))
+        return R.string.dictionary_file_error to null
 
     val locale = newHeader.mLocaleString.constructLocale()
     val dict = ReadOnlyBinaryDictionary(file.absolutePath, 0, file.length(), false, locale, "test")
