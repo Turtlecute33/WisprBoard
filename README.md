@@ -50,7 +50,7 @@ You're chatting in English, Italian, German, whatever isn't your strongest. You 
 
 ## Offline speech recognition
 
-Prefer that your voice never leaves the phone? Set *WisprBoard Settings → Voice Input → Speech engine* to **On-device**. Dictation then runs through Android's offline recogniser: no API key, no connection, no request. Accuracy is below a cloud model, and auto-polish is skipped — sending the transcript to an LLM afterwards would defeat the point. Needs Android 12 or newer and the offline language pack for the language you dictate in.
+Prefer that your voice never leaves the phone? Set *WisprBoard Settings → Voice Input → Speech engine* to **On-device**. Dictation then runs through Android's offline recogniser: no API key, no connection, no request. Accuracy is below a cloud model, and auto-polish is skipped — sending the transcript to an LLM afterwards would defeat the point. Needs Android 12 or newer and the offline language pack for the language you dictate in. On Android 13 or newer, dictation continues across pauses until you tap Stop or the maximum length is reached, if your recogniser supports it. On Android 12, it stops at the first pause.
 
 If your device has no offline recogniser, the option cannot be selected — WisprBoard shows you how to install one instead of leaving you on an engine that fails at every dictation.
 

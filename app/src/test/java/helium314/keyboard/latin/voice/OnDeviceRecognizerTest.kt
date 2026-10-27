@@ -42,6 +42,28 @@ class OnDeviceRecognizerTest {
     }
 
     @Test
+    fun segmentsJoinWithOneSpaceAndDropBlankParts() {
+        assertEquals(
+            "First sentence. Second sentence. Third one.",
+            joinSegments(listOf("First sentence.", " Second sentence. ", "Third one."))
+        )
+        assertEquals("one two", joinSegments(listOf(" one ", "", "   ", "two")))
+        assertEquals("only", joinSegments(listOf("only")))
+        assertEquals("", joinSegments(emptyList()))
+        assertEquals("", joinSegments(listOf("", "  ")))
+    }
+
+    @Test
+    fun segmentsInChineseAndJapaneseJoinWithNoSpace() {
+        assertEquals("你好。我很好。", joinSegments(listOf("你好。", "我很好。")))
+        assertEquals("こんにちは。元気です", joinSegments(listOf("こんにちは。", "元気です")))
+        // Korean puts spaces between words, so it gets the space.
+        assertEquals("안녕하세요 반갑습니다", joinSegments(listOf("안녕하세요", "반갑습니다")))
+        // U+20000 (CJK Extension B) is a surrogate pair; the check must read the full code point.
+        assertEquals("\uD840\uDC00\uD840\uDC00", joinSegments(listOf("\uD840\uDC00", "\uD840\uDC00")))
+    }
+
+    @Test
     fun recognitionErrorsMapToActionableMessages() {
         // Nothing was said — reuse the message the cloud path already shows for silence.
         assertEquals(R.string.voice_error_silent, onDeviceErrorMessageRes(SpeechRecognizer.ERROR_NO_MATCH))

@@ -50,6 +50,33 @@ internal fun amplitudeFromRms(rmsdB: Float): Double {
     return normalized.toDouble() * AMPLITUDE_FULL_SCALE
 }
 
+/**
+ * Joins the text of the segments of a segmented session (UX-004). Each segment is trimmed and
+ * blank segments are dropped. A space goes between two segments, but not next to Chinese or
+ * Japanese characters, because these scripts do not put spaces between sentences.
+ */
+internal fun joinSegments(segments: List<String>): String {
+    val joined = StringBuilder()
+    for (raw in segments) {
+        val segment = raw.trim()
+        if (segment.isEmpty()) continue
+        if (joined.isNotEmpty()
+            && !isSpacelessScript(joined.codePointBefore(joined.length))
+            && !isSpacelessScript(segment.codePointAt(0))
+        ) {
+            joined.append(' ')
+        }
+        joined.append(segment)
+    }
+    return joined.toString()
+}
+
+/** CJK radicals to CJK ideographs (kana and CJK punctuation included), compatibility ideographs,
+ *  full-width forms and the supplementary ideograph planes. */
+private fun isSpacelessScript(codePoint: Int): Boolean =
+    codePoint in 0x2E80..0x9FFF || codePoint in 0xF900..0xFAFF ||
+        codePoint in 0xFF00..0xFFEF || codePoint in 0x20000..0x3FFFF
+
 /** Maps a platform recognition error onto the user-facing message for it. */
 @StringRes
 internal fun onDeviceErrorMessageRes(error: Int): Int = when (error) {
@@ -81,7 +108,7 @@ class OnDeviceRecognizer(private val context: Context) {
     interface Listener {
         /** The microphone is open and the recognizer is listening. */
         fun onReadyForSpeech()
-        /** The recognizer detected the end of the utterance and is now decoding. */
+        /** The recognizer stopped listening and is now decoding. */
         fun onEndOfSpeech()
         fun onResult(text: String)
         fun onError(@StringRes messageRes: Int)
@@ -98,6 +125,12 @@ class OnDeviceRecognizer(private val context: Context) {
     private var decodeTimeoutRunnable: Runnable? = null
     /** Guards against the platform emitting a result or error after we tore the session down. */
     private var sessionActive = false
+    /**
+     * Android 13+: the session continues across pauses and only Stop or the duration cap ends it
+     * (UX-004). The recognizer sends the text in segments, which are kept here until the end.
+     */
+    private var segmented = false
+    private val segments = ArrayList<String>()
 
     /** Rolling amplitude on the same 0..32767 scale [AudioRecorder.currentAmplitude] uses. */
     @Volatile var currentAmplitude: Double = 0.0
@@ -133,6 +166,16 @@ class OnDeviceRecognizer(private val context: Context) {
             // Redundant for an on-device recognizer, but it makes the no-network contract explicit.
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             if (locale != null) putExtra(RecognizerIntent.EXTRA_LANGUAGE, locale.toLanguageTag())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && maxDurationMs > 0L) {
+                // The silence that ends the session is as long as the session cap, so a pause does
+                // not end it. A recognizer that ignores these extras ends at the first pause, as before.
+                segmented = true
+                putExtra(
+                    RecognizerIntent.EXTRA_SEGMENTED_SESSION,
+                    RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS
+                )
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, maxDurationMs)
+            }
         }
         speechRecognizer.setRecognitionListener(recognitionListener)
         runCatching { speechRecognizer.startListening(intent) }.getOrElse {
@@ -160,6 +203,11 @@ class OnDeviceRecognizer(private val context: Context) {
         freezeDuration()
         armDecodeTimeout()
         runCatching { recognizer?.stopListening() }.onFailure { Log.w(TAG, "stopListening failed", it) }
+        // A segmented session ignores the end of speech at each pause, so the stop is the end of speech.
+        if (segmented && sessionActive) {
+            currentAmplitude = 0.0
+            listener?.onEndOfSpeech()
+        }
     }
 
     /** Abandons the session; no further callbacks are delivered. */
@@ -177,6 +225,8 @@ class OnDeviceRecognizer(private val context: Context) {
         freezeDuration()
         listener = null
         currentAmplitude = 0.0
+        segmented = false
+        segments.clear()
         recognizer?.let { r ->
             runCatching {
                 r.setRecognitionListener(null)
@@ -197,7 +247,7 @@ class OnDeviceRecognizer(private val context: Context) {
             decodeTimeoutRunnable = null
             if (!sessionActive) return@Runnable
             Log.w(TAG, "On-device recognition produced no result within ${DECODE_TIMEOUT_MS}ms")
-            finishWith { it.onError(R.string.voice_error_on_device_failed) }
+            finishWithSegmentsOr(R.string.voice_error_on_device_failed)
         }
         decodeTimeoutRunnable = runnable
         mainHandler.postDelayed(runnable, DECODE_TIMEOUT_MS)
@@ -236,6 +286,12 @@ class OnDeviceRecognizer(private val context: Context) {
         target?.let(deliver)
     }
 
+    /** Delivers the segments that arrived. With no segments, delivers the error. */
+    private fun finishWithSegmentsOr(@StringRes errorRes: Int) {
+        val text = joinSegments(segments)
+        finishWith { if (text.isEmpty()) it.onError(errorRes) else it.onResult(text) }
+    }
+
     private val recognitionListener = object : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) {
             if (sessionActive) listener?.onReadyForSpeech()
@@ -251,7 +307,7 @@ class OnDeviceRecognizer(private val context: Context) {
         override fun onBufferReceived(buffer: ByteArray?) = Unit
 
         override fun onEndOfSpeech() {
-            if (!sessionActive) return
+            if (!sessionActive || segmented) return
             freezeDuration()
             cancelMaxDurationTimer()
             currentAmplitude = 0.0
@@ -263,17 +319,26 @@ class OnDeviceRecognizer(private val context: Context) {
             if (!sessionActive) return
             // Only the numeric code is logged — nothing the user said reaches logcat, even here.
             Log.i(TAG, "On-device recognition error: $error")
-            finishWith { it.onError(onDeviceErrorMessageRes(error)) }
+            // Segments that arrived before the error are kept.
+            finishWithSegmentsOr(onDeviceErrorMessageRes(error))
         }
 
         override fun onResults(results: Bundle?) {
             if (!sessionActive) return
-            val text = results
-                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                ?.firstOrNull()
-                .orEmpty()
-            finishWith { if (text.isBlank()) it.onError(R.string.voice_error_silent) else it.onResult(text) }
+            segments.add(firstResult(results))
+            finishWithSegmentsOr(R.string.voice_error_silent)
         }
+
+        override fun onSegmentResults(segmentResults: Bundle) {
+            if (sessionActive) segments.add(firstResult(segmentResults))
+        }
+
+        override fun onEndOfSegmentedSession() {
+            if (sessionActive) finishWithSegmentsOr(R.string.voice_error_silent)
+        }
+
+        private fun firstResult(results: Bundle?): String =
+            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
 
         override fun onPartialResults(partialResults: Bundle?) = Unit
 

@@ -204,7 +204,8 @@ internal fun buildVoiceScreenItems(
         if (voiceInputEnabled) Settings.PREF_VOICE_HAPTIC_FEEDBACK else null,
         if (voiceInputEnabled) Settings.PREF_VOICE_MAX_DURATION_SECONDS else null,
         // The platform recogniser owns the microphone end to end: it applies no capture gain we can
-        // set, and it decides for itself when the utterance ended.
+        // set. On Android 12 it decides for itself when the utterance ended; on Android 13+ only
+        // Stop or the max duration ends the session (UX-004).
         if (cloud) Settings.PREF_VOICE_MIC_SENSITIVITY else null,
         if (cloud) Settings.PREF_VOICE_AUTO_STOP_SILENCE else null,
         if (cloud && voiceAutoStop) Settings.PREF_VOICE_AUTO_STOP_SILENCE_SECONDS else null,
