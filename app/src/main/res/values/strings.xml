@@ -1300,7 +1300,7 @@ New dictionary:
     <string name="voice_api_key_replace_hint">A key is already saved. Enter a new one to replace it.</string>
     <string name="voice_api_key_remove">Remove key</string>
     <string name="voice_mic_rationale_title">Microphone access</string>
-    <string name="voice_mic_rationale_message">WisprBoard records audio only while you hold the voice button. The recording is sent over HTTPS to your selected AI provider for transcription using the API key you supply; it is not proxied by any WisprBoard server. You can revoke microphone access at any time from Android\'s app settings.</string>
+    <string name="voice_mic_rationale_message">WisprBoard records audio only after you tap the voice key. It stops when you tap Stop, or at the time limit. With the Cloud AI engine, the recording goes over HTTPS to your selected AI provider with your API key, and no WisprBoard server is used. With the On-device engine, nothing is sent. You can remove microphone access at any time in Android app settings.</string>
     <string name="voice_mic_rationale_confirm">Allow microphone</string>
     <string name="voice_enable_privacy_title">Enable Voice Input?</string>
     <string name="voice_enable_privacy_message">Voice Input sends your recorded audio over HTTPS to your selected AI provider using the API key you supply.</string>
