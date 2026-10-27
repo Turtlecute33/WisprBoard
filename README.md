@@ -86,6 +86,8 @@ If you don't want AI features, stay on HeliBoard. It's wonderful as-is.
 
 WisprBoard has no backend, no analytics, no tracking. Once your audio or selected text reaches OpenRouter, PayPerQ, or the underlying model provider, their policies apply. Read [OpenRouter's policy](https://openrouter.ai/privacy) and [PayPerQ's terms](https://ppq.ai/terms) before pointing this at anything sensitive.
 
+Requests to OpenRouter include three [app attribution](https://openrouter.ai/docs/app-attribution) headers: the app name, the URL of this repository and the category `writing-assistant`. These headers contain no user data. OpenRouter uses them to show the total use of all WisprBoard users in its public app rankings. Requests to PayPerQ do not include these headers.
+
 
 <br>
 
