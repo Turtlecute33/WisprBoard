@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.util.Base64
 import androidx.core.content.edit
+import helium314.keyboard.compat.isUserLocked
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import java.util.concurrent.ConcurrentHashMap
@@ -42,9 +43,12 @@ object SecretStore {
         vault(context)
     }
 
-    /** True while the old security-crypto file still holds data for the one-time migration. */
-    fun hasLegacyFile(context: Context): Boolean = !legacyMigrated && context.applicationContext
-        .getSharedPreferences(LEGACY_ENCRYPTED_FILE, Context.MODE_PRIVATE).all.isNotEmpty()
+    /**
+     * True while the old security-crypto file still holds data for the one-time migration.
+     * False before the first unlock: then the file is in locked storage, and a read throws.
+     */
+    fun hasLegacyFile(context: Context): Boolean = !legacyMigrated && !isUserLocked(context) &&
+        context.applicationContext.getSharedPreferences(LEGACY_ENCRYPTED_FILE, Context.MODE_PRIVATE).all.isNotEmpty()
 
     fun getApiKey(context: Context, prefKey: String, default: String): String {
         val vault = vault(context) ?: return default
