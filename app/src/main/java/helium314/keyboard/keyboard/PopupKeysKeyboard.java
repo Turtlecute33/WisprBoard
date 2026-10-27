@@ -299,7 +299,8 @@ public final class PopupKeysKeyboard extends Keyboard {
             }
             final PopupKeySpec[] popupKeys = key.getPopupKeys();
             final int defaultColumns = key.getPopupKeysColumnNumber();
-            final int spaceForKeys = keyboard.mId.mWidth / keyWidth;
+            // n columns occupy n * (keyWidth + dividerWidth) - dividerWidth (see setParameters)
+            final int spaceForKeys = (keyboard.mId.mWidth + dividerWidth) / (keyWidth + dividerWidth);
             final int finalNumColumns = spaceForKeys >= Math.min(popupKeys.length, defaultColumns)
                     ? defaultColumns
                     : (spaceForKeys > 0 ? spaceForKeys : defaultColumns); // in last case setParameters will throw an exception
