@@ -1444,6 +1444,8 @@ New dictionary:
     <string name="translate_error_unsupported_field">Translate is unavailable in this field</string>
     <string name="translate_error_empty">The model returned no text</string>
     <string name="translate_error_failed">Translation failed</string>
+    <!-- Shown when Toolbar mode is Hidden or emoji search is open: the result cannot be shown, so no request is sent -->
+    <string name="ai_needs_suggestion_strip">Text Fix and Translate need the toolbar, which is hidden now</string>
     <string name="clipboard_action_translate">Translate</string>
     <string name="popup_drag_haptic">Haptic feedback on popup drag</string>
     <string name="popup_drag_haptic_summary">Subtle tick when sliding across popup buttons (e.g. long-press Return). Independent from keypress vibration.</string>

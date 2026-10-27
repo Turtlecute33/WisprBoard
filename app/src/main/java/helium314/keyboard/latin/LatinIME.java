@@ -935,6 +935,11 @@ public class LatinIME extends InputMethodService implements
             clearPendingTranslateState();
             return;
         }
+        // The language menu shows only in the strip. Check before the clipboard is read.
+        if (!hasSuggestionStripView()) {
+            Toast.makeText(this, R.string.ai_needs_suggestion_strip, Toast.LENGTH_LONG).show();
+            return;
+        }
         final String reason = mTranslateManager.unavailableReason();
         if (reason != null) {
             Toast.makeText(this, reason, Toast.LENGTH_LONG).show();
@@ -952,7 +957,6 @@ public class LatinIME extends InputMethodService implements
             Toast.makeText(this, R.string.translate_error_no_selection, Toast.LENGTH_LONG).show();
             return;
         }
-        if (mSuggestionStripView == null) return;
         // Voice, Text Fix and Translate all take over the suggestion strip; make them mutually
         // exclusive instead of letting the newest one stomp the previous one's overlay.
         cancelVoiceRecordingIfCapturing();
@@ -2206,6 +2210,11 @@ public class LatinIME extends InputMethodService implements
                 clearPendingTextFixState();
                 clearPendingTranslateState();
                 if (!wasWorking) {
+                    // The proposal and Replace show only in the strip: no strip, no paid request.
+                    if (!hasSuggestionStripView()) {
+                        Toast.makeText(this, R.string.ai_needs_suggestion_strip, Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     cancelVoiceRecordingIfCapturing();
                     mTextFixManager.startTextFix(KeyCode.TEXT_FIX_2 == event.getKeyCode()
                             ? TextFixManager.Variant.SECONDARY : TextFixManager.Variant.PRIMARY);
