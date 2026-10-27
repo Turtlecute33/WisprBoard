@@ -1,24 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Explicitly excludes sensitive data from cloud backup and device-to-device transfer.
-  allowBackup="false" already blocks most paths, but an explicit rules file also covers
-  Android 12+ D2D transfer and signals intent to tooling / Play Console reviewers.
+  Nothing leaves the device through the system: all domains (credential-encrypted and
+  device-protected) are excluded from cloud backup and from each transfer, so learned words,
+  settings and crash reports stay on the device. The in-app backup is the only export path.
+  allowBackup="false" does not stop device-to-device transfer on Android 12+.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="wisprboard_secrets.xml" />
-        <exclude domain="device_sharedpref" path="wisprboard_secrets.xml" />
-        <exclude domain="database" path="heliboard.db" />
-        <exclude domain="device_database" path="heliboard.db" />
-        <exclude domain="file" path="dicts/" />
-        <exclude domain="device_file" path="dicts/" />
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" path="wisprboard_secrets.xml" />
-        <exclude domain="device_sharedpref" path="wisprboard_secrets.xml" />
-        <exclude domain="database" path="heliboard.db" />
-        <exclude domain="device_database" path="heliboard.db" />
-        <exclude domain="file" path="dicts/" />
-        <exclude domain="device_file" path="dicts/" />
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
     </device-transfer>
+    <cross-platform-transfer platform="ios">
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
+    </cross-platform-transfer>
 </data-extraction-rules>
