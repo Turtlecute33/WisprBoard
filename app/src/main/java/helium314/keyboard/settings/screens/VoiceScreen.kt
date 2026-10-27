@@ -50,6 +50,7 @@ import helium314.keyboard.latin.voice.isOnDeviceRecognitionAvailable
 import helium314.keyboard.latin.voice.parseVoiceDictionaryTerms
 import helium314.keyboard.latin.voice.parseExpectedLanguages
 import helium314.keyboard.latin.voice.resolveVoiceModel
+import helium314.keyboard.latin.voice.resolveVoiceSttModel
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.latin.voice.defaultApiKey
@@ -956,18 +957,30 @@ private fun VoiceTestKeyPreference(setting: Setting) {
                 Toast.makeText(ctx, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
                 return@Preference
             }
-            val selectedModel = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL) ?: Defaults.PREF_VOICE_MODEL
-            val customModel = prefs.getString(Settings.PREF_VOICE_MODEL_CUSTOM, Defaults.PREF_VOICE_MODEL_CUSTOM) ?: ""
-            val model = resolveVoiceModel(selectedModel, customModel)
-            if (model == null) {
-                Toast.makeText(ctx, R.string.voice_error_no_model, Toast.LENGTH_SHORT).show()
-                return@Preference
+            // Test the model of the route that the mic uses: dedicated STT when the chat-audio
+            // button is off and STT is on (the same rule as VoiceInputManager.startRecording).
+            val sttOnly = !prefs.getBoolean(Settings.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED, Defaults.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED) &&
+                prefs.getBoolean(Settings.PREF_VOICE_STT_ENABLED, Defaults.PREF_VOICE_STT_ENABLED)
+            val model = if (sttOnly) {
+                resolveVoiceSttModel(
+                    prefs.getString(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL) ?: Defaults.PREF_VOICE_STT_MODEL,
+                    prefs.getString(Settings.PREF_VOICE_STT_MODEL_CUSTOM, Defaults.PREF_VOICE_STT_MODEL_CUSTOM) ?: "",
+                )
+            } else {
+                resolveVoiceModel(
+                    prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL) ?: Defaults.PREF_VOICE_MODEL,
+                    prefs.getString(Settings.PREF_VOICE_MODEL_CUSTOM, Defaults.PREF_VOICE_MODEL_CUSTOM) ?: "",
+                )
             }
             busy = true
             lastResult = null
             scope.launch {
                 try {
-                    val result = withContext(Dispatchers.IO) { probeApiKey(provider, apiKey, model) }
+                    // With no model set, test the key only, then ask for a model.
+                    val result = withContext(Dispatchers.IO) {
+                        val keyResult = probeApiKey(provider, apiKey, model)
+                        if (keyResult == TestResult.OK && model == null) TestResult.NO_MODEL else keyResult
+                    }
                     Toast.makeText(ctx, result.messageRes, Toast.LENGTH_SHORT).show()
                     lastResult = result
                 } finally {
@@ -984,11 +997,15 @@ private enum class TestResult(@StringRes val messageRes: Int) {
     INVALID(R.string.voice_test_key_invalid),
     INVALID_MODEL(R.string.voice_test_key_invalid_model),
     NETWORK(R.string.voice_test_key_network_error),
+    RATE_LIMITED(R.string.voice_error_rate_limited),
+    /** The key works, but the active route has no model. */
+    NO_MODEL(R.string.voice_error_no_model),
     /** HTTP 200, but the body exceeded the read cap — not a connectivity problem. */
     TOO_LARGE(R.string.voice_test_key_response_too_large),
 }
 
-private fun probeApiKey(provider: AiProvider, apiKey: String, model: String): TestResult {
+/** Tests [apiKey], then [model] if it is not null. */
+private fun probeApiKey(provider: AiProvider, apiKey: String, model: String?): TestResult {
     if (provider == AiProvider.PAYPERQ) return probePayPerQApiKey(apiKey, model)
     val keyConn = (java.net.URL(OpenRouterClient.KEY_ENDPOINT).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
@@ -1000,8 +1017,9 @@ private fun probeApiKey(provider: AiProvider, apiKey: String, model: String): Te
     }
     return try {
         when (keyConn.responseCode) {
-            200 -> probeModel(apiKey, model)
+            200 -> if (model == null) TestResult.OK else probeModel(apiKey, model)
             401, 403 -> TestResult.INVALID
+            429 -> TestResult.RATE_LIMITED
             else -> TestResult.NETWORK
         }
     } catch (_: Exception) {
@@ -1011,9 +1029,9 @@ private fun probeApiKey(provider: AiProvider, apiKey: String, model: String): Te
     }
 }
 
-private fun probePayPerQApiKey(apiKey: String, model: String): TestResult {
-    if (model.isBlank()) return TestResult.INVALID_MODEL
-    val modelsEndpoint = payPerQModelsEndpoint(model)
+private fun probePayPerQApiKey(apiKey: String, model: String?): TestResult {
+    if (model != null && model.isBlank()) return TestResult.INVALID_MODEL
+    val modelsEndpoint = if (model == null) OpenRouterClient.PAYPERQ_MODELS_ENDPOINT else payPerQModelsEndpoint(model)
     val conn = (java.net.URL(modelsEndpoint).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
@@ -1023,12 +1041,13 @@ private fun probePayPerQApiKey(apiKey: String, model: String): TestResult {
     }
     return try {
         when (conn.responseCode) {
-            200 -> if (payPerQModelResponseContains(readProbeResponseCapped(conn.inputStream), model)) {
+            200 -> if (model == null || payPerQModelResponseContains(readProbeResponseCapped(conn.inputStream), model)) {
                 TestResult.OK
             } else {
                 TestResult.INVALID_MODEL
             }
             401, 403 -> TestResult.INVALID
+            429 -> TestResult.RATE_LIMITED
             else -> TestResult.NETWORK
         }
     } catch (_: ProbeResponseTooLargeException) {
@@ -1060,6 +1079,7 @@ private fun probeModel(apiKey: String, model: String): TestResult {
             200 -> TestResult.OK
             401, 403 -> TestResult.INVALID
             404 -> TestResult.INVALID_MODEL
+            429 -> TestResult.RATE_LIMITED
             else -> TestResult.NETWORK
         }
     } catch (_: Exception) {
