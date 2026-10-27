@@ -1364,7 +1364,7 @@ New dictionary:
     <string name="setup_status_done">done</string>
     <string name="setup_status_missing">missing</string>
     <string name="setup_ai_provider_choice_title">Choose your AI provider</string>
-    <string name="setup_ai_provider_choice_instruction">Voice input needs an AI provider before it can transcribe speech. Pick the service you want to use now, or keep the current provider and continue.</string>
+    <string name="setup_ai_provider_choice_instruction">Only the Cloud AI speech engine needs an AI provider. Pick the service you want to use now, or keep the current provider and continue. To keep your speech on this device, set the speech engine to On-device in Voice settings. It needs no provider and no API key.</string>
     <string name="setup_ai_provider_current_provider">Current provider: %1$s</string>
     <string name="setup_ai_provider_select">Provider: %1$s</string>
     <string name="setup_ai_provider_key_title">Add your API key</string>
