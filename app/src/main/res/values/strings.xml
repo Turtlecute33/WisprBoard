@@ -277,7 +277,7 @@
     <!-- Preferences item and dialog title for backup and restore -->
     <string name="backup_restore_title">Backup and restore</string>
     <!-- Message for backup and restore dialog -->
-    <string name="backup_restore_message">Save or load from file. Warning: restore will overwrite existing data</string>
+    <string name="backup_restore_message">Save or load from file. Warning: restore will overwrite existing data. The file holds your learned words and pinned clipboard items in plain text.</string>
     <!-- Error message for backup -->
     <string name="backup_error">Backup error: %s</string>
     <!-- Error message for restore, %s is replaced by the error message -->
