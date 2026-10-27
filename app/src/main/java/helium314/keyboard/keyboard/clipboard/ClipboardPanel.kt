@@ -73,6 +73,7 @@ import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -879,11 +880,13 @@ private fun SmallIconButton(
     rotation: Float = 0f,
     onClick: () -> Unit
 ) {
+    // The visible circle stays 30dp; the layout box and touch target are 48dp (UX-007).
     Box(
         modifier = Modifier
+            .minimumInteractiveComponentSize()
             .size(30.dp)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
