@@ -33,6 +33,7 @@ import helium314.keyboard.latin.InputAttributes
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.define.DebugFlags
+import helium314.keyboard.latin.define.crashReportDir
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.BackButton
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
@@ -214,8 +215,9 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         if (onlyUnprotected)
             return unprotected.filter { it.name.startsWith("crash_report") }
 
-        val dir = getExternalFilesDir(null)
-        val allFiles = dir?.listFiles()?.toList().orEmpty() + unprotected
+        // the external files dir holds reports from older versions
+        val allFiles = crashReportDir(this).listFiles().orEmpty().toList() +
+            getExternalFilesDir(null)?.listFiles().orEmpty() + unprotected
         return allFiles.filter { it.name.startsWith("crash_report") }
     }
 

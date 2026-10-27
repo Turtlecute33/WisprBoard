@@ -8,6 +8,7 @@ package helium314.keyboard.latin.define
 
 import android.content.Context
 import android.os.Build
+import helium314.keyboard.compat.credentialProtectedDataDir
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.settings.DebugSettings
 import helium314.keyboard.latin.settings.Defaults
@@ -30,6 +31,14 @@ object DebugFlags {
         CrashReportExceptionHandler(context.applicationContext).install()
     }
 }
+
+/**
+ * Crash reports go to private credential-encrypted storage (PRIV-003), not to external storage,
+ * where on Android 9 and lower each app with storage permission can read them.
+ */
+internal fun crashReportDir(context: Context): File =
+    credentialProtectedDataDir(context)?.let { File(it, "files/crash_reports") }
+        ?: File(context.filesDir, "crash_reports")
 
 // basically copied from StreetComplete
 private class CrashReportExceptionHandler(val appContext: Context) : Thread.UncaughtExceptionHandler {
@@ -63,12 +72,12 @@ ${Log.getLogForExport(100).joinToString("\n")}
 
     private fun writeCrashReportToFile(text: String) {
         try {
-            val dir = appContext.getExternalFilesDir(null)
+            val dir = crashReportDir(appContext).apply { mkdirs() }
             val date = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Calendar.getInstance().time)
             val crashReportFile = File(dir, "crash_report_$date.txt")
             crashReportFile.appendText(text)
         } catch (_: Exception) {
-            // can't write in external files dir, maybe device just booted and is still locked
+            // can't write in the credential-encrypted dir, maybe device just booted and is still locked
             // in this case there shouldn't be any sensitive data and we can put crash logs in unprotected files dir
             val dir = DeviceProtectedUtils.getFilesDir(appContext) ?: return
             val date = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Calendar.getInstance().time)
