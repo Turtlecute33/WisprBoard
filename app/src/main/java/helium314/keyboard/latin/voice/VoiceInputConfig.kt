@@ -15,16 +15,27 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 private val SANITIZE_OUTPUT_REGEX =
-    Regex("[[\\p{Cc}&&[^\\n\\r\\t]]\\u200B\\u200C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFEFF]")
+    Regex("[[\\p{Cc}&&[^\\n\\r\\t]]\\u200B\\u200C\\u200E\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\u2066-\\u2069\\uFEFF]")
 
 /**
- * Strip control characters (Cc) and a narrow set of bidi/format marks that corrupt host editors,
+ * Tag characters (U+E0000-U+E007F) are invisible, so they can hide text in the output (SEC-012).
+ * Group 1 is a subdivision flag (U+1F3F4, a code of 3 to 6 tag letters or digits, U+E007F), which
+ * stays; each other tag character is removed.
+ */
+private val TAG_CHARACTER_REGEX =
+    Regex("(\\x{1F3F4}[\\x{E0030}-\\x{E0039}\\x{E0061}-\\x{E007A}]{3,6}\\x{E007F})|[\\x{E0000}-\\x{E007F}]")
+
+/**
+ * Strip control characters (Cc), invisible format marks (bidi marks, U+2060-U+2064, line and
+ * paragraph separators, tag characters outside a flag) that corrupt host editors or hide text,
  * but intentionally preserve U+200D (ZWJ) so emoji sequences survive, and newline/carriage-return/tab
  * so the model's requested line breaks and spacing survive (otherwise "end.\nNext" collapses to
  * "end.Next", losing both the line break and the space after punctuation).
  */
 internal fun sanitizeModelOutput(raw: String, maxLength: Int): String {
-    val cleaned = raw.replace(SANITIZE_OUTPUT_REGEX, "").trim()
+    val cleaned = raw.replace(SANITIZE_OUTPUT_REGEX, "")
+        .replace(TAG_CHARACTER_REGEX) { it.groupValues[1] }
+        .trim()
     if (cleaned.length <= maxLength) return cleaned
     // Truncate at a grapheme cluster boundary so we never split a surrogate pair, a ZWJ emoji
     // sequence, or a base+combining-mark cluster - any of which would render as broken glyphs.

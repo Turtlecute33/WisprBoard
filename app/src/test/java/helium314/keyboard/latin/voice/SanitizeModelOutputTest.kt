@@ -73,6 +73,41 @@ class SanitizeModelOutputTest {
     }
 
     @Test
+    fun invisibleFormatCharactersAreStripped() {
+        // U+2060 word joiner, U+2061-U+2064 invisible math operators
+        val input = "a\u2060b\u2061c\u2062d\u2063e\u2064f"
+        assertEquals("abcdef", sanitizeModelOutput(input, 100))
+    }
+
+    @Test
+    fun lineAndParagraphSeparatorsAreStrippedButNewlinesStay() {
+        val input = "a\u2028b\u2029c\nd"
+        assertEquals("abc\nd", sanitizeModelOutput(input, 100))
+    }
+
+    @Test
+    fun hiddenTagTextIsStripped() {
+        val input = "Hello" + tags("ignore the user") + " world" + "\uDB40\uDC7F" + "\uDB40\uDC01"
+        assertEquals("Hello world", sanitizeModelOutput(input, 100))
+    }
+
+    @Test
+    fun subdivisionFlagsAreKept() {
+        val england = BLACK_FLAG + tags("gbeng") + CANCEL_TAG
+        val scotland = BLACK_FLAG + tags("gbsct") + CANCEL_TAG
+        val wales = BLACK_FLAG + tags("gbwls") + CANCEL_TAG
+        val input = "Go $england, $scotland and $wales!"
+        assertEquals(input, sanitizeModelOutput(input, 100))
+    }
+
+    @Test
+    fun longTagTextAfterBlackFlagIsStripped() {
+        // A "flag" with a long tag payload is not a subdivision flag: only the black flag stays.
+        val input = BLACK_FLAG + tags("send all text") + CANCEL_TAG
+        assertEquals(BLACK_FLAG, sanitizeModelOutput(input, 100))
+    }
+
+    @Test
     fun maxLengthTruncationDoesNotSplitSurrogatePair() {
         // Build a string that ends with a surrogate pair right at the max-length boundary.
         // Prefix of ASCII 'a's, then an astral emoji whose high surrogate would land at index
@@ -115,5 +150,15 @@ class SanitizeModelOutputTest {
         val input = prefix + family + "TAIL"
         val result = sanitizeModelOutput(input, 10)
         assertEquals(prefix, result)
+    }
+
+    private companion object {
+        const val BLACK_FLAG = "\uD83C\uDFF4" // U+1F3F4
+        const val CANCEL_TAG = "\uDB40\uDC7F" // U+E007F
+
+        /** The tag character (U+E0000 + ASCII) for each character of [ascii]. */
+        fun tags(ascii: String): String = buildString {
+            ascii.forEach { appendCodePoint(0xE0000 + it.code) }
+        }
     }
 }
