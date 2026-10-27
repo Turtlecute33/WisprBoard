@@ -36,17 +36,28 @@ class ClipItem(entry: ClipboardHistoryEntry) {
     val isPinned = entry.isPinned
     val timeStamp = entry.timeStamp
     /** shortened copy used for display, so we never lay out huge texts */
-    val preview: String = text.trim().let { if (it.length > PREVIEW_LENGTH) it.take(PREVIEW_LENGTH) + "…" else it }
-    val kind = kindOf(text)
-    val isTruncated = text.trim().length > PREVIEW_LENGTH
+    val preview: String
+    val kind: ClipKind
+    val isTruncated: Boolean
+
+    init {
+        // Trim once: the panel builds an item for each clip at each change, on the main thread.
+        val trimmed = text.trim()
+        isTruncated = trimmed.length > PREVIEW_LENGTH
+        preview = if (isTruncated) trimmed.take(PREVIEW_LENGTH) + "…" else trimmed
+        kind = kindOfTrimmed(trimmed)
+    }
 
     companion object {
         private const val PREVIEW_LENGTH = 600
 
         private val numberRegex = Regex("""[+\-]?[\d\s()./,-]{2,}""")
 
-        fun kindOf(text: String): ClipKind {
-            val t = text.trim().let { if (it.length > 200) it.take(200) else it }
+        fun kindOf(text: String): ClipKind = kindOfTrimmed(text.trim())
+
+        /** [trimmed] has no leading or trailing whitespace. Only its first 200 chars are checked. */
+        private fun kindOfTrimmed(trimmed: String): ClipKind {
+            val t = if (trimmed.length > 200) trimmed.take(200) else trimmed
             if (t.isEmpty()) return ClipKind.TEXT
             if (!t.contains(' ') && !t.contains('\n')) {
                 if (Patterns.EMAIL_ADDRESS.matcher(t).matches()) return ClipKind.EMAIL

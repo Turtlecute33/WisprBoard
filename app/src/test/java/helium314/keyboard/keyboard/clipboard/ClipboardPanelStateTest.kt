@@ -6,6 +6,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class ClipboardPanelStateTest {
@@ -21,6 +23,25 @@ class ClipboardPanelStateTest {
         assertEquals(ClipKind.NUMBER, ClipItem.kindOf("+39 02 1234 5678"))
         assertEquals(ClipKind.TEXT, ClipItem.kindOf("meeting at 10 with the team"))
         assertEquals(ClipKind.TEXT, ClipItem.kindOf(""))
+    }
+
+    @Test fun `item uses the trimmed text for preview, kind and truncation`() {
+        val padded = ClipItem(entry(1, "  someone@example.com\n"))
+        assertEquals("someone@example.com", padded.preview)
+        assertEquals(ClipKind.EMAIL, padded.kind)
+        assertFalse(padded.isTruncated)
+
+        // 600 chars after the trim: not truncated, although the raw text is longer
+        val atLimit = ClipItem(entry(2, " " + "a".repeat(600) + " "))
+        assertEquals("a".repeat(600), atLimit.preview)
+        assertFalse(atLimit.isTruncated)
+
+        val body = "word ".repeat(150).trim()
+        val long = ClipItem(entry(3, "\n$body\n"))
+        assertEquals(body.take(600) + "…", long.preview)
+        assertTrue(long.isTruncated)
+        assertEquals(ClipKind.TEXT, long.kind)
+        assertEquals("\n$body\n", long.text)
     }
 
     @Test fun `pinned clips stay out of the list, but the pinned filter shows them`() {
