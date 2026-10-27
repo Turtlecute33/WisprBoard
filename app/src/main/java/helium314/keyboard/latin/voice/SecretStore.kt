@@ -32,14 +32,19 @@ object SecretStore {
     fun isSecureStorageAvailable(context: Context): Boolean = vault(context) != null
 
     /**
-     * Loads the vault key and runs the one-time migration from background code. Called once at
-     * app start so the IME's first transcription does not pay this cost on the input thread.
+     * Loads the vault key and runs the one-time migration from background code. Called at app
+     * start when an AI feature is on, so the IME's first request does not pay this cost on the
+     * input thread.
      * Best-effort: if the keystore is transiently unhappy at boot, the next real read/write will
      * simply retry.
      */
     fun warmUp(context: Context) {
         vault(context)
     }
+
+    /** True while the old security-crypto file still holds data for the one-time migration. */
+    fun hasLegacyFile(context: Context): Boolean = !legacyMigrated && context.applicationContext
+        .getSharedPreferences(LEGACY_ENCRYPTED_FILE, Context.MODE_PRIVATE).all.isNotEmpty()
 
     fun getApiKey(context: Context, prefKey: String, default: String): String {
         val vault = vault(context) ?: return default

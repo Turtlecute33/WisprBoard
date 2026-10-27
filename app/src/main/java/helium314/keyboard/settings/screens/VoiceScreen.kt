@@ -11,6 +11,7 @@ import androidx.annotation.StringRes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -658,8 +659,12 @@ private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var showDialog by rememberSaveable { mutableStateOf(false) }
-    var storedLength by remember {
-        mutableIntStateOf(SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).length)
+    // The first read can open the vault (a KeyStore call), so load the length off the UI thread.
+    var storedLength by remember(provider) { mutableIntStateOf(0) }
+    LaunchedEffect(provider) {
+        storedLength = withContext(Dispatchers.IO) {
+            SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).length
+        }
     }
 
     /**
