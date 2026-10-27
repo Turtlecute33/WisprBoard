@@ -129,11 +129,12 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
         </provider>
 
         <!-- EmojiCompat would look for a downloadable emoji font (a Play Services font provider).
-             Use the platform emoji font. -->
+             Use the platform emoji font. androidx.startup is only on the runtime classpath (MissingClass). -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
+            tools:ignore="MissingClass"
             tools:node="merge">
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"
