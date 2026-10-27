@@ -298,6 +298,24 @@
     <string name="button_include_keys">Include keys</string>
     <!-- Button to make the backup without the API keys -->
     <string name="button_exclude_keys">Without keys</string>
+    <!-- Title of the dialog that shows what a backup file holds before it is restored -->
+    <string name="restore_confirm_title">Restore this backup?</string>
+    <!-- Message above the list of what the backup file holds -->
+    <string name="restore_confirm_message">This file holds:</string>
+    <!-- Restore dialog list item: settings, layouts, blocklists, images and fonts -->
+    <string name="restore_item_settings">Settings and custom files</string>
+    <!-- Restore dialog list item: AI settings -->
+    <string name="restore_item_ai_settings">AI provider, model and prompt settings</string>
+    <!-- Restore dialog list item: learned words -->
+    <string name="restore_item_learned_words">Learned words</string>
+    <!-- Restore dialog list item: pinned clipboard items -->
+    <string name="restore_item_pinned_clips">Pinned clipboard items</string>
+    <!-- Restore dialog list item: AI provider API keys -->
+    <string name="restore_item_api_keys">API keys</string>
+    <!-- Checkbox in the restore dialog, off by default -->
+    <string name="restore_replace_api_keys">Replace my API keys with the keys in this file</string>
+    <!-- Note in the restore dialog: the restore does not change the zero data retention setting -->
+    <string name="restore_keeps_zdr">Restore replaces your current data. Your zero data retention (ZDR) setting does not change.</string>
     <!-- Preferences item for format for timestamp keycode -->
     <string name="timestamp_format_title">Format for timestamp key</string>
     <!-- Message in preferences how to get timestamp key -->

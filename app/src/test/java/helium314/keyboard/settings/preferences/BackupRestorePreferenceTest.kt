@@ -73,6 +73,37 @@ class BackupRestorePreferenceTest {
     }
 
     @Test
+    fun apiKeysFromBackupAreUsedOnlyWhenTheUserAgrees() {
+        val backupKeys = mapOf(Settings.PREF_OPENROUTER_API_KEY to "key-from-file")
+
+        assertEquals(emptyMap(), apiKeysToRestore(backupKeys, replaceApiKeys = false))
+        assertEquals(backupKeys, apiKeysToRestore(backupKeys, replaceApiKeys = true))
+    }
+
+    @Test
+    fun restoreKeepsTheCurrentZdrChoice() {
+        val zdrOff = SettingsSnapshot(booleans = mapOf(Settings.PREF_OPENROUTER_ZDR_ENABLED to false, "safe_boolean" to true))
+        val zdrOn = SettingsSnapshot(booleans = mapOf(Settings.PREF_OPENROUTER_ZDR_ENABLED to true))
+
+        // A file with ZDR off cannot turn off the user's ZDR.
+        assertEquals(
+            mapOf(Settings.PREF_OPENROUTER_ZDR_ENABLED to true, "safe_boolean" to true),
+            zdrOff.keepingZdrChoice(current = true).booleans,
+        )
+        assertEquals(false, zdrOn.keepingZdrChoice(current = false).booleans[Settings.PREF_OPENROUTER_ZDR_ENABLED])
+        // Not set now: stays not set, so the default (on) applies.
+        assertEquals(mapOf("safe_boolean" to true), zdrOff.keepingZdrChoice(current = null).booleans)
+    }
+
+    @Test
+    fun aiSettingsAreFoundInAnySettingType() {
+        assertTrue(SettingsSnapshot(strings = mapOf(Settings.PREF_TEXT_FIX_PROMPT to "prompt")).hasAiSettings())
+        assertTrue(SettingsSnapshot(ints = mapOf(Settings.PREF_VOICE_MAX_DURATION_SECONDS to 60)).hasAiSettings())
+        assertTrue(SettingsSnapshot(strings = mapOf(Settings.PREF_AI_PROVIDER to "openrouter")).hasAiSettings())
+        assertFalse(SettingsSnapshot(booleans = mapOf(Settings.PREF_AUTO_CAP to true)).hasAiSettings())
+    }
+
+    @Test
     fun malformedBackupEntriesDoNotQuoteTheirContent() {
         val keysError = assertFailsWith<IllegalArgumentException> { parseApiKeys("""{"key":"secret-value"""") }
         val clipsError = assertFailsWith<IllegalArgumentException> { parsePinnedClips("""[{"text":"private clip"""") }

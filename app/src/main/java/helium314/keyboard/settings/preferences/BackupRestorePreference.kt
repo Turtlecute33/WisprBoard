@@ -8,15 +8,28 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import helium314.keyboard.dictionarypack.DictionaryPackConstants
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
@@ -24,6 +37,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.personalization.PersonalizationHelper
+import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -64,8 +78,12 @@ fun BackupRestorePreference(setting: Setting) {
     val includeApiKeys = rememberSaveable { mutableStateOf(false) }
     val ctx = LocalContext.current
     var error: String? by rememberSaveable { mutableStateOf(null) }
+    // A read backup waits here until the user confirms it (SEC-002). Its files are not saveable,
+    // so a recreated screen deletes them and the user picks the file again.
+    var stagedRestore: StagedBackup? by remember { mutableStateOf(null) }
+    DisposableEffect(Unit) { onDispose { stagedRestore?.let(::discardStagedBackup) } }
     val backupLauncher = backupLauncher(includeApiKeys) { error = it }
-    val restoreLauncher = restoreLauncher { error = it }
+    val restoreLauncher = restoreLauncher(onStaged = { stagedRestore = it }) { error = it }
     fun launchBackup(withKeys: Boolean) {
         includeApiKeys.value = withKeys
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Calendar.getInstance().time)
@@ -110,6 +128,22 @@ fun BackupRestorePreference(setting: Setting) {
                 launchBackup(withKeys = true)
             },
             onConfirmed = { launchBackup(withKeys = false) }
+        )
+    }
+    stagedRestore?.let { staged ->
+        RestoreConfirmationDialog(
+            staged = staged,
+            // The dialog also calls this after a confirm; the restore then owns the staged files.
+            onDismissRequest = {
+                if (stagedRestore === staged) {
+                    stagedRestore = null
+                    discardStagedBackup(staged)
+                }
+            },
+            onRestore = { replaceApiKeys ->
+                stagedRestore = null
+                applyRestore(ctx, staged, replaceApiKeys) { error = it }
+            },
         )
     }
     if (error != null) {
@@ -186,47 +220,114 @@ private fun backupLauncher(
     }
 }
 
+/** Reads the picked file into a staged backup. Nothing changes until the user confirms it. */
 @Composable
-private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLauncher<Intent, ActivityResult> {
+private fun restoreLauncher(
+    onStaged: (StagedBackup) -> Unit,
+    onError: (String) -> Unit,
+): ManagedActivityResultLauncher<Intent, ActivityResult> {
     val ctx = LocalContext.current
     return filePicker { uri ->
         ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
-            var listenerStopped = false
-            var stagedBackup: StagedBackup? = null
             try {
                 val restoreInputStream = requireNotNull(ctx.getActivity()?.contentResolver?.openInputStream(uri)) {
                     "Unable to open backup archive"
                 }
-                restoreInputStream.use { inputStream ->
-                    stagedBackup = stageBackup(ctx, inputStream)
-                }
-                LayoutUtilsCustom.onLayoutFileChanged()
-                Settings.getInstance().stopListener()
-                listenerStopped = true
-                stagedBackup?.let { applyStagedBackup(ctx, it) }
-                val pinnedClips = stagedBackup?.pinnedClips.orEmpty()
-                postToMain {
-                    // on the main thread, like all other users of ClipboardDao
-                    try {
-                        restorePinnedClips(ctx, pinnedClips)
-                        Toast.makeText(ctx, ctx.getString(R.string.backup_restored), Toast.LENGTH_LONG).show()
-                    } catch (t: Throwable) {
-                        onError("r" + (t.message ?: "Unknown error"))
-                        Log.w("AdvancedScreen", "error restoring pinned clips", t)
-                    }
-                    refreshAfterRestore(ctx)
-                }
+                val staged = restoreInputStream.use { inputStream -> stageBackup(ctx, inputStream) }
+                postToMain { onStaged(staged) }
             } catch (t: Throwable) {
-                postToMain {
-                    if (listenerStopped) {
-                        Settings.getInstance().startListener()
-                    }
-                    onError("r" + (t.message ?: "Unknown error"))
-                }
+                postToMain { onError("r" + (t.message ?: "Unknown error")) }
                 Log.w("AdvancedScreen", "error during restore", t)
-            } finally {
-                stagedBackup?.root?.deleteRecursively()
             }
+        }
+    }
+}
+
+/**
+ * Lists what the staged backup holds before anything changes (SEC-002). The API keys in the file
+ * replace the current keys only if the user selects the option, which is off by default.
+ */
+@Composable
+private fun RestoreConfirmationDialog(
+    staged: StagedBackup,
+    onDismissRequest: () -> Unit,
+    onRestore: (replaceApiKeys: Boolean) -> Unit,
+) {
+    var replaceApiKeys by rememberSaveable { mutableStateOf(false) }
+    val items = remember(staged) {
+        buildList {
+            if (staged.prefs != null || staged.protectedPrefs != null || staged.hasOtherFiles) add(R.string.restore_item_settings)
+            if (listOfNotNull(staged.prefs, staged.protectedPrefs).any { it.hasAiSettings() }) add(R.string.restore_item_ai_settings)
+            if (staged.hasLearnedWords) add(R.string.restore_item_learned_words)
+            if (staged.pinnedClips.isNotEmpty()) add(R.string.restore_item_pinned_clips)
+            if (staged.apiKeys.isNotEmpty()) add(R.string.restore_item_api_keys)
+        }
+    }
+    ConfirmationDialog(
+        onDismissRequest = onDismissRequest,
+        onConfirmed = { onRestore(replaceApiKeys) },
+        title = { Text(stringResource(R.string.restore_confirm_title)) },
+        content = {
+            Column {
+                Text(stringResource(R.string.restore_confirm_message))
+                items.forEach { Text("\u2022 " + stringResource(it), Modifier.padding(start = 8.dp, top = 4.dp)) }
+                if (staged.apiKeys.isNotEmpty()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 48.dp)
+                            .toggleable(value = replaceApiKeys, role = Role.Checkbox) { replaceApiKeys = it }
+                    ) {
+                        Checkbox(checked = replaceApiKeys, onCheckedChange = null)
+                        Text(stringResource(R.string.restore_replace_api_keys), Modifier.padding(start = 8.dp))
+                    }
+                }
+                Text(stringResource(R.string.restore_keeps_zdr), Modifier.padding(top = 8.dp))
+            }
+        },
+        confirmButtonText = stringResource(R.string.button_restore),
+    )
+}
+
+private fun discardStagedBackup(staged: StagedBackup) {
+    ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute { staged.root.deleteRecursively() }
+}
+
+/** Writes a confirmed staged backup, then deletes the staged files. */
+private fun applyRestore(
+    ctx: android.content.Context,
+    staged: StagedBackup,
+    replaceApiKeys: Boolean,
+    onError: (String) -> Unit,
+) {
+    ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+        var listenerStopped = false
+        try {
+            LayoutUtilsCustom.onLayoutFileChanged()
+            Settings.getInstance().stopListener()
+            listenerStopped = true
+            applyStagedBackup(ctx, staged, replaceApiKeys)
+            val pinnedClips = staged.pinnedClips
+            postToMain {
+                // on the main thread, like all other users of ClipboardDao
+                try {
+                    restorePinnedClips(ctx, pinnedClips)
+                    Toast.makeText(ctx, ctx.getString(R.string.backup_restored), Toast.LENGTH_LONG).show()
+                } catch (t: Throwable) {
+                    onError("r" + (t.message ?: "Unknown error"))
+                    Log.w("AdvancedScreen", "error restoring pinned clips", t)
+                }
+                refreshAfterRestore(ctx)
+            }
+        } catch (t: Throwable) {
+            postToMain {
+                if (listenerStopped) {
+                    Settings.getInstance().startListener()
+                }
+                onError("r" + (t.message ?: "Unknown error"))
+            }
+            Log.w("AdvancedScreen", "error during restore", t)
+        } finally {
+            staged.root.deleteRecursively()
         }
     }
 }
@@ -341,6 +442,31 @@ internal fun parseApiKeys(json: String): Map<String, String> = try {
     throw IllegalArgumentException("Malformed API keys in backup")
 }
 
+/** The keys in a backup replace the current keys only if the user selected that option (SEC-002). */
+internal fun apiKeysToRestore(backupKeys: Map<String, String>, replaceApiKeys: Boolean): Map<String, String> =
+    if (replaceApiKeys) backupKeys else emptyMap()
+
+/**
+ * A restore keeps the current ZDR choice (SEC-002), so a file from another person cannot turn off
+ * zero data retention. [current] null means that the choice is not set (the default applies).
+ */
+internal fun SettingsSnapshot.keepingZdrChoice(current: Boolean?): SettingsSnapshot {
+    val others = booleans - Settings.PREF_OPENROUTER_ZDR_ENABLED
+    return copy(booleans = if (current == null) others else others + (Settings.PREF_OPENROUTER_ZDR_ENABLED to current))
+}
+
+private fun SharedPreferences.zdrChoice(): Boolean? =
+    if (contains(Settings.PREF_OPENROUTER_ZDR_ENABLED)) getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED) else null
+
+private val AI_SETTING_PREFIXES = listOf("ai_", "voice_", "text_fix_", "translate_", "openrouter_")
+
+/** True if the snapshot has AI provider, model or prompt settings; the restore dialog lists them. */
+internal fun SettingsSnapshot.hasAiSettings(): Boolean =
+    listOf(booleans.keys, ints.keys, longs.keys, floats.keys, strings.keys, stringSets.keys)
+        .any { keys -> keys.any { key -> AI_SETTING_PREFIXES.any { key.startsWith(it) } } }
+
+private fun isLearnedWordsFile(path: String) = path.startsWith("UserHistoryDictionary")
+
 private fun restorePinnedClips(ctx: android.content.Context, clips: List<BackupClip>) {
     if (clips.isEmpty()) return
     val dao = ClipboardDao.getInstance(ctx) ?: error("Clipboard unavailable")
@@ -362,6 +488,8 @@ private data class StagedBackup(
     val protectedPrefs: SettingsSnapshot?,
     val pinnedClips: List<BackupClip>,
     val apiKeys: Map<String, String>,
+    val hasLearnedWords: Boolean,
+    val hasOtherFiles: Boolean,
 )
 
 private fun collectBackupFiles(ctx: android.content.Context): BackupFiles {
@@ -389,6 +517,8 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
     var protectedPrefsSnapshot: SettingsSnapshot? = null
     var pinnedClips = emptyList<BackupClip>()
     var apiKeys = emptyMap<String, String>()
+    var hasLearnedWords = false
+    var hasOtherFiles = false
     var restoredFileBytes = 0L
     ZipInputStream(inputStream).use { zip ->
         var entry: ZipEntry? = zip.nextEntry
@@ -401,11 +531,13 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
                     if (isAllowedBackupFile(adjustedName)) {
                         restoredFileBytes += copyRestoreEntryToNewFile(zip, File(stageProtectedFilesDir, adjustedName))
                         require(restoredFileBytes <= MAX_RESTORE_TOTAL_BYTES) { "Backup file entries exceed total size limit" }
+                        if (isLearnedWordsFile(adjustedName)) hasLearnedWords = true else hasOtherFiles = true
                     }
                 }
                 isAllowedBackupFile(entryName) -> {
                     restoredFileBytes += copyRestoreEntryToNewFile(zip, File(stageFilesDir, entryName))
                     require(restoredFileBytes <= MAX_RESTORE_TOTAL_BYTES) { "Backup file entries exceed total size limit" }
+                    if (isLearnedWordsFile(entryName)) hasLearnedWords = true else hasOtherFiles = true
                 }
                 entryName == PREFS_FILE_NAME -> {
                     prefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
@@ -432,10 +564,12 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
         protectedPrefs = protectedPrefsSnapshot,
         pinnedClips = pinnedClips,
         apiKeys = apiKeys,
+        hasLearnedWords = hasLearnedWords,
+        hasOtherFiles = hasOtherFiles,
     )
 }
 
-private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup) {
+private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup, replaceApiKeys: Boolean) {
     val filesDir = ctx.filesDir ?: error("Files directory unavailable")
     val protectedFilesDir = DeviceProtectedUtils.getFilesDir(ctx)
     val rollbackRoot = File(ctx.cacheDir, "backup_restore_rollback_${System.currentTimeMillis()}")
@@ -450,16 +584,19 @@ private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup
         copyDirectoryContents(backup.protectedFilesDir, protectedFilesDir)
         // loaded learned words still use the old files, make them load the restored ones
         PersonalizationHelper.closeAllUserHistoryDictionaries()
+        // Read both ZDR choices before either file is cleared: the two can be the same file.
+        val zdrChoice = ctx.prefs().zdrChoice()
+        val protectedZdrChoice = ctx.protectedPrefs().zdrChoice()
         backup.prefs?.let { snapshot ->
             ctx.prefs().edit {
                 clear()
-                putAll(snapshot)
+                putAll(snapshot.keepingZdrChoice(zdrChoice))
             }
         }
         backup.protectedPrefs?.let { snapshot ->
             ctx.protectedPrefs().edit {
                 clear()
-                putAll(snapshot)
+                putAll(snapshot.keepingZdrChoice(protectedZdrChoice))
             }
         }
         // Old or hand-crafted backups may contain provider keys in either plaintext prefs file.
@@ -472,8 +609,9 @@ private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup
             SENSITIVE_BACKUP_KEYS.forEach { remove(it) }
         }
         // Without secure storage (API < 23) the app can't store keys at all, so skip them.
-        if (backup.apiKeys.isNotEmpty() && SecretStore.isSecureStorageAvailable(ctx)) {
-            backup.apiKeys.forEach { (prefKey, value) -> SecretStore.setApiKey(ctx, prefKey, value) }
+        val apiKeys = apiKeysToRestore(backup.apiKeys, replaceApiKeys)
+        if (apiKeys.isNotEmpty() && SecretStore.isSecureStorageAvailable(ctx)) {
+            apiKeys.forEach { (prefKey, value) -> SecretStore.setApiKey(ctx, prefKey, value) }
         }
     } catch (t: Throwable) {
         restoreAllowedFiles(rollbackFilesDir, filesDir)
