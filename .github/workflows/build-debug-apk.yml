@@ -3,6 +3,9 @@ name: Build debug APK (WisprBoard)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
 
@@ -18,6 +21,8 @@ jobs:
           distribution: 'temurin'
 
       - uses: gradle/actions/setup-gradle@d9c87d481d55275bb5441eef3fe0e46805f9ef70 # v3.5.0
+        with:
+          validate-wrappers: true  # v3 does not check gradle-wrapper.jar by default
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
