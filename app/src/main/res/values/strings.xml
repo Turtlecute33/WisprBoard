@@ -1249,6 +1249,8 @@ New dictionary:
     <string name="voice_error_rate_limited">AI provider rate limit reached — try again in a moment</string>
     <string name="voice_max_duration_reached">Maximum recording length reached — transcribing&#8230;</string>
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
+    <!-- Shown after a restart, before the first unlock: the recording cannot go to encrypted storage yet -->
+    <string name="voice_error_user_locked">Unlock the device to use voice input</string>
     <string name="voice_warning_zdr_unenforceable">No zero data retention route for <xliff:g id="slug">%1$s</xliff:g>. Sent without ZDR, only to providers that do not collect data.</string>
     <string name="voice_error_field_changed">Transcription discarded — the text field changed while it was being transcribed</string>
     <!-- Shown when a finished dictation cannot be written back, so it is put on the clipboard -->

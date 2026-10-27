@@ -11,6 +11,8 @@ import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.annotation.StringRes
+import helium314.keyboard.compat.credentialProtectedDataDir
+import helium314.keyboard.compat.isUserLocked
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.permissions.PermissionsUtil
@@ -185,6 +187,12 @@ class VoiceInputManager(
         // is still a transcription, and a password box is no place for one.
         if (speechEngine(prefs) == SpeechEngine.ON_DEVICE) {
             startOnDeviceRecording(prefs)
+            return
+        }
+
+        // Before the first unlock, credential-encrypted storage is not available for the clip.
+        if (isUserLocked(context)) {
+            Toast.makeText(context, R.string.voice_error_user_locked, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -649,7 +657,14 @@ class VoiceInputManager(
         backgroundScope.cancel()
     }
 
+    /**
+     * Recordings go to credential-encrypted storage, so no clip is readable before the first
+     * unlock (PRIV-002). If that dir is not available, the default cache dir is used, as before.
+     */
     private fun cacheAudioDir(): File {
+        credentialProtectedDataDir(context)?.let { File(it, "cache/$AUDIO_CACHE_SUBDIR") }
+            ?.takeIf { it.isDirectory || it.mkdirs() }
+            ?.let { return it }
         val dir = File(context.cacheDir, AUDIO_CACHE_SUBDIR)
         dir.mkdirs()
         return dir
@@ -658,11 +673,14 @@ class VoiceInputManager(
     private fun sweepOrphanRecordings() {
         runCatching {
             val cutoff = System.currentTimeMillis() - ORPHAN_RECORDING_MAX_AGE_MS
-            cacheAudioDir().listFiles()?.forEach { file ->
-                if (file.name.startsWith("rec_") && file.extension.equals("wav", ignoreCase = true)
-                    && file.lastModified() < cutoff
-                ) {
-                    file.delete()
+            // Also sweep the old device-protected dir, so that no clip from an older version stays.
+            listOf(File(context.cacheDir, AUDIO_CACHE_SUBDIR), cacheAudioDir()).distinct().forEach { dir ->
+                dir.listFiles()?.forEach { file ->
+                    if (file.name.startsWith("rec_") && file.extension.equals("wav", ignoreCase = true)
+                        && file.lastModified() < cutoff
+                    ) {
+                        file.delete()
+                    }
                 }
             }
         }
