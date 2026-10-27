@@ -51,17 +51,19 @@ fun TextFixScreen(
     val model by rememberStringPreferenceState(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
     val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
     val provider = AiProvider.fromPref(providerPref)
+    // Both buttons use the provider, key, ZDR and model rows; only the prompt is per button (UX-015).
+    val anyEnabled = enabled || secondEnabled
 
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = stringResource(R.string.settings_screen_text_fix),
         settings = listOf(
             Settings.PREF_TEXT_FIX_ENABLED,
-            if (enabled) Settings.PREF_AI_PROVIDER else null,
-            if (enabled) provider.apiKeyPrefKey() else null,
-            if (enabled && provider == AiProvider.OPENROUTER) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
-            if (enabled) Settings.PREF_TEXT_FIX_MODEL else null,
-            if (enabled && model == "custom") Settings.PREF_TEXT_FIX_MODEL_CUSTOM else null,
+            if (anyEnabled) Settings.PREF_AI_PROVIDER else null,
+            if (anyEnabled) provider.apiKeyPrefKey() else null,
+            if (anyEnabled && provider == AiProvider.OPENROUTER) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
+            if (anyEnabled) Settings.PREF_TEXT_FIX_MODEL else null,
+            if (anyEnabled && model == "custom") Settings.PREF_TEXT_FIX_MODEL_CUSTOM else null,
             if (enabled) Settings.PREF_TEXT_FIX_PROMPT else null,
             Settings.PREF_TEXT_FIX_2_ENABLED,
             if (secondEnabled) Settings.PREF_TEXT_FIX_2_PROMPT else null,
