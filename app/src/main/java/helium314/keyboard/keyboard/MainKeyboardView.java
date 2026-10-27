@@ -426,9 +426,15 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         mSlidingKeyInputDrawingPreview.setPreviewEnabled(enabled);
     }
 
+    /**
+     * The system "Remove animations" setting (animator scale 0) also turns the ripple off (UX-008).
+     * This reads the scale once for each keyboard load, not for each key press.
+     */
     public void setKeyPressRippleEnabled(final boolean enabled) {
-        mKeyPressRippleEnabled = enabled;
-        mKeyPressRippleDrawingPreview.setPreviewEnabled(enabled);
+        final float animatorScale = android.provider.Settings.Global.getFloat(getContext().getContentResolver(),
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1.0f);
+        mKeyPressRippleEnabled = enabled && animatorScale != 0.0f;
+        mKeyPressRippleDrawingPreview.setPreviewEnabled(mKeyPressRippleEnabled);
     }
 
     @Override
