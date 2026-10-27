@@ -96,6 +96,11 @@ class OpenRouterClient(
         private const val APP_TITLE = "WisprBoard"
         private const val APP_CATEGORIES = "writing-assistant"
         /**
+         * Fixed User-Agent for each AI request, probe and pre-warm. The default "http.agent"
+         * holds the device model and the OS build (report TURTLEBOARD-PRIV-010).
+         */
+        const val NEUTRAL_USER_AGENT = "Dalvik/2.1.0"
+        /**
          * A TCP+TLS handshake that has not completed in 8 s on a working mobile network will not
          * complete. Was 15 s, which — multiplied by [MAX_ATTEMPTS] — made a captive portal or a
          * black-holed route cost the user 46 s of dead waiting before any error appeared.
@@ -176,6 +181,7 @@ class OpenRouterClient(
                     val url = if (provider == AiProvider.PAYPERQ) PAYPERQ_MODELS_ENDPOINT else KEY_ENDPOINT
                     val c = (URL(url).openConnection() as HttpURLConnection).apply {
                         requestMethod = "GET"
+                        applyNeutralHeaders(this)
                         connectTimeout = PREWARM_TIMEOUT_MS
                         readTimeout = PREWARM_TIMEOUT_MS
                     }
@@ -203,6 +209,11 @@ class OpenRouterClient(
         /** Marks the pool as freshly used so a pre-warm cannot interfere with a live request. */
         private fun markContacted() {
             lastContactUptimeMs = SystemClock.elapsedRealtime()
+        }
+
+        /** Call on each connection to OpenRouter or PayPerQ. See [NEUTRAL_USER_AGENT]. */
+        fun applyNeutralHeaders(connection: HttpURLConnection) {
+            connection.setRequestProperty("User-Agent", NEUTRAL_USER_AGENT)
         }
 
         fun applyOpenRouterAttributionHeaders(connection: HttpURLConnection) {
@@ -402,6 +413,7 @@ class OpenRouterClient(
         val connection = (URL(chatEndpoint()).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
+            applyNeutralHeaders(this)
             setRequestProperty("Content-Type", "application/json")
             if (provider == AiProvider.OPENROUTER) applyOpenRouterAttributionHeaders(this)
             connectTimeout = connectTimeoutMs
@@ -535,6 +547,7 @@ class OpenRouterClient(
         val connection = (URL(chatEndpoint()).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
+            applyNeutralHeaders(this)
             setRequestProperty("Content-Type", "application/json")
             if (provider == AiProvider.OPENROUTER) applyOpenRouterAttributionHeaders(this)
             connectTimeout = connectTimeoutMs
@@ -611,6 +624,7 @@ class OpenRouterClient(
         val connection = (URL(OPENROUTER_TRANSCRIPTION_ENDPOINT).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
+            applyNeutralHeaders(this)
             setRequestProperty("Content-Type", "application/json")
             applyOpenRouterAttributionHeaders(this)
             connectTimeout = connectTimeoutMs
@@ -652,6 +666,7 @@ class OpenRouterClient(
         val connection = (URL(PAYPERQ_TRANSCRIPTION_ENDPOINT).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $apiKey")
+            applyNeutralHeaders(this)
             setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             connectTimeout = connectTimeoutMs
             readTimeout = effectiveReadTimeoutMs()

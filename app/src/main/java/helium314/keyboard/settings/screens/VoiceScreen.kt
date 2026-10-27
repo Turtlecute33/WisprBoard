@@ -993,6 +993,7 @@ private fun probeApiKey(provider: AiProvider, apiKey: String, model: String): Te
     val keyConn = (java.net.URL(OpenRouterClient.KEY_ENDPOINT).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
+        OpenRouterClient.applyNeutralHeaders(this)
         OpenRouterClient.applyOpenRouterAttributionHeaders(this)
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
         readTimeout = 10_000
@@ -1016,6 +1017,7 @@ private fun probePayPerQApiKey(apiKey: String, model: String): TestResult {
     val conn = (java.net.URL(modelsEndpoint).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
+        OpenRouterClient.applyNeutralHeaders(this)
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
         readTimeout = 10_000
     }
@@ -1048,6 +1050,7 @@ private fun probeModel(apiKey: String, model: String): TestResult {
     val conn = (java.net.URL(OpenRouterClient.modelEndpointUrl(author, slug)).openConnection() as HttpURLConnection).apply {
         requestMethod = "GET"
         setRequestProperty("Authorization", "Bearer $apiKey")
+        OpenRouterClient.applyNeutralHeaders(this)
         OpenRouterClient.applyOpenRouterAttributionHeaders(this)
         connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
         readTimeout = 10_000
