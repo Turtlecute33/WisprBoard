@@ -1,11 +1,13 @@
 import com.android.build.api.variant.ApplicationVariant
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import java.io.File
 
 plugins {
     id("com.android.application")
     kotlin("android")
-    kotlin("plugin.serialization") version "2.2.21"
-    kotlin("plugin.compose") version "2.2.21"
+    kotlin("plugin.serialization") version "2.4.21"
+    kotlin("plugin.compose") version "2.4.21"
 }
 
 android {
@@ -136,10 +138,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     // see https://github.com/HeliBorg/HeliBoard/issues/477
     dependenciesInfo {
         includeInApk = false
@@ -150,6 +148,17 @@ android {
     lint {
         abortOnError = true
         baseline = file("lint-baseline.xml")
+    }
+}
+
+// The Kotlin 2.4 Gradle plugin fixes CVE-2026-53914 (report TURTLEBOARD-SEC-010). R8 and lint in AGP 8.13
+// cannot read Kotlin 2.4 metadata, so the code and the stdlib stay on Kotlin 2.2 until the move to AGP 9.
+kotlin {
+    coreLibrariesVersion = "2.2.21"
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+        languageVersion.set(KotlinVersion.KOTLIN_2_2)
+        apiVersion.set(KotlinVersion.KOTLIN_2_2)
     }
 }
 
