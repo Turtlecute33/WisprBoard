@@ -190,6 +190,17 @@ class VoiceInputManager(
             return
         }
 
+        // The toolbar mic sends VOICE_INPUT also when the chat-audio button is off. Then use the
+        // route that the settings show: dedicated STT, or no route.
+        if (!useDedicatedStt && !prefs.getBoolean(
+                Settings.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED, Defaults.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED)) {
+            if (!prefs.getBoolean(Settings.PREF_VOICE_STT_ENABLED, Defaults.PREF_VOICE_STT_ENABLED)) {
+                Toast.makeText(context, R.string.voice_error_not_enabled, Toast.LENGTH_SHORT).show()
+                return
+            }
+            currentUseDedicatedStt = true
+        }
+
         // Before the first unlock, credential-encrypted storage is not available for the clip.
         if (isUserLocked(context)) {
             Toast.makeText(context, R.string.voice_error_user_locked, Toast.LENGTH_SHORT).show()
