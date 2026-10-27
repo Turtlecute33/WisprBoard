@@ -19,7 +19,8 @@ import helium314.keyboard.latin.R
  * Overlay shown in the suggestion strip for the Translate action.
  *
  * States:
- *  - languages: the middle menu — one pill per configured target language.
+ *  - languages: the middle menu — one pill per configured target language, with a
+ *    "From clipboard" label when the source is the clipboard (report TURTLEBOARD-PRIV-007).
  *  - working: "Translating…" plus Cancel while the request is in flight.
  *  - error: the failure reason plus Dismiss.
  *
@@ -29,6 +30,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
 
     private val pulseView: AiPulseView
     private val statusText: TextView
+    private val sourceLabel: TextView
     private val languageScroller: HorizontalScrollView
     private val languageRow: LinearLayout
     private val retryButton: TextView
@@ -60,6 +62,13 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
             layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(12) }
             visibility = View.GONE
         }
+        sourceLabel = TextView(context).apply {
+            text = context.getString(R.string.translate_source_clipboard)
+            textSize = 12f
+            maxLines = 1
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
+            visibility = View.GONE
+        }
         languageRow = LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -86,6 +95,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
 
         addView(pulseView)
         addView(statusText)
+        addView(sourceLabel)
         addView(languageScroller)
         addView(retryButton)
         addView(cancelButton)
@@ -95,6 +105,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         textColor = color
         pulseView.meterColor = color
         statusText.setTextColor(color)
+        sourceLabel.setTextColor(color)
         applyPillColors(retryButton, primary = true)
         applyPillColors(cancelButton, primary = false)
         for (i in 0 until languageRow.childCount) {
@@ -102,8 +113,11 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         }
     }
 
-    /** Shows the middle menu. [languages] is already de-duplicated and trimmed. */
-    fun showLanguages(languages: List<String>) {
+    /**
+     * Shows the middle menu. [languages] is already de-duplicated and trimmed. [fromClipboard]
+     * shows the source label, so the user knows the clipboard is sent and not a selection.
+     */
+    fun showLanguages(languages: List<String>, fromClipboard: Boolean) {
         stopPulse()
         languageRow.removeAllViews()
         for (language in languages) {
@@ -113,10 +127,12 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         }
         languageScroller.scrollTo(0, 0)
         statusText.visibility = View.GONE
+        sourceLabel.visibility = if (fromClipboard) View.VISIBLE else View.GONE
         languageScroller.visibility = View.VISIBLE
         retryButton.visibility = View.GONE
         cancelButton.visibility = View.VISIBLE
-        announceForAccessibility(context.getString(R.string.translate_pick_language))
+        val pick = context.getString(R.string.translate_pick_language)
+        announceForAccessibility(if (fromClipboard) "${sourceLabel.text}. $pick" else pick)
     }
 
     fun showWorking() {
@@ -126,6 +142,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         pulseView.visibility = View.VISIBLE
         pulseView.resetToIdlePulse()
         statusText.visibility = View.VISIBLE
+        sourceLabel.visibility = View.GONE
         languageScroller.visibility = View.GONE
         retryButton.visibility = View.GONE
         cancelButton.visibility = View.VISIBLE
@@ -142,6 +159,7 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
         stopPulse()
         statusText.text = message
         statusText.visibility = View.VISIBLE
+        sourceLabel.visibility = View.GONE
         languageScroller.visibility = View.GONE
         retryButton.visibility = if (canRetry) View.VISIBLE else View.GONE
         cancelButton.visibility = View.VISIBLE

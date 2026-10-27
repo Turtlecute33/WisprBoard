@@ -976,7 +976,7 @@ public class LatinIME extends InputMethodService implements
             return Unit.INSTANCE;
         });
         mSuggestionStripView.setOnCancelTranslate(this::clearPendingTranslateState);
-        mSuggestionStripView.showTranslateLanguages(mTranslateManager.languages());
+        mSuggestionStripView.showTranslateLanguages(mTranslateManager.languages(), mPendingTranslateFromClipboard);
     }
 
     private void startTranslate(@NonNull final String language) {

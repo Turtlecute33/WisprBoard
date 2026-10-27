@@ -477,8 +477,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         onRetryTranslate = callback
     }
 
-    fun showTranslateLanguages(languages: List<String>) {
-        ensureTranslateOverlay().showLanguages(languages)
+    fun showTranslateLanguages(languages: List<String>, fromClipboard: Boolean) {
+        ensureTranslateOverlay().showLanguages(languages, fromClipboard)
     }
 
     fun showTranslateWorking() {

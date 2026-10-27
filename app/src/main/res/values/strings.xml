@@ -1387,7 +1387,7 @@ New dictionary:
     <string name="translate_enabled">Enable Translate</string>
     <string name="translate_enabled_summary">After adding a provider API key, enable this. Select text, or copy some, then long-press Return and pick a language.</string>
     <string name="translate_enable_privacy_title">Enable Translate?</string>
-    <string name="translate_enable_privacy_message">Translate sends the selected text over HTTPS to your selected AI provider using the API key you supply.</string>
+    <string name="translate_enable_privacy_message">Translate sends the selected text, or the clipboard when nothing is selected, over HTTPS to your selected AI provider using the API key you supply.</string>
     <string name="translate_enable_privacy_confirm">Enable Translate</string>
     <string name="translate_model">Translate Model</string>
     <string name="translate_model_custom">Custom Model ID</string>
@@ -1398,6 +1398,7 @@ New dictionary:
     <string name="translate_languages_summary">Languages offered after tapping Translate, separated by commas</string>
     <string name="translate_languages_hint">English, Italian, Spanish…</string>
     <string name="translate_pick_language">Pick a language</string>
+    <string name="translate_source_clipboard">From clipboard</string>
     <string name="translate_working">Translating…</string>
     <string name="translate_cancel">Cancel</string>
     <string name="translate_retry">Retry</string>
