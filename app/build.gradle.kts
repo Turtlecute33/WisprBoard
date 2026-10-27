@@ -64,6 +64,7 @@ android {
             isShrinkResources = false
             isDebuggable = false
             isJniDebuggable = false
+            vcsInfo { include = false } // no commit data in the APK
             if (releaseSigningConfigured) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -73,6 +74,7 @@ android {
             isShrinkResources = false
             isDebuggable = false
             isJniDebuggable = false
+            vcsInfo { include = false } // no commit data in the APK
         }
         debug {
             // "normal" debug has minify for smaller APK to fit the GitHub 25 MB limit when zipped
@@ -124,6 +126,14 @@ android {
         jniLibs {
             // shrinks APK by 3 MB, zipped size unchanged
             useLegacyPackaging = true
+        }
+        resources {
+            // Build metadata that the app does not read (no kotlin-reflect): licence copies, multi-release
+            // class files, Kotlin builtins and the coroutines debug probes (report TURTLEBOARD-PERF-001).
+            excludes += setOf(
+                "META-INF/versions/**", "META-INF/*.md", "META-INF/LICENSE*", "META-INF/NOTICE*",
+                "META-INF/**/LICENSE*", "META-INF/**/NOTICE*", "DebugProbesKt.bin", "kotlin/**",
+            )
         }
     }
 
@@ -182,7 +192,6 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.navigation:navigation-compose:2.9.6")
     implementation("sh.calvin.reorderable:reorderable:2.4.3") // for easier re-ordering, todo: check 3.0.0
     implementation("com.github.skydoves:colorpicker-compose:1.1.3") // for user-defined colors
