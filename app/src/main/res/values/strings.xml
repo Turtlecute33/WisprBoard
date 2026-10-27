@@ -1256,8 +1256,9 @@ New dictionary:
     <string name="voice_error_no_network">No internet connection</string>
     <string name="voice_error_sensitive_field">Voice input is unavailable in sensitive fields</string>
     <string name="voice_error_unsupported_field">Voice input is unavailable in this field</string>
-    <string name="voice_error_on_device_unavailable">On-device speech recognition is unavailable on this device. It needs Android 12 or newer and a system speech service with an offline model.</string>
-    <string name="voice_error_on_device_language">No offline language pack for this language. Install it in the system speech recognition settings, or switch the speech engine to Cloud AI.</string>
+    <!-- Toasts: keep to about 80 characters. Android 12+ shows only two lines of a toast (UX-020) -->
+    <string name="voice_error_on_device_unavailable">On-device voice is not available on this phone. See Voice settings.</string>
+    <string name="voice_error_on_device_language">No offline pack for this language. See Voice settings.</string>
     <string name="voice_error_on_device_failed">On-device recognition failed</string>
     <string name="voice_error_transcription_failed">Transcription failed</string>
     <!-- Provider failures that the user can actually do something about -->
@@ -1275,10 +1276,11 @@ New dictionary:
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
     <!-- Shown after a restart, before the first unlock: the recording cannot go to encrypted storage yet -->
     <string name="voice_error_user_locked">Unlock the device to use voice input</string>
-    <string name="voice_warning_zdr_unenforceable">No zero data retention route for <xliff:g id="slug">%1$s</xliff:g>. Sent without ZDR, only to providers that do not collect data.</string>
+    <!-- %1$s is a model ID. The request went to a provider that does not collect data (PRIV-001) -->
+    <string name="voice_warning_zdr_unenforceable">No ZDR route for <xliff:g id="slug">%1$s</xliff:g>. Sent without ZDR, data collection off.</string>
     <string name="voice_error_field_changed">Transcription discarded — the text field changed while it was being transcribed</string>
     <!-- Shown when a finished dictation cannot be written back, so it is put on the clipboard -->
-    <string name="voice_copied_field_changed">The text field changed, so your dictation was copied to the clipboard. Paste it where you want it.</string>
+    <string name="voice_copied_field_changed">The field changed. Your dictation is on the clipboard.</string>
     <!-- Shown when the keyboard closes or the field changes while a dictation, Text Fix or Translate request runs -->
     <string name="ai_request_cancelled">Request cancelled. Keep the keyboard open until it is done.</string>
     <!-- Badges shown next to AI models in the model picker -->
