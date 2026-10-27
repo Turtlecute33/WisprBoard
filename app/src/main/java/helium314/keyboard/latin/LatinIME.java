@@ -1904,8 +1904,12 @@ public class LatinIME extends InputMethodService implements
         if (DebugFlags.DEBUG_ENABLED) {
             Log.i(TAG, "Received completions:");
             if (applicationSpecifiedCompletions != null) {
+                // Log only the length: the completions hold text from the host app.
                 for (int i = 0; i < applicationSpecifiedCompletions.length; i++) {
-                    Log.i(TAG, "  #" + i + ": " + applicationSpecifiedCompletions[i]);
+                    final CompletionInfo ci = applicationSpecifiedCompletions[i];
+                    final CharSequence t = ci == null ? null : ci.getText();
+                    final int len = t == null ? 0 : t.length();
+                    Log.i(TAG, "  #" + i + ": " + len + " chars");
                 }
             }
         }

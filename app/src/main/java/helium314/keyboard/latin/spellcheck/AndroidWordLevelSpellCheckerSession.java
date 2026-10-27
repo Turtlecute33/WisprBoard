@@ -337,16 +337,9 @@ public abstract class AndroidWordLevelSpellCheckerSession extends Session {
                     mLocale, composer.getComposedDataSnapshot(), ngramContext, keyboard);
             final Result result = getResult(capitalizeType, mLocale, suggestionsLimit,
                     mService.getRecommendedThreshold(), text, suggestionResults);
-            if (DebugFlags.DEBUG_ENABLED) {
-                if (result.mSuggestions != null && result.mSuggestions.length > 0) {
-                    final StringBuilder builder = new StringBuilder();
-                    for (String suggestion : result.mSuggestions) {
-                        builder.append(" [");
-                        builder.append(suggestion);
-                        builder.append("]");
-                    }
-                    Log.i(TAG, "onGetSuggestionsInternal() : Suggestions =" + builder);
-                }
+            // Log only the count: the suggestions are close to the word that the user typed.
+            if (DebugFlags.DEBUG_ENABLED && result.mSuggestions != null) {
+                Log.i(TAG, "onGetSuggestionsInternal() : " + result.mSuggestions.length + " suggestions");
             }
             // Handle word not in dictionary.
             // This is called only once per unique word, so entering multiple
