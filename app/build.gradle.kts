@@ -23,7 +23,9 @@ android {
             && configuredKeyAlias != null
             && configuredKeyPassword != null
     val requestedReleaseBuild = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
-    if (requestedReleaseBuild && !releaseSigningConfigured) {
+    // -PunsignedRelease=true: CI builds the release APK without secrets, and a separate job signs it (report TURTLEBOARD-SEC-003)
+    val unsignedReleaseRequested = providers.gradleProperty("unsignedRelease").orNull == "true"
+    if (requestedReleaseBuild && !releaseSigningConfigured && !unsignedReleaseRequested) {
         throw GradleException("Release signing must be provided via KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD.")
     }
 

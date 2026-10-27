@@ -13,15 +13,22 @@ concurrency:
   group: release-build-${{ github.ref_name }}
   cancel-in-progress: false
 
+# Three jobs, so that build code never runs next to the signing key or a write token
+# (report TURTLEBOARD-SEC-003):
+# - build: Gradle, lint and tests with a read-only token and no secrets; makes an unsigned APK.
+# - sign: no Gradle and no checkout; only zipalign and apksigner from the SDK touch the key.
+# - publish: only on a tag; the only job with contents: write.
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: write  # only needed for the release-creation step
+      contents: read
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Set up JDK
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
@@ -65,85 +72,18 @@ jobs:
       - name: Run release verification
         run: ./gradlew --no-daemon lintDebug testDebugUnitTest
 
-      - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/keystore.jks
-
-      - name: Validate keystore
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        run: |
-          if [ ! -s app/keystore.jks ]; then
-            echo "::error::Keystore file is empty — check KEYSTORE_BASE64 secret"
-            exit 1
-          fi
-          keytool -list -keystore app/keystore.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" || {
-            echo "::error::Keystore validation failed — check KEYSTORE_PASSWORD and KEY_ALIAS secrets"
-            exit 1
-          }
-
-      - name: Build signed release APK
+      - name: Build unsigned release APK
         shell: bash
-        env:
-          KEYSTORE_FILE: keystore.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -o pipefail
-          ./gradlew --no-daemon --stacktrace assembleRelease 2>&1 | tee /tmp/gradle-release.log
+          ./gradlew --no-daemon --stacktrace assembleRelease -PunsignedRelease=true 2>&1 | tee /tmp/gradle-release.log
 
-      - name: Verify APK is signed
-        run: |
-          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          if [ -z "$APK" ]; then
-            echo "ERROR: No APK found"
-            exit 1
-          fi
-          # apksigner is in the Android SDK build-tools
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
-          echo "Verifying: $APK"
-          "$APKSIGNER" verify --verbose "$APK"
-
-      - name: Upload release APK
+      - name: Upload unsigned release APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: WisprBoard-release
-          path: app/build/outputs/apk/release/*.apk
-
-      - name: Generate APK checksums
-        run: |
-          cd app/build/outputs/apk/release
-          sha256sum *.apk > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-
-      - name: Ensure release is immutable
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            echo "::error::Release $TAG already exists; published artifacts are immutable"
-            exit 1
-          fi
-
-      - name: Create GitHub Release
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
-        with:
-          tag_name: ${{ github.ref_name }}
-          target_commitish: ${{ github.sha }}
-          name: WisprBoard ${{ github.ref_name }}
-          files: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/release/SHA256SUMS.txt
-          generate_release_notes: true
-          make_latest: true
-
-      - name: Clean up keystore
-        if: always()
-        run: rm -f app/keystore.jks
+          name: WisprBoard-release-unsigned
+          path: app/build/outputs/apk/release/*-release-unsigned.apk
+          if-no-files-found: error
 
       - name: Upload Gradle build log
         if: failure()
@@ -158,3 +98,149 @@ jobs:
           name: reports
           path: '*/build/reports'
         if: failure()
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # No checkout: the token has no permissions. Artifacts of this run do not need the token.
+    permissions: {}
+
+    steps:
+      - name: Set up JDK
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          packages: ''
+
+      - name: Install Android SDK build tools
+        run: sdkmanager "build-tools;35.0.0"
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: WisprBoard-release-unsigned
+          path: unsigned
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
+
+      - name: Validate keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          if [ ! -s "$RUNNER_TEMP/keystore.jks" ]; then
+            echo "::error::Keystore file is empty — check KEYSTORE_BASE64 secret"
+            exit 1
+          fi
+          keytool -list -keystore "$RUNNER_TEMP/keystore.jks" -storepass:env KEYSTORE_PASSWORD -alias "$KEY_ALIAS" > /dev/null || {
+            echo "::error::Keystore validation failed — check KEYSTORE_PASSWORD and KEY_ALIAS secrets"
+            exit 1
+          }
+
+      - name: Sign release APK
+        shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/35.0.0"
+          UNSIGNED=$(find unsigned -name '*-release-unsigned.apk')
+          if [ "$(printf '%s\n' "$UNSIGNED" | grep -c .)" -ne 1 ]; then
+            echo "::error::Expected exactly one unsigned APK, found: ${UNSIGNED:-none}"
+            exit 1
+          fi
+          NAME=$(basename "$UNSIGNED" -unsigned.apk).apk
+          mkdir -p signed
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" "$RUNNER_TEMP/aligned.apk"
+          # Passwords come from the environment, not from the command line.
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$RUNNER_TEMP/keystore.jks" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
+            --out "signed/$NAME" \
+            "$RUNNER_TEMP/aligned.apk"
+          rm -f "$RUNNER_TEMP/aligned.apk" signed/*.idsig
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/keystore.jks"
+
+      - name: Verify APK is signed and write hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          cd signed
+          APK=$(ls *.apk)
+          echo "Verifying: $APK"
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/verify.txt"
+          CERT_SHA256=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/verify.txt")
+          if [ -z "$CERT_SHA256" ] || grep -q '^Signer #2' "$RUNNER_TEMP/verify.txt"; then
+            echo "::error::Expected exactly one signer certificate"
+            exit 1
+          fi
+          sha256sum "$APK" > SHA256SUMS.txt
+          APK_SHA256=$(cut -d' ' -f1 SHA256SUMS.txt)
+          cat > release-notes.md <<EOF
+          | File | SHA-256 |
+          |---|---|
+          | \`$APK\` | \`$APK_SHA256\` |
+
+          Signing certificate SHA-256: \`$CERT_SHA256\`
+          EOF
+          cat SHA256SUMS.txt release-notes.md
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: WisprBoard-release
+          path: signed/
+          if-no-files-found: error
+
+  publish:
+    needs: sign
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write  # only to create the release
+
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: WisprBoard-release
+          path: release
+
+      - name: Ensure release is immutable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "::error::Release $TAG already exists; published artifacts are immutable"
+            exit 1
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: ${{ github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: WisprBoard ${{ github.ref_name }}
+          body_path: release/release-notes.md
+          files: |
+            release/*.apk
+            release/SHA256SUMS.txt
+          generate_release_notes: true
+          make_latest: true
