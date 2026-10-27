@@ -1394,6 +1394,8 @@ New dictionary:
     <string name="text_fix_working">Fixing…</string>
     <string name="text_fix_result_a11y">Proposed text: <xliff:g id="text">%1$s</xliff:g>. Use Replace to accept or Discard to reject.</string>
     <string name="text_fix_replace">Replace</string>
+    <!-- Accessibility label of the tap on the proposal in the strip: it opens the full text over the keys -->
+    <string name="text_fix_show_full">Show the full text</string>
     <string name="text_fix_discard">Discard</string>
     <string name="text_fix_error_no_selection">Select text first, then long-press Return to fix</string>
     <string name="text_fix_error_selection_changed">Selection changed; select the same text and try again</string>

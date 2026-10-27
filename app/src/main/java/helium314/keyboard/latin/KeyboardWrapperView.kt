@@ -19,6 +19,7 @@ import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.voice.TextFixPanelView
 import kotlin.math.abs
 
 class KeyboardWrapperView @JvmOverloads constructor(
@@ -161,5 +162,10 @@ class KeyboardWrapperView @JvmOverloads constructor(
         stopOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.2f).toInt())
         switchOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.5f).toInt())
         resizeOneHandedModeBtn.setLayout((keyboardView.measuredHeight * 0.8f).toInt())
+        // The Text Fix panel (UX-002) covers the full width, also in one-handed mode.
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            if (child is TextFixPanelView) child.layout(0, 0, child.measuredWidth, child.measuredHeight)
+        }
     }
 }

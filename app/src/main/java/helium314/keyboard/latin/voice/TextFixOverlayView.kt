@@ -8,9 +8,15 @@ import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
+import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.common.ColorType
+import helium314.keyboard.latin.settings.Settings
 import kotlin.reflect.KMutableProperty0
 
 /**
@@ -18,7 +24,8 @@ import kotlin.reflect.KMutableProperty0
  *
  * States:
  *  - working: shows "Fixing…" status while the request is in flight.
- *  - result: shows the proposed text plus Replace/Discard buttons.
+ *  - result: shows the proposed text plus Replace/Discard buttons. A tap on the text opens
+ *    [TextFixPanelView] with the full text over the keys.
  */
 class TextFixOverlayView(context: Context) : LinearLayout(context) {
 
@@ -32,6 +39,9 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     var onDiscardClick: (() -> Unit)? = null
     private var lastReplaceClickMs = 0L
     private var lastDiscardClickMs = 0L
+    private var textColor = 0
+    private var proposedText: String? = null
+    private var panel: TextFixPanelView? = null
 
     init {
         orientation = HORIZONTAL
@@ -62,19 +72,30 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
             layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginEnd = dp(12)
             }
+            // Two lines are not sufficient to read a long proposal (UX-002): a tap shows all of it.
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { togglePanel() }
+            ViewCompat.replaceAccessibilityAction(
+                this, AccessibilityActionCompat.ACTION_CLICK, context.getString(R.string.text_fix_show_full), null
+            )
         }
-        discardButton = makePillButton(R.string.text_fix_discard, isPrimary = false) {
-            debounceClick(::lastDiscardClickMs) { onDiscardClick?.invoke() }
-        }
-        replaceButton = makePillButton(R.string.text_fix_replace, isPrimary = true) {
-            debounceClick(::lastReplaceClickMs) { onReplaceClick?.invoke() }
-        }
+        discardButton = makeDiscardButton()
+        replaceButton = makeReplaceButton()
 
         addView(pulseView)
         addView(statusText)
         addView(resultText)
         addView(discardButton)
         addView(replaceButton)
+    }
+
+    private fun makeDiscardButton() = makePillButton(R.string.text_fix_discard, isPrimary = false) {
+        debounceClick(::lastDiscardClickMs) { onDiscardClick?.invoke() }
+    }
+
+    private fun makeReplaceButton() = makePillButton(R.string.text_fix_replace, isPrimary = true) {
+        debounceClick(::lastReplaceClickMs) { onReplaceClick?.invoke() }
     }
 
     private fun makePillButton(labelRes: Int, isPrimary: Boolean, onClick: () -> Unit): TextView {
@@ -104,20 +125,51 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     }
 
     fun setColors(textColor: Int) {
+        this.textColor = textColor
         pulseView.meterColor = textColor
         statusText.setTextColor(textColor)
         resultText.setTextColor(textColor)
+        colorButtons(replaceButton, discardButton)
+    }
+
+    private fun colorButtons(replace: TextView, discard: TextView) {
         // Primary (Replace): strong filled background with full-opacity text.
-        replaceButton.setTextColor(textColor)
-        (replaceButton.background as? GradientDrawable)
+        replace.setTextColor(textColor)
+        (replace.background as? GradientDrawable)
             ?.setColor((textColor and 0x00FFFFFF) or 0x55000000)
         // Secondary (Discard): muted text, subtle fill to keep it clearly recessive.
-        discardButton.setTextColor((textColor and 0x00FFFFFF) or 0xB0000000.toInt())
-        (discardButton.background as? GradientDrawable)
+        discard.setTextColor((textColor and 0x00FFFFFF) or 0xB0000000.toInt())
+        (discard.background as? GradientDrawable)
             ?.setColor((textColor and 0x00FFFFFF) or 0x18000000)
     }
 
+    /** Opens or closes the full proposal over the keys. */
+    private fun togglePanel() {
+        if (panel != null) {
+            closePanel()
+            return
+        }
+        val text = proposedText ?: return
+        val keyboardArea = KeyboardSwitcher.getInstance().wrapperView as? ViewGroup ?: return
+        if (keyboardArea.height == 0) return
+        val discard = makeDiscardButton()
+        val replace = makeReplaceButton()
+        colorButtons(replace, discard)
+        val background = Settings.getValues().mColors.get(ColorType.MAIN_BACKGROUND) or 0xFF000000.toInt()
+        val newPanel = TextFixPanelView(context, text, keyboardArea.height, textColor, background, discard, replace)
+        keyboardArea.addView(newPanel)
+        panel = newPanel
+    }
+
+    private fun closePanel() {
+        val current = panel ?: return
+        panel = null
+        (current.parent as? ViewGroup)?.removeView(current)
+    }
+
     fun showWorking() {
+        closePanel()
+        proposedText = null
         statusText.text = context.getString(R.string.text_fix_working)
         // Something has to move while the provider thinks, or a multi-second wait behind static
         // text reads as a dead keyboard.
@@ -131,6 +183,8 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     }
 
     fun showResult(proposed: String) {
+        closePanel()
+        proposedText = proposed
         stopPulse()
         statusText.visibility = View.GONE
         resultText.text = proposed
@@ -141,6 +195,8 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     }
 
     fun showError(message: String) {
+        closePanel()
+        proposedText = null
         stopPulse()
         statusText.text = message
         statusText.visibility = View.VISIBLE
@@ -159,6 +215,9 @@ class TextFixOverlayView(context: Context) : LinearLayout(context) {
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         pulseView.stopPulse()
+        // Each way that hides the overlay (Replace, Discard, typing, a hide) removes it from the
+        // strip, so the panel closes with it and never stays over the keys alone.
+        closePanel()
     }
 
     private fun debounceClick(lastClickMs: KMutableProperty0<Long>, action: () -> Unit) {

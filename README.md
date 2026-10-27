@@ -44,7 +44,7 @@ You're chatting in English, Italian, German, whatever isn't your strongest. You 
 
 - Works in every language your model supports
 - Good for typos, clumsy phrasing, or shifting tone (formal ↔ casual)
-- Review the message and decide if you want to replace the original one
+- Review the message and decide if you want to replace the original one. Tap the proposal to read the full text
 
 <br>
 
