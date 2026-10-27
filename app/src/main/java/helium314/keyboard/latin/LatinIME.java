@@ -1758,9 +1758,11 @@ public class LatinIME extends InputMethodService implements
     public void onWindowHidden() {
         super.onWindowHidden();
         Log.i(TAG, "onWindowHidden");
+        final boolean aiRequestWasRunning = isAiRequestRunning();
         cancelVoiceRecordingIfCapturing();
         clearPendingTextFixState();
         clearPendingTranslateState();
+        noticeAiRequestCancelled(aiRequestWasRunning);
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
             mainKeyboardView.closing();
@@ -1776,9 +1778,11 @@ public class LatinIME extends InputMethodService implements
         // finishing (older Android versions, and the pending-IMS-callback coalescing window can
         // swallow onFinishInputView entirely). Leaving a recording running past the end of input
         // risks uploading audio for an editor that no longer exists.
+        final boolean aiRequestWasRunning = isAiRequestRunning();
         cancelVoiceRecordingIfCapturing();
         clearPendingTextFixState();
         clearPendingTranslateState();
+        noticeAiRequestCancelled(aiRequestWasRunning);
         mDictionaryFacilitator.onFinishInput();
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
@@ -1789,8 +1793,33 @@ public class LatinIME extends InputMethodService implements
     void onFinishInputViewInternal(final boolean finishingInput) {
         super.onFinishInputView(finishingInput);
         Log.i(TAG, "onFinishInputView");
+        final boolean aiRequestWasRunning = isAiRequestRunning();
         cancelVoiceRecordingIfCapturing();
         cleanupInternalStateForFinishInput();
+        noticeAiRequestCancelled(aiRequestWasRunning);
+    }
+
+    /**
+     * True while a dictation is stopped and waits for its text, or a Text Fix or Translate request
+     * runs. A live microphone capture is not included: the user expects a hide to stop it.
+     */
+    private boolean isAiRequestRunning() {
+        return (mVoiceInputManager != null
+                        && mVoiceInputManager.getState() != VoiceInputManager.State.IDLE
+                        && !mVoiceInputManager.isCapturing())
+                || (mTextFixManager != null && mTextFixManager.getState() == TextFixManager.State.WORKING)
+                || (mTranslateManager != null && mTranslateManager.getState() == TranslateManager.State.WORKING);
+    }
+
+    /**
+     * A hide or a finished input cancels a running AI request, and the provider can bill it. One
+     * toast tells the user, so that the result is not lost without a message (UX-009). A Back
+     * press calls more than one hide path; only the path that cancels the request shows the toast.
+     */
+    private void noticeAiRequestCancelled(final boolean wasRunning) {
+        if (wasRunning && !isAiRequestRunning()) {
+            Toast.makeText(this, R.string.ai_request_cancelled, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void cleanupInternalStateForFinishInput() {
