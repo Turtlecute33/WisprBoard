@@ -117,6 +117,23 @@ cd WisprBoard
 
 Needs JDK 17, Android SDK 35, NDK `28.0.13004108`. APK lands in `app/build/outputs/apk/debug/`.
 
+<details>
+<summary>Dependency verification</summary>
+
+Gradle checks each dependency and plugin against the sha256 values in `gradle/verification-metadata.xml`, and the wrapper checks the Gradle download against `distributionSha256Sum`. `google()` serves only the `com.android`, `com.google` and `androidx` groups. After each dependency or plugin change, make the file again from an empty Gradle home, one command for each variant:
+
+```bash
+export GRADLE_USER_HOME=$(mktemp -d)
+./gradlew --write-verification-metadata sha256 help :app:testDebugNoMinifyUnitTest :app:assembleDebugNoMinify
+./gradlew --write-verification-metadata sha256 :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew --write-verification-metadata sha256 :app:assembleRelease -PunsignedRelease=true
+JAVA_HOME=<JDK 21> ./gradlew --write-verification-metadata sha256 :tools:make-emoji-keys:jar
+```
+
+Gradle records only the `aapt2` jar of the host OS, and CI runs on Linux. For a new `aapt2` version, download the `linux`, `osx` and `windows` jars from Google Maven, compare each sha1 with the published `.sha1` file, and add each sha256 to the `aapt2` component.
+
+</details>
+
 <br>
 
 ## Open source, top to bottom
