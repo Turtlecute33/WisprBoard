@@ -26,8 +26,8 @@ class App : Application() {
         scope.launch { // do some uncritical work in background for faster startup
             SupportedEmojis.load(this@App)
             LayoutUtilsCustom.removeMissingLayouts(this@App)
-            // Warm up EncryptedSharedPreferences + AndroidKeyStore master key so the first
-            // voice/text-fix request doesn't pay the cold-decrypt cost on the IME main thread.
+            // Load the vault key (and run the one-time secret migration) so the first
+            // voice/text-fix request doesn't pay this cost on the IME main thread.
             SecretStore.warmUp(this@App)
             val packageInfo = packageManager.getPackageInfo(packageName, 0)
             @Suppress("DEPRECATION")
