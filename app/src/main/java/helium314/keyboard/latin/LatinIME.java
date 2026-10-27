@@ -40,6 +40,7 @@ import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.compat.ConfigurationCompatKt;
 import helium314.keyboard.compat.EditorInfoCompatUtils;
 import helium314.keyboard.compat.ImeCompat;
+import helium314.keyboard.compat.IsLockedCompatKt;
 import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.keyboard.KeyboardActionListener;
 import helium314.keyboard.keyboard.KeyboardActionListenerImpl;
@@ -2205,6 +2206,9 @@ public class LatinIME extends InputMethodService implements
             onTranslateKeyPressed();
             return;
         }
+        // No clipboard history and no paste on a locked device. This also covers custom layouts
+        // with a clipboard key.
+        if (event.getKeyCode() == KeyCode.CLIPBOARD && IsLockedCompatKt.isDeviceLocked(this)) return;
         releaseAiOverlayIfEditingText(event);
         final InputTransaction completeInputTransaction =
                 mInputLogic.onCodeInput(mSettings.getCurrent(), event,

@@ -228,7 +228,8 @@ sealed interface KeyData : AbstractKeyData {
                         popupKeys[i] = popupKeys[i].replace(n.toString(), (n - 1).toString())
                 }
             }
-            if (params.mId.mElementId == KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW)
+            // no clipboard history on a locked device (the comma popup and the toolbar also hide it)
+            if (params.mId.mElementId == KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW || params.mId.mDeviceLocked)
                 popupKeys.remove("!icon/clipboard_action_key|!code/key_clipboard")
             applyActionPopupOrder(popupKeys)
             return SimplePopups(popupKeys)

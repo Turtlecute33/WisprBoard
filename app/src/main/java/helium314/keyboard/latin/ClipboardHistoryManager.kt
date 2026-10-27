@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import androidx.core.view.isGone
 import helium314.keyboard.compat.ClipboardManagerCompat
+import helium314.keyboard.compat.isDeviceLocked
 import helium314.keyboard.event.HapticEvent
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.ColorType
@@ -119,8 +120,10 @@ class ClipboardHistoryManager(
      * The clipboard text, or "" when the clip is not text or the app that wrote it marked it
      * sensitive. Pasting such a clip is fine because it stays on the device, but an AI action
      * picks the clipboard up implicitly and sends it to a provider, so it must skip these.
+     * Also "" on a locked device: a person without the unlock code must not send the clipboard.
      */
     fun retrieveClipboardContentForAi(): CharSequence {
+        if (isDeviceLocked(latinIME)) return ""
         val clipData = clipboardManager.primaryClip ?: return ""
         if (clipData.itemCount == 0 || clipData.description?.hasMimeType("text/*") == false) return ""
         if (ClipboardManagerCompat.getClipSensitivity(clipData.description) == true) return ""
@@ -141,6 +144,8 @@ class ClipboardHistoryManager(
         if (!latinIME.mSettings.current.mSuggestClipboardContent) return null
         if (dontShowCurrentSuggestion) return null
         if (parent == null) return null
+        // No clipboard content on a locked device. Use the cached flag, not an IPC per keystroke.
+        if (latinIME.mKeyboardSwitcher.keyboard?.mId?.mDeviceLocked == true) return null
         // Check the description before fetching the clip. This runs once per keystroke for anyone
         // with clipboard suggestions on, and getPrimaryClip() copies the entire clip across a
         // binder boundary, whereas getPrimaryClipDescription() does not — so for a clip older than
