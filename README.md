@@ -71,6 +71,7 @@ PayPerQ support uses PayPerQ's own API endpoints and policies. Your provider API
 |                                         | HeliBoard | WisprBoard |
 | --------------------------------------- | :-------: | :--------: |
 | HeliBoard features up to 2 April 2026   |     ✅     |     ✅      |
+| Load an external glide-typing library   |     ✅     |     —      |
 | Installs alongside HeliBoard            |     —     |     ✅      |
 | Voice-to-text via OpenRouter or PayPerQ |     —     |     ✅      |
 | Offline on-device voice-to-text         |     —     |     ✅      |
@@ -79,6 +80,8 @@ PayPerQ support uses PayPerQ's own API endpoints and policies. Your provider API
 | API key encrypted on-device             |     —     |     ✅      |
 
 WisprBoard is based on HeliBoard commit `b742d69e` (2 April 2026). HeliBoard changes after that commit are not in WisprBoard.
+
+Release builds of WisprBoard do not load an external glide-typing library. This is a security choice: the keyboard does not run native code from a file that you supply. Thus, on most devices, release builds have no glide typing.
 
 If you don't want AI features, stay on HeliBoard. It's wonderful as-is.
 
