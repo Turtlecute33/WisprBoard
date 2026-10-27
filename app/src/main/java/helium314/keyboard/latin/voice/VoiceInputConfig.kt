@@ -11,7 +11,6 @@ import androidx.annotation.StringRes
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import java.text.BreakIterator
-import java.util.Collections
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
@@ -120,12 +119,11 @@ internal fun safeUserFacingError(context: Context, e: Throwable, @StringRes fall
     return context.getString(fallbackResId)
 }
 
-/** Models already disclosed as having fallen back from ZDR, once per process. */
-private val zdrWarnedModels: MutableSet<String> =
-    Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
-
+/**
+ * Tells the user that this request went without ZDR. Shown on each affected request, not once per
+ * model: an IME process lives for days, so a single notice hides later downgrades.
+ */
 internal fun warnAfterZdrFallback(context: Context, model: String) {
-    if (!zdrWarnedModels.add(model)) return
     Toast.makeText(
         context,
         context.getString(R.string.voice_warning_zdr_unenforceable, model),

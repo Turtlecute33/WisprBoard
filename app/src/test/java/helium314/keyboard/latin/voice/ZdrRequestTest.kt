@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.voice
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.json.JSONObject
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowToast
 
 @RunWith(RobolectricTestRunner::class)
 class ZdrRequestTest {
@@ -25,6 +29,7 @@ class ZdrRequestTest {
         client.putProviderPreferences(body, enforceZdr = true)
 
         assertTrue(body.getJSONObject("provider").getBoolean("zdr"))
+        assertEquals("deny", body.getJSONObject("provider").getString("data_collection"))
     }
 
     @Test
@@ -57,6 +62,51 @@ class ZdrRequestTest {
         client.putProviderPreferences(body, enforceZdr = false)
 
         assertFalse(body.has("provider"))
+    }
+
+    @Test
+    fun zdrFallbackBodyKeepsTheDataCollectionFloor() {
+        val client = OpenRouterClient(
+            apiKey = "test-key",
+            model = "custom/provider-model",
+            systemPrompt = "prompt",
+            runtimeInstruction = null,
+            provider = AiProvider.OPENROUTER,
+            useZeroDataRetention = true,
+        )
+
+        // Without a provider object OpenRouter uses data_collection "allow".
+        val provider = client.buildTextRequestBody("text", enforceZdr = false).getJSONObject("provider")
+
+        assertFalse(provider.has("zdr"))
+        assertEquals("deny", provider.getString("data_collection"))
+    }
+
+    @Test
+    fun payPerQGetsNoProviderPreferences() {
+        val body = JSONObject()
+        val client = OpenRouterClient(
+            apiKey = "test-key",
+            model = "custom/provider-model",
+            systemPrompt = "prompt",
+            runtimeInstruction = null,
+            provider = AiProvider.PAYPERQ,
+            useZeroDataRetention = true,
+        )
+
+        client.putProviderPreferences(body, enforceZdr = false)
+
+        assertFalse(body.has("provider"))
+    }
+
+    @Test
+    fun eachZdrFallbackShowsTheWarning() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+
+        warnAfterZdrFallback(context, "custom/provider-model")
+        warnAfterZdrFallback(context, "custom/provider-model")
+
+        assertEquals(2, ShadowToast.shownToastCount())
     }
 
     @Test

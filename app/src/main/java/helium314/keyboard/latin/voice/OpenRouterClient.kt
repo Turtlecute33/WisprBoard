@@ -281,8 +281,9 @@ class OpenRouterClient(
             withReasoningFallback(label, requestZdr, retryTimeouts) { request(requestZdr) }
         } catch (e: OpenRouterException) {
             if (!requestZdr || !e.isZdrRouteUnavailable()) throw e
-            // ZDR is a preference, not a hard requirement. Retry once through normal routing so
-            // unsupported, custom, or temporarily unavailable ZDR routes do not break the feature.
+            // ZDR is a preference, not a hard requirement. Retry once without the ZDR constraint,
+            // but keep the data_collection "deny" floor (see putProviderPreferences), so that the
+            // retry never goes to a provider that can store or train on the data.
             if (isZdrRouteVerdictCacheable(e.statusCode, e.errorBody)) markZdrRouteUnavailable(model)
             didFallbackFromZdr = true
             withReasoningFallback(label, false, retryTimeouts) { request(false) }
@@ -470,8 +471,8 @@ class OpenRouterClient(
 
     /**
      * Chat-only request tuning. Deliberately separate from [putProviderPreferences], which returns
-     * early when ZDR is off — folding the two together would silently drop the tuning on every
-     * non-ZDR request, including the ZDR-fallback attempt.
+     * early when the ZDR setting is off — folding the two together would silently drop the tuning
+     * on every request with ZDR off.
      *
      * Only `reasoning` is sent. `temperature` is deliberately absent: the shipped default text
      * model rejects a non-default temperature with a 400, which is non-retryable here and would
@@ -492,10 +493,16 @@ class OpenRouterClient(
     }
 
     internal fun putProviderPreferences(body: JSONObject, enforceZdr: Boolean) {
-        if (!enforceZdr || provider != AiProvider.OPENROUTER) return
+        if (provider != AiProvider.OPENROUTER || !useZeroDataRetention) return
         // ZDR is a best-effort preference: every enabled OpenRouter request asks for it first.
-        // If routing cannot satisfy the constraint, withOptionalZdr retries without it.
-        body.put("provider", JSONObject().apply { put("zdr", true) })
+        // If routing cannot satisfy the constraint, withOptionalZdr retries without it. The
+        // retry still sends data_collection "deny": without a provider object OpenRouter uses
+        // "allow", which permits providers that store data and train on it (report
+        // TURTLEBOARD-PRIV-001).
+        body.put("provider", JSONObject().apply {
+            if (enforceZdr) put("zdr", true)
+            put("data_collection", "deny")
+        })
     }
 
     private fun buildSystemMessage(): JSONObject {

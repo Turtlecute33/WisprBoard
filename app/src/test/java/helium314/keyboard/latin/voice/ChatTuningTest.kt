@@ -46,10 +46,11 @@ class ChatTuningTest {
 
     @Test
     fun tuningSurvivesTheNonZdrFallbackAttempt() {
-        // Regression guard: folding this into putProviderPreferences, which returns early when ZDR
-        // is off, would silently drop the flag on exactly the retry the ZDR fallback performs.
+        // Regression guard: the tuning must not depend on the ZDR constraint, which the ZDR
+        // fallback drops. The fallback keeps only the data_collection floor (TURTLEBOARD-PRIV-001).
         val body = client().buildTextRequestBody("fix this", enforceZdr = false)
-        assertFalse(body.has("provider"))
+        assertFalse(body.getJSONObject("provider").has("zdr"))
+        assertEquals("deny", body.getJSONObject("provider").getString("data_collection"))
         assertFalse(body.getJSONObject("reasoning").getBoolean("enabled"))
     }
 

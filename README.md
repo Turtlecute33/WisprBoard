@@ -60,7 +60,7 @@ Cloud AI stays the default, and Text Fix is unaffected either way.
 
 ## Zero Data Retention
 
-OpenRouter is the default provider, and WisprBoard asks OpenRouter for **zero-data-retention endpoints by default**. When your model offers a [ZDR route](https://openrouter.ai/docs/use-cases/zero-data-retention), your audio and text aren't logged, stored, or used for training. If a model doesn't offer one, WisprBoard tells you and falls back so things still work. You can turn the setting off if you'd rather.
+OpenRouter is the default provider, and WisprBoard asks OpenRouter for **zero-data-retention endpoints by default**. When your model offers a [ZDR route](https://openrouter.ai/docs/use-cases/zero-data-retention), your audio and text aren't logged, stored, or used for training. If a model doesn't offer one, WisprBoard tells you on each request and sends it only to providers that do not collect your data. If the model has no such provider, the request fails. You can turn the setting off if you'd rather.
 
 PayPerQ support uses PayPerQ's own API endpoints and policies. Your provider API keys are encrypted with the Android Keystore, excluded from cloud backups, and never written to logs. AI is opt-in: both features stay off until you paste a key in.
 
