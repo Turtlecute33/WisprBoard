@@ -1265,6 +1265,8 @@ New dictionary:
     <string name="ai_error_bad_key">Your API key was rejected. Check it in WisprBoard Settings.</string>
     <string name="ai_error_out_of_credit">Your provider account is out of credit. Top it up to keep using AI features.</string>
     <string name="ai_error_model_not_found">That model is no longer available. Pick another one in WisprBoard Settings.</string>
+    <!-- HTTP 404 "matching your data policy": the model is there, but each provider of it can collect data -->
+    <string name="ai_error_no_private_provider">No provider of this model meets your privacy settings. Pick another model.</string>
     <string name="ai_error_rejected_request">The model did not accept this request. Try a different model.</string>
     <!-- HTTP 403: on OpenRouter a moderation refusal, not a bad API key -->
     <string name="ai_error_refused_content">The AI provider refused this content.</string>

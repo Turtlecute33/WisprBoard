@@ -111,4 +111,13 @@ class VoiceInputConfigTest {
         assertNull(actionableErrorResId(-1))
         assertNull(actionableErrorResId(418))
     }
+
+    @Test
+    fun dataPolicyRefusalIsNotAMissingModel() {
+        // The ZDR fallback keeps the data_collection "deny" floor, and OpenRouter refuses a model
+        // whose providers all collect data with this 404.
+        assertTrue(isDataPolicyRefusal(404, "No endpoints found matching your data policy (Free model publication)."))
+        assertFalse(isDataPolicyRefusal(404, "No endpoints found for some/model."))
+        assertFalse(isDataPolicyRefusal(400, "No endpoints found matching your data policy"))
+    }
 }

@@ -110,6 +110,14 @@ internal fun actionableErrorResId(statusCode: Int): Int? = when (statusCode) {
     else -> null
 }
 
+/**
+ * True for the OpenRouter 404 "No endpoints found matching your data policy". The model is there,
+ * but no provider of it meets the privacy settings (the data_collection "deny" floor of PRIV-001
+ * or the account settings), so the text must not say that the model is no longer available.
+ */
+internal fun isDataPolicyRefusal(statusCode: Int, errorBody: String): Boolean =
+    statusCode == 404 && errorBody.contains("data policy", ignoreCase = true)
+
 private val SENSITIVE_USER_FACING_PATTERNS: List<Pair<Regex, String>> = listOf(
     Regex("(?i)Bearer\\s+\\S+") to "Bearer ***",
     Regex("(?i)(\"?api[_-]?key\"?\\s*[:=]\\s*\"?)[^\"\\s,}]+") to "$1***",
@@ -126,6 +134,7 @@ internal fun safeUserFacingError(context: Context, e: Throwable, @StringRes fall
         // An empty transcript describes the recording, not the service. Saying so keeps the user
         // from re-recording to work around what reads like a provider outage.
         if (e.statusCode == OpenRouterClient.STATUS_NO_SPEECH) return context.getString(R.string.voice_error_silent)
+        if (isDataPolicyRefusal(e.statusCode, e.errorBody)) return context.getString(R.string.ai_error_no_private_provider)
         actionableErrorResId(e.statusCode)?.let { return context.getString(it) }
         val raw = e.message?.takeIf { it.isNotBlank() }
         if (BuildConfig.DEBUG && raw != null) {
