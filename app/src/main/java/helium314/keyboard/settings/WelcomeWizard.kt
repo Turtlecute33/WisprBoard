@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings as AndroidSettings
@@ -15,6 +16,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -194,6 +196,15 @@ fun WelcomeWizard(
     val stepBackgroundColor = MaterialTheme.colorScheme.surface
     val actionContainerColor = Color(ContextCompat.getColor(ctx, R.color.setup_step_background))
     val primaryActionColor = MaterialTheme.colorScheme.primary
+    // The text on filled actions stays white. The dynamic dark scheme (Android 12+) has a light
+    // primary, so filled actions use inversePrimary there, a darker tone of the same hue (UX-018).
+    // Outlines and the progress bar keep primary, because they are on the dark background.
+    val primaryActionContainerColor =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isSystemInDarkTheme()) {
+            MaterialTheme.colorScheme.inversePrimary
+        } else {
+            primaryActionColor
+        }
     val primaryActionContentColor = Color.White
     val infoContainerColor = MaterialTheme.colorScheme.primaryContainer
     val infoContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -231,7 +242,7 @@ fun WelcomeWizard(
                 val isSelected = currentStep == it
                 Surface(
                     shape = CircleShape,
-                    color = if (isSelected) primaryActionColor else actionContainerColor.copy(alpha = 0.5f),
+                    color = if (isSelected) primaryActionContainerColor else actionContainerColor.copy(alpha = 0.5f),
                     contentColor = if (isSelected) primaryActionContentColor else textColorDim,
                     modifier = Modifier.size(28.dp)
                 ) {
@@ -260,7 +271,7 @@ fun WelcomeWizard(
             onClick = action,
             shape = RoundedCornerShape(20.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = primaryActionColor,
+                containerColor = primaryActionContainerColor,
                 contentColor = primaryActionContentColor
             ),
             modifier = Modifier.fillMaxWidth()
@@ -339,7 +350,7 @@ fun WelcomeWizard(
         if (step == welcomeStep)
             Step0(
                 actionContainerColor = actionContainerColor,
-                primaryActionColor = primaryActionColor,
+                primaryActionColor = primaryActionContainerColor,
                 primaryActionContentColor = primaryActionContentColor,
                 onClick = { step = enableStep }
             )
