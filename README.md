@@ -70,13 +70,15 @@ PayPerQ support uses PayPerQ's own API endpoints and policies. Your provider API
 
 |                                         | HeliBoard | WisprBoard |
 | --------------------------------------- | :-------: | :--------: |
-| Everything HeliBoard does               |     ✅     |     ✅      |
+| HeliBoard features up to 2 April 2026   |     ✅     |     ✅      |
 | Installs alongside HeliBoard            |     —     |     ✅      |
 | Voice-to-text via OpenRouter or PayPerQ |     —     |     ✅      |
 | Offline on-device voice-to-text         |     —     |     ✅      |
 | Text Fix (rewrite selected text)        |     —     |     ✅      |
 | Zero Data Retention requested by default where supported |     —     |     ✅      |
 | API key encrypted on-device             |     —     |     ✅      |
+
+WisprBoard is based on HeliBoard commit `b742d69e` (2 April 2026). HeliBoard changes after that commit are not in WisprBoard.
 
 If you don't want AI features, stay on HeliBoard. It's wonderful as-is.
 
