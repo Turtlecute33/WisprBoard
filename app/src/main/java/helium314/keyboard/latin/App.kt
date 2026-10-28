@@ -27,15 +27,13 @@ class App : Application() {
         scope.launch { // do some uncritical work in background for faster startup
             SupportedEmojis.load(this@App)
             LayoutUtilsCustom.removeMissingLayouts(this@App)
-            // Load the vault key (and run the one-time secret migration) so the first
-            // voice/text-fix request doesn't pay this cost on the IME main thread. Only when an
-            // AI feature is on or old keys wait for the migration: AI is off by default.
+            // Load the vault key so the first voice/text-fix request doesn't pay this cost on the
+            // IME main thread. Only when an AI feature is on: AI is off by default.
             val prefs = prefs()
             if (prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED)
                 || prefs.getBoolean(Settings.PREF_TEXT_FIX_ENABLED, Defaults.PREF_TEXT_FIX_ENABLED)
                 || prefs.getBoolean(Settings.PREF_TEXT_FIX_2_ENABLED, Defaults.PREF_TEXT_FIX_2_ENABLED)
                 || prefs.getBoolean(Settings.PREF_TRANSLATE_ENABLED, Defaults.PREF_TRANSLATE_ENABLED)
-                || SecretStore.hasLegacyFile(this@App)
             ) SecretStore.warmUp(this@App)
             val packageInfo = packageManager.getPackageInfo(packageName, 0)
             @Suppress("DEPRECATION")

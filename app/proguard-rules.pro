@@ -12,8 +12,3 @@
 # after upgrading to gradle 8, stack traces contain "unknown source"
 -keepattributes SourceFile,LineNumberTable
 
-# Tink (pulled in by androidx.security:security-crypto) references compile-only
-# annotations that are not on the runtime classpath. These are safe to ignore.
--dontwarn com.google.errorprone.annotations.**
--dontwarn javax.annotation.concurrent.**
--dontwarn com.google.j2objc.annotations.**

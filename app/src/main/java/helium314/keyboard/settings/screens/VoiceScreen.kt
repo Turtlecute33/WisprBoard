@@ -670,7 +670,7 @@ private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
 
     /**
      * Persists the key off the main thread. `SecretStore.setApiKey` does a synchronous
-     * `commit()` into EncryptedSharedPreferences, which means a disk write plus an AndroidKeyStore
+     * `commit()` into the vault prefs file, which means a disk write plus an AndroidKeyStore
      * round trip — hundreds of milliseconds on some devices, and it was landing on the UI thread.
      * The optimistic length update keeps the masked row in sync immediately either way.
      */

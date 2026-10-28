@@ -6,7 +6,6 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.util.Base64
 import androidx.core.content.edit
-import helium314.keyboard.compat.isUserLocked
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import java.util.concurrent.ConcurrentHashMap
@@ -16,39 +15,29 @@ import java.util.concurrent.ConcurrentHashMap
  * device supports it (API 23+). Each value is Base64(IV + AES-GCM ciphertext) in a normal
  * SharedPreferences file, in the same storage as the old encrypted file.
  *
- * Migrates once from the old EncryptedSharedPreferences file (report TURTLEBOARD-SEC-008), and
- * migrates any plaintext value in the normal prefs file on first use.
+ * Migrates any plaintext value in the normal prefs file on first use.
  */
 object SecretStore {
 
     private const val TAG = "SecretStore"
     private const val VAULT_FILE = "wisprboard_vault"
-    /** The old security-crypto file. Read once for the migration, then deleted. */
+    /** The security-crypto file of 7.12.2 and older (TURTLEBOARD-SEC-008). Only a reset deletes it. */
     private const val LEGACY_ENCRYPTED_FILE = "wisprboard_secrets"
     @Volatile private var cachedVault: Vault? = null
-    @Volatile private var legacyMigrated = false
     /** Decrypted values, so that a key press does not wait for a StrongBox decrypt each time. */
     private val plainCache = ConcurrentHashMap<String, String>()
 
     fun isSecureStorageAvailable(context: Context): Boolean = vault(context) != null
 
     /**
-     * Loads the vault key and runs the one-time migration from background code. Called at app
-     * start when an AI feature is on, so the IME's first request does not pay this cost on the
-     * input thread.
+     * Loads the vault key from background code. Called at app start when an AI feature is on, so
+     * the IME's first request does not pay this cost on the input thread.
      * Best-effort: if the keystore is transiently unhappy at boot, the next real read/write will
      * simply retry.
      */
     fun warmUp(context: Context) {
         vault(context)
     }
-
-    /**
-     * True while the old security-crypto file still holds data for the one-time migration.
-     * False before the first unlock: then the file is in locked storage, and a read throws.
-     */
-    fun hasLegacyFile(context: Context): Boolean = !legacyMigrated && !isUserLocked(context) &&
-        context.applicationContext.getSharedPreferences(LEGACY_ENCRYPTED_FILE, Context.MODE_PRIVATE).all.isNotEmpty()
 
     fun getApiKey(context: Context, prefKey: String, default: String): String {
         val vault = vault(context) ?: return default
@@ -59,7 +48,6 @@ object SecretStore {
 
     private fun readApiKey(context: Context, vault: Vault, prefKey: String, default: String): String {
         val values = vaultPrefs(context)
-        if (!values.contains(prefKey)) migrateLegacyFile(context, vault) // no-op once done
         val stored = values.getString(prefKey, null)
         if (stored != null) {
             // A blob that does not decrypt (for example after a restore or an OS update changed
@@ -122,42 +110,8 @@ object SecretStore {
                 Log.w(TAG, "Failed to open the vault: ${e.javaClass.simpleName}")
                 return@synchronized null
             }
-            migrateLegacyFile(context, vault)
             cachedVault = vault
             vault
-        }
-    }
-
-    /**
-     * One-time move from the old EncryptedSharedPreferences file: copies each API key that the
-     * vault does not have yet, then deletes the old file. If the old file does not open (for
-     * example a locked keystore), it stays, and the next read that finds no key tries again.
-     * A value that does not decrypt is lost, as before: the user enters the key again.
-     */
-    private fun migrateLegacyFile(context: Context, vault: Vault) {
-        if (legacyMigrated) return
-        synchronized(this) {
-            if (legacyMigrated) return
-            try {
-                val app = context.applicationContext
-                val raw = app.getSharedPreferences(LEGACY_ENCRYPTED_FILE, Context.MODE_PRIVATE)
-                // Nothing to move (new install or done before): do not load Tink at all.
-                if (raw.all.isNotEmpty()) {
-                    val legacy = EncryptedPrefsFactory.create(app, LEGACY_ENCRYPTED_FILE)
-                    val values = vaultPrefs(context)
-                    for (prefKey in AiProvider.entries.map { it.apiKeyPrefKey() }) {
-                        if (values.contains(prefKey)) continue // a key set in this version wins
-                        val value = runCatching { legacy.getString(prefKey, null) }.getOrNull() ?: continue
-                        if (!put(context, vault, prefKey, value)) return // keep the old file for a retry
-                    }
-                    // If this write fails, the next start finds the keys in the vault and clears again.
-                    raw.edit(commit = true) { clear() }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) app.deleteSharedPreferences(LEGACY_ENCRYPTED_FILE)
-                }
-                legacyMigrated = true
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to migrate the old encrypted prefs: ${e.javaClass.simpleName}")
-            }
         }
     }
 
@@ -183,20 +137,3 @@ object SecretStore {
     }
 }
 
-/**
- * Opens the old security-crypto file, only for the one-time migration in [SecretStore]. Remove it
- * with the security-crypto dependency one release after the migration.
- */
-private object EncryptedPrefsFactory {
-    fun create(context: Context, name: String): SharedPreferences {
-        val spec = androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-        val masterKeyAlias = androidx.security.crypto.MasterKeys.getOrCreate(spec)
-        return androidx.security.crypto.EncryptedSharedPreferences.create(
-            name,
-            masterKeyAlias,
-            context.applicationContext,
-            androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
-    }
-}
