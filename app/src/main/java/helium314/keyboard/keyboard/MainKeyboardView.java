@@ -360,6 +360,17 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             Log.w(TAG, "Cannot find android.R.id.content view to add DrawingPreviewPlacerView");
             return;
         }
+        final ViewParent parent = mDrawingPreviewPlacerView.getParent();
+        if (parent == windowContentView) return;
+        if (parent instanceof ViewGroup group) group.removeView(mDrawingPreviewPlacerView);
+        // Remove the placer of an earlier input view here, not in onDetachedFromWindow: when the
+        // IME window closes, a removal there changes the children of a parent that is in its
+        // detach loop, and the service stop crashes.
+        for (int i = windowContentView.getChildCount() - 1; i >= 0; i--) {
+            if (windowContentView.getChildAt(i) instanceof DrawingPreviewPlacerView) {
+                windowContentView.removeViewAt(i);
+            }
+        }
         windowContentView.addView(mDrawingPreviewPlacerView);
     }
 
@@ -502,12 +513,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        final ViewParent parent = mDrawingPreviewPlacerView.getParent();
-        if (parent instanceof ViewGroup) {
-            ((ViewGroup) parent).removeView(mDrawingPreviewPlacerView);
-        } else {
-            mDrawingPreviewPlacerView.removeAllViews();
-        }
+        mDrawingPreviewPlacerView.removeAllViews();
     }
 
     // Implements {@link DrawingProxy@showPopupKeysKeyboard(Key,PointerTracker)}.
