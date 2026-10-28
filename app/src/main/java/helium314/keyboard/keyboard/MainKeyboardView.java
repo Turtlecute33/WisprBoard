@@ -24,7 +24,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewParent;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -355,21 +354,14 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             return;
         }
         final ViewGroup windowContentView = rootView.findViewById(android.R.id.content);
+        // Remove the placer here, not in onDetachedFromWindow: when the IME window closes, the
+        // parent is in its detach loop, and a removal there crashes the service stop.
+        if (mDrawingPreviewPlacerView.getParent() instanceof ViewGroup vg)
+            vg.removeView(mDrawingPreviewPlacerView);
         // Note: It'd be very weird if we get null by android.R.id.content.
         if (windowContentView == null) {
             Log.w(TAG, "Cannot find android.R.id.content view to add DrawingPreviewPlacerView");
             return;
-        }
-        final ViewParent parent = mDrawingPreviewPlacerView.getParent();
-        if (parent == windowContentView) return;
-        if (parent instanceof ViewGroup group) group.removeView(mDrawingPreviewPlacerView);
-        // Remove the placer of an earlier input view here, not in onDetachedFromWindow: when the
-        // IME window closes, a removal there changes the children of a parent that is in its
-        // detach loop, and the service stop crashes.
-        for (int i = windowContentView.getChildCount() - 1; i >= 0; i--) {
-            if (windowContentView.getChildAt(i) instanceof DrawingPreviewPlacerView) {
-                windowContentView.removeViewAt(i);
-            }
         }
         windowContentView.addView(mDrawingPreviewPlacerView);
     }
