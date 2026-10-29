@@ -37,7 +37,6 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.database.ClipboardDao
 import helium314.keyboard.latin.personalization.PersonalizationHelper
-import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -449,14 +448,23 @@ internal fun apiKeysToRestore(backupKeys: Map<String, String>, replaceApiKeys: B
 /**
  * A restore keeps the current ZDR choice (SEC-002), so a file from another person cannot turn off
  * zero data retention. [current] null means that the choice is not set (the default applies).
+ * The key is valid only as a boolean, so the restore removes it from all other types.
  */
 internal fun SettingsSnapshot.keepingZdrChoice(current: Boolean?): SettingsSnapshot {
-    val others = booleans - Settings.PREF_OPENROUTER_ZDR_ENABLED
-    return copy(booleans = if (current == null) others else others + (Settings.PREF_OPENROUTER_ZDR_ENABLED to current))
+    val key = Settings.PREF_OPENROUTER_ZDR_ENABLED
+    val others = booleans - key
+    return SettingsSnapshot(
+        booleans = if (current == null) others else others + (key to current),
+        ints = ints - key,
+        longs = longs - key,
+        floats = floats - key,
+        strings = strings - key,
+        stringSets = stringSets - key,
+    )
 }
 
-private fun SharedPreferences.zdrChoice(): Boolean? =
-    if (contains(Settings.PREF_OPENROUTER_ZDR_ENABLED)) getBoolean(Settings.PREF_OPENROUTER_ZDR_ENABLED, Defaults.PREF_OPENROUTER_ZDR_ENABLED) else null
+// A value that is not a boolean counts as not set, so the restore removes it and the default applies.
+private fun SharedPreferences.zdrChoice(): Boolean? = all[Settings.PREF_OPENROUTER_ZDR_ENABLED] as? Boolean
 
 private val AI_SETTING_PREFIXES = listOf("ai_", "voice_", "text_fix_", "translate_", "openrouter_")
 

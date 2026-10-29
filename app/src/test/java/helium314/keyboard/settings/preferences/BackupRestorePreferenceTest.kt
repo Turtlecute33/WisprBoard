@@ -93,6 +93,11 @@ class BackupRestorePreferenceTest {
         assertEquals(false, zdrOn.keepingZdrChoice(current = false).booleans[Settings.PREF_OPENROUTER_ZDR_ENABLED])
         // Not set now: stays not set, so the default (on) applies.
         assertEquals(mapOf("safe_boolean" to true), zdrOff.keepingZdrChoice(current = null).booleans)
+        // A ZDR key with a different type cannot replace the kept choice.
+        val zdrAsString = SettingsSnapshot(strings = mapOf(Settings.PREF_OPENROUTER_ZDR_ENABLED to "x", "safe_string" to "value"))
+        val kept = zdrAsString.keepingZdrChoice(current = true)
+        assertEquals(mapOf("safe_string" to "value"), kept.strings)
+        assertEquals(mapOf(Settings.PREF_OPENROUTER_ZDR_ENABLED to true), kept.booleans)
     }
 
     @Test
