@@ -17,7 +17,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 | TURTLEBOARD-OPT-02 | Stop the per-vsync pulse redraw while live audio drives the meter | battery | S | low | applied |
 | TURTLEBOARD-OPT-03 | Replace the four copied term-list rows in VoiceScreen with one composable and one parser | minimalism | S | low | applied |
 | TURTLEBOARD-OPT-04 | Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first) | ui-ux | M | medium | rejected (owner, 2026-10-30) |
-| TURTLEBOARD-OPT-05 | Do not cache a clip that the database refused to insert | stability | S | low | approved |
+| TURTLEBOARD-OPT-05 | Do not cache a clip that the database refused to insert | stability | S | low | applied |
 | TURTLEBOARD-OPT-06 | Obey the Voice haptic setting when the maximum duration is reached | ui-ux | S | low | approved |
 | TURTLEBOARD-OPT-07 | Always give the recording watchdog the recorder's completion | stability | S | low | approved |
 | TURTLEBOARD-OPT-08 | Keep the setup wizard's key-save coroutine alive so that a failed save is reported | stability | S | low | approved |
@@ -86,7 +86,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: No change to the CLIPBOARD schema, the columns or the stored rows. The change only skips caching a row that the database did not write. The lines come from upstream c56c5715, and line 92 from a0db63f5. Neither is a 'Report:' commit. The locked-device clipboard block (21a82527) is in ClipboardHistoryManager and LatinIME and does not change. No dependency.
 - **Verification**: The stability lens confirmed the path and that nothing removes duplicates by id. Separate privacy note, not part of this change: the framework insert() logs 'Error inserting ' + ContentValues, which puts the clip text in logcat. insertOrThrow in a try/catch would also stop that log, for about +3 lines. Verify: a unit test that makes insert fail (read-only database) and checks that the cache stays empty, or a code read, because no clipboard DAO test exists today.
 - **Effort**: S. **Risk**: low. **Net lines**: about +1 (estimate).
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures; the new ClipboardDaoTest makes each insert fail with a temporary trigger and checks that the cache stays empty; without the fix it fails with 2 cached clips) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the clipboard panel on an emulator or device.
+- **Status**: applied
 
 ### TURTLEBOARD-OPT-06: Obey the Voice haptic setting when the maximum duration is reached
 - **What**: Each voice vibration checks isVoiceHapticEnabled(): start (692), transcribing (703), success (760) and error (768). The 50 ms buzz at the maximum recording length (775) does not check it. A user who turned off 'Voice > Haptic feedback' ('Vibrate when recording starts and stops') still feels a buzz when a dictation stops at the limit, on the cloud engine and on the on-device engine.

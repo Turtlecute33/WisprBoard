@@ -85,6 +85,7 @@ class ClipboardDao private constructor(private val db: Database) {
         cv.put(COLUMN_PINNED, pinned)
         cv.put(COLUMN_TEXT, text)
         val rowId = db.writableDatabase.insert(TABLE, null, cv)
+        if (rowId == -1L) return // insert failed: do not cache a clip that is not in the database
 
         val entry = ClipboardHistoryEntry(rowId, timestamp, pinned, text)
         cache.add(entry)
