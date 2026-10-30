@@ -19,7 +19,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 | TURTLEBOARD-OPT-04 | Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first) | ui-ux | M | medium | rejected (owner, 2026-10-30) |
 | TURTLEBOARD-OPT-05 | Do not cache a clip that the database refused to insert | stability | S | low | applied |
 | TURTLEBOARD-OPT-06 | Obey the Voice haptic setting when the maximum duration is reached | ui-ux | S | low | applied |
-| TURTLEBOARD-OPT-07 | Always give the recording watchdog the recorder's completion | stability | S | low | approved |
+| TURTLEBOARD-OPT-07 | Always give the recording watchdog the recorder's completion | stability | S | low | applied |
 | TURTLEBOARD-OPT-08 | Keep the setup wizard's key-save coroutine alive so that a failed save is reported | stability | S | low | approved |
 | TURTLEBOARD-OPT-09 | Move the provider-switch model reset to one function in AiProvider.kt | minimalism | S | low | approved |
 | TURTLEBOARD-OPT-10 | Delete the eight fork strings that no code or resource uses | minimalism | S | low | approved |
@@ -111,7 +111,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: Changes only the return condition of a getter that has one caller. The privacy-sensitive capture flag (809a4923), the credential-encrypted recording path (07e83cb2), the upload and the file deletion do not change. Line 134 comes from 0a0ad1c8 (7.9.0), not a 'Report:' commit. No storage format, preference or dependency change.
 - **Verification**: The stability lens confirmed the race window and that a normal start always gets a watchdog, so the normal path does not change. The trigger is rare. No recorder test exists. Verify by a code read and, on the emulator, by a dictation with the microphone blocked by another app (startRecording fails): the overlay must close with 'recording interrupted'.
 - **Effort**: S. **Risk**: low. **Net lines**: about 0 (estimate).
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check on an emulator or device of a dictation that fails at once (microphone blocked by another app).
+- **Status**: applied
 
 ### TURTLEBOARD-OPT-08: Keep the setup wizard's key-save coroutine alive so that a failed save is reported
 - **What**: The wizard gets the scope for the API-key save from rememberCoroutineScope() inside `if (showApiKeyDialog)`. onConfirmed launches the save, then sets showApiKeyDialog = false, and ThreeButtonAlertDialog also calls onDismissRequest. On the next frame the dialog leaves composition, and its scope is cancelled. In most cases SecretStore.setApiKey still runs and saves the key. But withContext(IO) has prompt cancellation and throws CancellationException on return. So the failure branch (toast, revert of apiKeySet) cannot run when the keystore encrypt plus commit() takes longer than one frame. A failed save then shows as a success. It is not certain that setApiKey runs: if the scope is cancelled before the launched coroutine starts, or before withContext enters, setApiKey does not run. The wizard has already set apiKeySet = true and called onApiKeyConfigured, so a key that was not saved can show as saved.

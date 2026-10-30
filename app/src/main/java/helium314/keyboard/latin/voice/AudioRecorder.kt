@@ -128,10 +128,12 @@ class AudioRecorder(
         }
 
     /**
-     * The in-flight recording's completion, or null when nothing is running. Unlike [stop] this
-     * does not request a stop — it lets a caller observe a recording that ended on its own.
+     * The completion of the recording that [start] launched, or null if no recording started.
+     * It stays set after the loop ends, so a caller also sees a loop that failed at once. Unlike
+     * [stop] this does not request a stop — it lets a caller observe a recording that ended on
+     * its own.
      */
-    fun completionOrNull(): Deferred<File?>? = if (recordingJob != null) completion else null
+    fun completionOrNull(): Deferred<File?>? = completion
 
     /** Captures the elapsed time before [recordingStartMs] is cleared. Idempotent per session. */
     private fun freezeDuration() {
