@@ -33,7 +33,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: The change removes a skip, so the PRIV-007 disclosure shows in more cases. This makes a security-review change stronger and does not weaken it. The deleted lines come from aa610f30, not from a 'Report:' commit. The preference key and its stored value do not change. No dependency.
 - **Verification**: Read TranslateScreen.kt:90-110 and `git show 35d4b6d2` again in this pass. No UI test exists. Verify on the emulator: turn on Text Fix, then turn on Translate. The Translate dialog must show and name the clipboard.
 - **Effort**: S. **Risk**: low. **Net lines**: about -4 (estimate).
-- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the dialog on an emulator or device.
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Device (emulator, API 35): pass. With Text Fix on, the Translate dialog shows and names the clipboard. The skip between the two Text Fix buttons still works.
 - **Status**: applied
 
 ### TURTLEBOARD-OPT-02: Stop the per-vsync pulse redraw while live audio drives the meter
@@ -57,7 +57,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: Settings UI and a pure parser only. The same four pref keys get the same comma-joined value, so stored data and existing installs do not change. No line comes from a security-review commit. No API key, SecretStore or encryption code changes. No dependency.
 - **Verification**: The lean lens confirmed the four bodies, the call sites, the defaults and the parsers. It also merged the parser half of its 'forwarding aliases' item into this one. Test: run VoiceInputConfigTest (the parser test stays). Verify the UI by hand: edit each of the four rows, then read the stored value in the debug build.
 - **Effort**: S. **Risk**: low. **Net lines**: about -110 (estimate).
-- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (VoiceInputConfigTest: 9 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the four rows and their stored values on an emulator or device.
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (VoiceInputConfigTest: 9 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Device (emulator, API 35): pass. Each of the four rows stores a clean comma-joined list. The dialog keeps its text on rotation.
 - **Status**: applied
 
 ### TURTLEBOARD-OPT-04: Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first)
@@ -86,7 +86,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: No change to the CLIPBOARD schema, the columns or the stored rows. The change only skips caching a row that the database did not write. The lines come from upstream c56c5715, and line 92 from a0db63f5. Neither is a 'Report:' commit. The locked-device clipboard block (21a82527) is in ClipboardHistoryManager and LatinIME and does not change. No dependency.
 - **Verification**: The stability lens confirmed the path and that nothing removes duplicates by id. Separate privacy note, not part of this change: the framework insert() logs 'Error inserting ' + ContentValues, which puts the clip text in logcat. insertOrThrow in a try/catch would also stop that log, for about +3 lines. Verify: a unit test that makes insert fail (read-only database) and checks that the cache stays empty, or a code read, because no clipboard DAO test exists today.
 - **Effort**: S. **Risk**: low. **Net lines**: about +1 (estimate).
-- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures; the new ClipboardDaoTest makes each insert fail with a temporary trigger and checks that the cache stays empty; without the fix it fails with 2 cached clips) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the clipboard panel on an emulator or device.
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures; the new ClipboardDaoTest makes each insert fail with a temporary trigger and checks that the cache stays empty; without the fix it fails with 2 cached clips) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Device (emulator, API 35): pass. Pin, edit and delete work. After failed inserts, the panel and the search show no phantom clip and do not crash.
 - **Status**: applied
 
 ### TURTLEBOARD-OPT-06: Obey the Voice haptic setting when the maximum duration is reached
@@ -99,7 +99,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Verification**: The path runs only when a dictation reaches the limit (default 90 s). No test exists. Verify on the emulator or phone: set the voice length to 15 s, turn off Voice haptics, dictate past the limit, and check for no buzz. TURTLEBOARD-OPT-04 step 4 changes the next line (LatinIME.java:776). If you apply both items, a revert of one of them can give a merge conflict on these adjacent lines. Then fix it by hand.
 - **Effort**: S. **Risk**: low. **Net lines**: about 0 (estimate).
 - **Owner decision**: TURTLEBOARD-OPT-04 is rejected, so the toast line next to the vibrate line stays as it is.
-- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the buzz at the time limit on an emulator or device.
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Device (emulator, API 35): pass for the setting text and the key write. Not checked: the buzz at the time limit.
 - **Status**: applied
 
 ### TURTLEBOARD-OPT-07: Always give the recording watchdog the recorder's completion
@@ -118,12 +118,13 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **What**: The wizard gets the scope for the API-key save from rememberCoroutineScope() inside `if (showApiKeyDialog)`. onConfirmed launches the save, then sets showApiKeyDialog = false, and ThreeButtonAlertDialog also calls onDismissRequest. On the next frame the dialog leaves composition, and its scope is cancelled. In most cases SecretStore.setApiKey still runs and saves the key. But withContext(IO) has prompt cancellation and throws CancellationException on return. So the failure branch (toast, revert of apiKeySet) cannot run when the keystore encrypt plus commit() takes longer than one frame. A failed save then shows as a success. It is not certain that setApiKey runs: if the scope is cancelled before the launched coroutine starts, or before withContext enters, setApiKey does not run. The wizard has already set apiKeySet = true and called onApiKeyConfigured, so a key that was not saved can show as saved.
 - **Where**: app/src/main/java/helium314/keyboard/settings/WelcomeWizard.kt:569-592 (AiProviderSetupStep, API key TextInputDialog, scope at line 570); app/src/main/java/helium314/keyboard/settings/dialogs/ThreeButtonAlertDialog.kt:82
 - **Change**: Move `val scope = rememberCoroutineScope()` from line 570 (inside `if (showApiKeyDialog)`) to the top of AiProviderSetupStep, next to the other remembered state (about line 491). AiProviderSetupStep stays composed for step in providerStep..voiceStep (WelcomeWizard.kt:387), and this includes the step that onApiKeyConfigured goes to. VoiceScreen.VoiceApiKeyPreference (VoiceScreen.kt:661) already uses a function-level scope.
-- **Benefit**: If the key cannot be stored (setApiKey throws when commit() returns false or when the keystore encrypt fails), the wizard shows 'secure storage unavailable' and marks the key as not set. Today it says that setup worked, and the user finds out only at the first dictation or Text Fix.
+- **Benefit**: If the key cannot be stored (setApiKey throws when commit() returns false or when the keystore encrypt fails), the wizard shows 'secure storage unavailable'. After a keystore encrypt failure, it also marks the key as not set. After a failed commit(), the key shows as set until the process restarts (see Known limit). Before this change, it says that setup worked, and the user finds out only at the first dictation or Text Fix.
 - **Evidence**: WelcomeWizard.kt:569-570 `if (showApiKeyDialog) { val scope = rememberCoroutineScope()`; :578-589 `scope.launch { withContext(IO) { runCatching { SecretStore.setApiKey(...) }.isFailure }; if (failed) { Toast; apiKeySet = stillSet } }`; :590 showApiKeyDialog = false; :591 onApiKeyConfigured(). ThreeButtonAlertDialog.kt:82 `onClick = { onConfirmed(); onDismissRequest() }`. SecretStore.kt:78-84 setApiKey throws on vault null or on a false commit. VoiceScreen.kt:930 records the same class of bug (a scope cancelled when its composable leaves).
 - **Safety**: Only moves where the coroutine scope lives. SecretStore.setApiKey, the vault, the stored blob format and the preference keys do not change. The isSecureStorageAvailable pre-check (WelcomeWizard.kt:737) stays. Line 570 comes from aa610f30 (7.7.0) and the dialog lines from bd07dbf9 and cfc44a5e. None is a 'Report:' commit. No dependency.
 - **Verification**: The stability lens found that the key is usually saved today, so usually only the error report is lost. A later audit found that the save itself can also be skipped when the scope is cancelled before setApiKey starts (see What), so the bug can be worse. The failure modes after the pre-check are rare. No wizard test exists. Verify by a code read. A forced failure needs a debug-only throw in setApiKey, which must not be committed.
 - **Effort**: S. **Risk**: low. **Net lines**: about 0 (estimate).
-- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the wizard key save on an emulator or device, and no forced save failure.
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Device (emulator, API 35): pass. A fake key saves and shows as set after a restart. A forced save failure shows the 'secure storage unavailable' toast after the dialog closes. Not checked: a dictation with a real key.
+- **Known limit**: When SharedPreferences commit() returns false, the value stays in memory. SecretStore.getApiKey reads it back, so the key shows as set until the process restarts. The emulator showed this. The cause is in SecretStore.put (security-review code, TURTLEBOARD-SEC-008), which OPT-08 did not change. It needs a failed disk write (for example a full disk), so it is rare. Owner decision (2026-10-30): record only, no code change.
 - **Status**: applied
 
 ### TURTLEBOARD-OPT-09: Move the provider-switch model reset to one function in AiProvider.kt
@@ -135,7 +136,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: The same pref keys get the same default values as now. No new key and no format change. The wizard does two apply() calls in place of one, with the same end state. API key code (refreshApiKeyState, SecretStore) stays where it is. No security-review line changes. No dependency.
 - **Verification**: The lean lens confirmed both copies. No test covers the reset. Verify on the emulator: pick a model that only one provider has, switch the provider in Settings and in the wizard, and check that the model goes back to the default in both.
 - **Effort**: S. **Risk**: low. **Net lines**: about -25 (estimate).
-- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (376 tests, 0 failures, with a new reset test in VoiceScreenLogicTest) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the provider switch in Settings or in the wizard on an emulator or device.
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (376 tests, 0 failures, with a new reset test in VoiceScreenLogicTest) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Device (emulator, API 35): pass. In Settings and in the wizard, a model that only one provider has goes back to the default.
 - **Status**: applied
 
 ### TURTLEBOARD-OPT-10: Delete the eight fork strings that no code or resource uses
@@ -147,7 +148,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: Text resources only. No translated copies exist, so the CLAUDE.md Weblate rule is kept. No pref key, storage format or security-review line changes. No dependency.
 - **Verification**: The lean lens ran the reference search again for all 8 names and checked each getIdentifier path, also the empty-prefix lookup in ReorderSwitchPreference. Verify: the build and lint pass (aapt fails on a missing @string reference), and grep for the 8 names returns nothing.
 - **Effort**: S. **Risk**: low. **Net lines**: about -18 (estimate).
-- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (376 tests, 0 failures), `./gradlew :app:assembleDebugNoMinify`, `./gradlew :app:assembleDebug` and `./gradlew :app:lintDebug` (JDK 21) passed. A grep for the 8 names in the repo returns only this file. The stale voice_prompt_preset_custom UnusedResources block in app/lint-baseline.xml is also removed, because its string is now gone. Not checked: no run-time check of the settings screens on an emulator or device.
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (376 tests, 0 failures), `./gradlew :app:assembleDebugNoMinify`, `./gradlew :app:assembleDebug` and `./gradlew :app:lintDebug` (JDK 21) passed. A grep for the 8 names in the repo returns only this file. The stale voice_prompt_preset_custom UnusedResources block in app/lint-baseline.xml is also removed, because its string is now gone. Device (emulator, API 35): pass. The 8 strings are not in the debug APK, and no text is missing in the Voice, Text Fix and Translate settings and the wizard.
 - **Status**: applied
 
 ## Areas in good shape
@@ -202,15 +203,38 @@ Size of the unsigned release APK (versionName 7.13.3, versionCode 8026). Both AP
 
 Not applied: TURTLEBOARD-OPT-04. The 38 Toast calls and the double Text Fix error message stay as they are.
 
-The owner must still check these by hand. No item got a run-time check.
+The emulator checked OPT-01, OPT-03, OPT-05, OPT-09 and OPT-10 later. The checks by hand that stay open for the owner are in 'Still for the owner' in Device checks.
+
+### Device checks (2026-10-30)
+A debug build (7.13.3, versionCode 8026) of branch optimize at 1fff0611 ran on an emulator with Android 15 (API 35), with no real account or server. Where the table says so, local fakes replaced real failures: a fake API key, a temporary SQLite trigger and a read-only prefs directory.
+
+| Item | Check | Result |
+|---|---|---|
+| TURTLEBOARD-OPT-01 | Turn on Text Fix, then Translate. The Translate dialog shows and names the clipboard. | pass. The dialog also survives rotation. |
+| TURTLEBOARD-OPT-01 | The skip between the two Text Fix buttons still works. | pass |
+| TURTLEBOARD-OPT-02 | Dictate 10 s with animations on and off, count frames with gfxinfo. | not possible: no real key, no speech recognizer on the emulator, and no real audio level |
+| TURTLEBOARD-OPT-03 | Edit the four voice term-list rows and read the stored values. | pass. Each row stores a clean comma-joined list, and an empty field stores ''. |
+| TURTLEBOARD-OPT-03 | The term-list dialog survives rotation. | pass |
+| TURTLEBOARD-OPT-05 | Pin, edit and delete a clip in the clipboard panel. | pass |
+| TURTLEBOARD-OPT-05 | Failed inserts (local fake: a trigger that blocks inserts) are not cached. The panel and search do not crash. | pass. No phantom clip. The framework log contains the clip text, as the OPT-05 privacy note says. |
+| TURTLEBOARD-OPT-06 | Text of the Voice haptic setting, and the switch writes its key. | pass |
+| TURTLEBOARD-OPT-06 | Length 15 s, Voice haptics off, dictate past the limit, no buzz. | not possible: needs a dictation |
+| TURTLEBOARD-OPT-07 | Block the mic, start a dictation, the overlay closes with 'recording interrupted'. | not possible: needs a dictation and a mic that fails at the first read |
+| TURTLEBOARD-OPT-08 | Save a fake API key in the wizard. The key shows as set. | pass, also after a restart. A dictation with the key is not possible. |
+| TURTLEBOARD-OPT-08 | Forced save failure (local fake: read-only prefs directory). The failure shows after the dialog closes. | pass. The 'secure storage unavailable' toast shows. |
+| TURTLEBOARD-OPT-08 | After a failed save, the key is marked as not set (the Benefit claim). | fail. The key shows as set until the process restarts. See Known limit in OPT-08. |
+| TURTLEBOARD-OPT-09 | Switch the provider in Settings with a model that only one provider has. | pass. The model goes back to the default. A model that both providers have stays. |
+| TURTLEBOARD-OPT-09 | The same switch in the setup wizard. | pass |
+| TURTLEBOARD-OPT-10 | The 8 deleted strings are not in the APK (aapt2 dump). | pass |
+| TURTLEBOARD-OPT-10 | Open the Voice, Text Fix and Translate settings and the wizard. No text is missing. | pass |
+| Release | Build the signed release and install it on the phone. | not possible: needs the owner's keystore and the phone |
+
+Crash and ANR: none for the debug app, in the crash buffer, the logcat and the process history.
+
+Still for the owner:
 - Release: build the signed release with the four signing env vars, then install it on the phone.
-- OPT-01: turn on Text Fix, then turn on Translate. The Translate dialog must show and name the clipboard.
-- OPT-02: dictate for 10 s with animations on and with animations off. The meter must look as before. To count frames, compare `adb shell dumpsys gfxinfo helium314.keyboard.wisprboard` before and after.
-- OPT-03: edit each of the four voice term-list rows. Each must keep a comma-joined list.
-- OPT-05: copy some texts and open the clipboard panel. Pin, edit and delete a clip.
-- OPT-06: set the voice length to 15 s, turn off Voice haptics and dictate past the limit. No buzz must occur.
-- OPT-07: block the microphone with another app, then start a dictation. The overlay must close with 'recording interrupted'.
-- OPT-08: save an API key in the setup wizard. The key must show as set, and a dictation must work with it.
-- OPT-09: select a model that only one provider has, then switch the provider in Settings and in the wizard. The model must go back to the default in both.
-- OPT-10: open the Voice, Text Fix and Translate settings and the wizard. No text must be missing.
+- OPT-02: on the phone, dictate for 10 s with animations on and off, with the real key or an on-device recognizer. The meter must look as before. Count frames with gfxinfo on the 120 Hz panel.
+- OPT-06: on the phone, set the voice length to 15 s, turn off Voice haptics and dictate past the limit. No buzz must occur.
+- OPT-07: on the phone, block the microphone with another app, then start a dictation. The overlay must close with 'recording interrupted'.
+- OPT-08: on the phone, save the real key in the wizard and do a dictation with it. This save also uses the real keystore (StrongBox).
 - Windows: no item changes a build script or a file path. If you build on Windows, run the unit tests there one time. The Kotlin compiler warns that some test names, which were there before this branch, have characters that can cause problems on Windows.
