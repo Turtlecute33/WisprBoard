@@ -1191,7 +1191,6 @@ New dictionary:
     <!-- new strings should go above the section for gesture data gathering -->
 
     <!-- Voice Input -->
-    <string name="voice_input_title">Voice Input</string>
     <string name="voice_input_enabled">Enable Voice Input</string>
     <string name="voice_input_enabled_summary">Enable this, pick a speech engine, then long-press Return to record and transcribe. The Cloud AI engine also needs a provider API key.</string>
     <string name="voice_speech_engine">Speech engine</string>
@@ -1204,8 +1203,6 @@ New dictionary:
     <string name="voice_on_device_open_settings">Open speech settings</string>
     <string name="voice_on_device_get_app">Get the app</string>
     <string name="voice_on_device_settings_unavailable">This device has no speech settings screen to open</string>
-    <string name="voice_speech_engine_cloud_description">Uploads the recording to your AI provider. Best accuracy, needs an API key and a connection.</string>
-    <string name="voice_speech_engine_on_device_description">Uses Android\'s offline recogniser. No API key, no connection, and nothing you say leaves the device. Auto-polish is skipped, since it would send the text to the cloud. Needs Android 12+ and the offline language pack for your keyboard language.</string>
     <string name="ai_provider">AI Provider</string>
     <string name="ai_provider_openrouter">OpenRouter</string>
     <string name="ai_provider_payperq">PayPerQ</string>
@@ -1344,14 +1341,12 @@ New dictionary:
     <string name="voice_stop_recording">Stop recording</string>
     <string name="voice_validate_key">Validate key and model</string>
     <string name="voice_test_key_success">API key works</string>
-    <string name="voice_test_key_success_zdr_unavailable">API key works, but the selected model has no ZDR endpoint</string>
     <string name="voice_test_key_invalid">API key rejected</string>
     <string name="voice_test_key_invalid_model">Selected model is unavailable</string>
     <string name="voice_test_key_network_error">Network error while testing key</string>
     <string name="voice_test_key_response_too_large">Provider response was too large to process</string>
     <string name="voice_test_key_testing">Testing…</string>
     <string name="voice_prompt_preset">Prompt preset</string>
-    <string name="voice_prompt_preset_custom">Custom</string>
     <string name="voice_prompt_preset_verbatim">Verbatim</string>
     <string name="voice_prompt_preset_clean">Clean up filler words</string>
     <string name="voice_prompt_preset_punctuated">Add punctuation</string>
@@ -1362,9 +1357,6 @@ New dictionary:
     <string name="voice_prompt_preset_translate_en_text">Transcribe this audio and translate it into natural English. Output only the English translation, nothing else.</string>
     <string name="voice_prompt_preset_overwrite_title">Replace prompt?</string>
     <string name="voice_prompt_preset_overwrite_message">This will overwrite your customized prompt with the selected preset.</string>
-    <string name="setup_ai_provider_title">Set up AI voice</string>
-    <string name="setup_ai_provider_instruction">Choose OpenRouter or PayPerQ, add the matching API key, and allow microphone access now. You can skip and configure this later from Voice settings.</string>
-    <string name="setup_ai_provider_status">Provider: %1$s\nAPI key: %2$s\nMicrophone: %3$s\nVoice input: %4$s</string>
     <string name="setup_status_done">done</string>
     <string name="setup_status_missing">missing</string>
     <string name="setup_ai_provider_choice_title">Choose your AI provider</string>

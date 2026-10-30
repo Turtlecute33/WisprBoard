@@ -22,7 +22,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 | TURTLEBOARD-OPT-07 | Always give the recording watchdog the recorder's completion | stability | S | low | applied |
 | TURTLEBOARD-OPT-08 | Keep the setup wizard's key-save coroutine alive so that a failed save is reported | stability | S | low | applied |
 | TURTLEBOARD-OPT-09 | Move the provider-switch model reset to one function in AiProvider.kt | minimalism | S | low | applied |
-| TURTLEBOARD-OPT-10 | Delete the eight fork strings that no code or resource uses | minimalism | S | low | approved |
+| TURTLEBOARD-OPT-10 | Delete the eight fork strings that no code or resource uses | minimalism | S | low | applied |
 
 ### TURTLEBOARD-OPT-01: Always show the Translate consent dialog, which names the clipboard
 - **What**: TranslateEnableSwitch does not show its consent dialog when a Text Fix button is already on. The code comment says that the disclosure is 'identical'. Since PRIV-007 this is false. The Translate text says that it sends 'the selected text, or the clipboard when nothing is selected'. The Text Fix text says only 'the selected text'. A user who turns on Text Fix first never reads the clipboard sentence. The PRIV-007 manual check ('turn Translate off and on again, then read the dialog') fails when Text Fix is on.
@@ -147,7 +147,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: Text resources only. No translated copies exist, so the CLAUDE.md Weblate rule is kept. No pref key, storage format or security-review line changes. No dependency.
 - **Verification**: The lean lens ran the reference search again for all 8 names and checked each getIdentifier path, also the empty-prefix lookup in ReorderSwitchPreference. Verify: the build and lint pass (aapt fails on a missing @string reference), and grep for the 8 names returns nothing.
 - **Effort**: S. **Risk**: low. **Net lines**: about -18 (estimate).
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (376 tests, 0 failures), `./gradlew :app:assembleDebugNoMinify`, `./gradlew :app:assembleDebug` and `./gradlew :app:lintDebug` (JDK 21) passed. A grep for the 8 names in the repo returns only this file. The stale voice_prompt_preset_custom UnusedResources block in app/lint-baseline.xml is also removed, because its string is now gone. Not checked: no run-time check of the settings screens on an emulator or device.
+- **Status**: applied
 
 ## Areas in good shape
 - Background work: no wake locks, alarms, WorkManager, JobScheduler or foreground services. The only polling is the 80 ms meter ticker. It runs only during a recording and stops when no telemetry is available.

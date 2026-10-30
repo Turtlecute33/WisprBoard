@@ -1884,26 +1884,4 @@
             column="13"/>
     </issue>
 
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.voice_input_title` appears to be unused"
-        errorLine1="    &lt;string name=&quot;voice_input_title&quot;>Voice Input&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="1098"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.voice_prompt_preset_custom` appears to be unused"
-        errorLine1="    &lt;string name=&quot;voice_prompt_preset_custom&quot;>Custom&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="1146"
-            column="13"/>
-    </issue>
-
 </issues>
