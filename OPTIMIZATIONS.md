@@ -20,7 +20,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 | TURTLEBOARD-OPT-05 | Do not cache a clip that the database refused to insert | stability | S | low | applied |
 | TURTLEBOARD-OPT-06 | Obey the Voice haptic setting when the maximum duration is reached | ui-ux | S | low | applied |
 | TURTLEBOARD-OPT-07 | Always give the recording watchdog the recorder's completion | stability | S | low | applied |
-| TURTLEBOARD-OPT-08 | Keep the setup wizard's key-save coroutine alive so that a failed save is reported | stability | S | low | approved |
+| TURTLEBOARD-OPT-08 | Keep the setup wizard's key-save coroutine alive so that a failed save is reported | stability | S | low | applied |
 | TURTLEBOARD-OPT-09 | Move the provider-switch model reset to one function in AiProvider.kt | minimalism | S | low | approved |
 | TURTLEBOARD-OPT-10 | Delete the eight fork strings that no code or resource uses | minimalism | S | low | approved |
 
@@ -123,7 +123,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: Only moves where the coroutine scope lives. SecretStore.setApiKey, the vault, the stored blob format and the preference keys do not change. The isSecureStorageAvailable pre-check (WelcomeWizard.kt:737) stays. Line 570 comes from aa610f30 (7.7.0) and the dialog lines from bd07dbf9 and cfc44a5e. None is a 'Report:' commit. No dependency.
 - **Verification**: The stability lens found that the key is usually saved today, so usually only the error report is lost. A later audit found that the save itself can also be skipped when the scope is cancelled before setApiKey starts (see What), so the bug can be worse. The failure modes after the pre-check are rare. No wizard test exists. Verify by a code read. A forced failure needs a debug-only throw in setApiKey, which must not be committed.
 - **Effort**: S. **Risk**: low. **Net lines**: about 0 (estimate).
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the wizard key save on an emulator or device, and no forced save failure.
+- **Status**: applied
 
 ### TURTLEBOARD-OPT-09: Move the provider-switch model reset to one function in AiProvider.kt
 - **What**: The rule 'when the provider changes, reset each saved model that the new provider cannot serve' is copied in two places: the PREF_AI_PROVIDER ListPreference callback in VoiceScreen and selectProvider() in the setup wizard (its comment says 'same policy as VoiceScreen'). Both read four model prefs and run the same four supports*Slug checks. Translate is in neither copy. Today this has no effect, because OPENROUTER_TEXT_FIX and PAYPERQ_TEXT_FIX hold the same five slugs.

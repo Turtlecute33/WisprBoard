@@ -488,6 +488,9 @@ private fun AiProviderSetupStep(
 ) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
+    // Keep this scope at step level, not in the dialog. The dialog closes when the key save starts,
+    // and its scope then stops the save before it can report a failure.
+    val scope = rememberCoroutineScope()
     var showApiKeyDialog by rememberSaveable { mutableStateOf(false) }
     var showProviderDialog by rememberSaveable { mutableStateOf(false) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
@@ -567,7 +570,6 @@ private fun AiProviderSetupStep(
     }
 
     if (showApiKeyDialog) {
-        val scope = rememberCoroutineScope()
         TextInputDialog(
             onDismissRequest = { showApiKeyDialog = false },
             onConfirmed = {
