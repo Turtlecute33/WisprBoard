@@ -772,7 +772,7 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onMaxDurationReached() {
-                AudioAndHapticFeedbackManager.getInstance().vibrate(50L);
+                if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(50L);
                 Toast.makeText(LatinIME.this, R.string.voice_max_duration_reached, Toast.LENGTH_LONG).show();
             }
 

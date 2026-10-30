@@ -18,7 +18,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 | TURTLEBOARD-OPT-03 | Replace the four copied term-list rows in VoiceScreen with one composable and one parser | minimalism | S | low | applied |
 | TURTLEBOARD-OPT-04 | Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first) | ui-ux | M | medium | rejected (owner, 2026-10-30) |
 | TURTLEBOARD-OPT-05 | Do not cache a clip that the database refused to insert | stability | S | low | applied |
-| TURTLEBOARD-OPT-06 | Obey the Voice haptic setting when the maximum duration is reached | ui-ux | S | low | approved |
+| TURTLEBOARD-OPT-06 | Obey the Voice haptic setting when the maximum duration is reached | ui-ux | S | low | applied |
 | TURTLEBOARD-OPT-07 | Always give the recording watchdog the recorder's completion | stability | S | low | approved |
 | TURTLEBOARD-OPT-08 | Keep the setup wizard's key-save coroutine alive so that a failed save is reported | stability | S | low | approved |
 | TURTLEBOARD-OPT-09 | Move the provider-switch model reset to one function in AiProvider.kt | minimalism | S | low | approved |
@@ -99,7 +99,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Verification**: The path runs only when a dictation reaches the limit (default 90 s). No test exists. Verify on the emulator or phone: set the voice length to 15 s, turn off Voice haptics, dictate past the limit, and check for no buzz. TURTLEBOARD-OPT-04 step 4 changes the next line (LatinIME.java:776). If you apply both items, a revert of one of them can give a merge conflict on these adjacent lines. Then fix it by hand.
 - **Effort**: S. **Risk**: low. **Net lines**: about 0 (estimate).
 - **Owner decision**: TURTLEBOARD-OPT-04 is rejected, so the toast line next to the vibrate line stays as it is.
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (375 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the buzz at the time limit on an emulator or device.
+- **Status**: applied
 
 ### TURTLEBOARD-OPT-07: Always give the recording watchdog the recorder's completion
 - **What**: watchForSelfAbortedRecording installs the watchdog only if AudioRecorder.completionOrNull() is not null. That getter returns null as soon as recordingJob is null, and the IO coroutine sets recordingJob = null in finalizeOutputFile and cleanupRecordingFailure. When the first read fails at once (a failed startRecording(), ERROR_DEAD_OBJECT, or a write IOException), the loop can end before the main thread finishes state = RECORDING and onRecordingStarted. Then no watchdog is installed, and state stays RECORDING with no microphone. The overlay shows 'Recording...' with a frozen timer. The next key press is swallowed as 'stop recording' and ends with 'no audio' instead of 'recording interrupted'.
