@@ -13,7 +13,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 ## Findings
 | ID | Finding | Area | Effort | Risk | Status |
 |---|---|---|---|---|---|
-| TURTLEBOARD-OPT-01 | Always show the Translate consent dialog, which names the clipboard | ui-ux | S | low | approved |
+| TURTLEBOARD-OPT-01 | Always show the Translate consent dialog, which names the clipboard | ui-ux | S | low | applied |
 | TURTLEBOARD-OPT-02 | Stop the per-vsync pulse redraw while live audio drives the meter | battery | S | low | approved |
 | TURTLEBOARD-OPT-03 | Replace the four copied term-list rows in VoiceScreen with one composable and one parser | minimalism | S | low | approved |
 | TURTLEBOARD-OPT-04 | Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first) | ui-ux | M | medium | rejected (owner, 2026-10-30) |
@@ -33,7 +33,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: The change removes a skip, so the PRIV-007 disclosure shows in more cases. This makes a security-review change stronger and does not weaken it. The deleted lines come from aa610f30, not from a 'Report:' commit. The preference key and its stored value do not change. No dependency.
 - **Verification**: Read TranslateScreen.kt:90-110 and `git show 35d4b6d2` again in this pass. No UI test exists. Verify on the emulator: turn on Text Fix, then turn on Translate. The Translate dialog must show and name the clipboard.
 - **Effort**: S. **Risk**: low. **Net lines**: about -4 (estimate).
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the dialog on an emulator or device.
+- **Status**: applied
 
 ### TURTLEBOARD-OPT-02: Stop the per-vsync pulse redraw while live audio drives the meter
 - **What**: While a dictation records, AiPulseView runs an infinite ValueAnimator. Its update listener calls invalidate() on each vsync (60-120 frames/s on the Pixel 9 Pro XL). The 80 ms ticker also redraws the meter through setAmplitude(). When audio drives the bars (level > 0.01), the pulse is only 15 % of the bar height. So the vsync redraws add no visible information over the 12.5/s ticker redraws. The IME window renders at the display rate for the full recording (15-300 s).

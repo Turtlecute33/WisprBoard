@@ -97,10 +97,6 @@ private fun TranslateEnableSwitch(setting: Setting) {
             else if (!SecretStore.isSecureStorageAvailable(ctx)) {
                 Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
                 false
-            } else if (prefs.getBoolean(Settings.PREF_TEXT_FIX_ENABLED, Defaults.PREF_TEXT_FIX_ENABLED)
-                || prefs.getBoolean(Settings.PREF_TEXT_FIX_2_ENABLED, Defaults.PREF_TEXT_FIX_2_ENABLED)) {
-                // Text Fix is already on, so the identical disclosure has been accepted.
-                true
             } else {
                 showPrivacyDialog.value = true
                 false
