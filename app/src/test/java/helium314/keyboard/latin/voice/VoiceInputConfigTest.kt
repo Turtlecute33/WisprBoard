@@ -12,14 +12,6 @@ import kotlin.test.assertTrue
 
 class VoiceInputConfigTest {
     @Test
-    fun parseVoiceDictionaryTermsSplitsAndDeduplicates() {
-        assertEquals(
-            listOf("OpenRouter", "WisprBoard", "gRPC"),
-            parseVoiceDictionaryTerms("OpenRouter, WisprBoard\nopenrouter; gRPC"),
-        )
-    }
-
-    @Test
     fun parseExpectedLanguagesSplitsAndDeduplicates() {
         assertEquals(
             listOf("English", "Italian", "Deutsch"),

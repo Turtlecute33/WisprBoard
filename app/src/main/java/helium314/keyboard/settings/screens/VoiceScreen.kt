@@ -48,7 +48,6 @@ import helium314.keyboard.latin.voice.OpenRouterClient
 import helium314.keyboard.latin.voice.PolishLevel
 import helium314.keyboard.latin.voice.SpeechEngine
 import helium314.keyboard.latin.voice.isOnDeviceRecognitionAvailable
-import helium314.keyboard.latin.voice.parseVoiceDictionaryTerms
 import helium314.keyboard.latin.voice.parseExpectedLanguages
 import helium314.keyboard.latin.voice.resolveVoiceModel
 import helium314.keyboard.latin.voice.resolveVoiceSttModel
@@ -424,7 +423,7 @@ fun createVoiceSettings(context: Context) = listOf(
         R.string.voice_stt_dictionary,
         R.string.voice_stt_dictionary_summary
     ) {
-        VoiceSttDictionaryPreference(it)
+        TermListPreference(it, Defaults.PREF_VOICE_STT_DICTIONARY)
     },
     Setting(
         context,
@@ -432,7 +431,7 @@ fun createVoiceSettings(context: Context) = listOf(
         R.string.voice_stt_expected_languages,
         R.string.voice_stt_expected_languages_summary
     ) {
-        VoiceSttExpectedLanguagesPreference(it)
+        TermListPreference(it, Defaults.PREF_VOICE_STT_EXPECTED_LANGUAGES)
     },
     Setting(
         context,
@@ -456,7 +455,7 @@ fun createVoiceSettings(context: Context) = listOf(
         R.string.voice_transcription_dictionary,
         R.string.voice_transcription_dictionary_summary
     ) {
-        VoiceDictionaryPreference(it)
+        TermListPreference(it, Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY)
     },
     Setting(
         context,
@@ -464,7 +463,7 @@ fun createVoiceSettings(context: Context) = listOf(
         R.string.voice_expected_languages,
         R.string.voice_expected_languages_summary
     ) {
-        VoiceExpectedLanguagesPreference(it)
+        TermListPreference(it, Defaults.PREF_VOICE_EXPECTED_LANGUAGES)
     },
     Setting(context, Settings.PREF_VOICE_ACTION_PROMPT_PRESET, R.string.voice_prompt_preset) {
         VoicePromptPresetPreference(it)
@@ -728,85 +727,13 @@ private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
     }
 }
 
+/** One row for each term list (the two dictionaries and the two expected-language lists). */
 @Composable
-private fun VoiceDictionaryPreference(setting: Setting) {
+private fun TermListPreference(setting: Setting, default: String) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
     var showDialog by rememberSaveable { mutableStateOf(false) }
-    val rawValue by rememberStringPreferenceState(
-        Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY,
-        Defaults.PREF_VOICE_TRANSCRIPTION_DICTIONARY
-    )
-    val displayValue = parseVoiceDictionaryTerms(rawValue).joinToString(", ")
-    Preference(
-        name = setting.title,
-        description = displayValue.ifEmpty { setting.description },
-        onClick = { showDialog = true },
-    )
-    if (showDialog) {
-        TextInputDialog(
-            onDismissRequest = { showDialog = false },
-            onConfirmed = { value ->
-                prefs.edit {
-                    putString(
-                        Settings.PREF_VOICE_TRANSCRIPTION_DICTIONARY,
-                        parseVoiceDictionaryTerms(value).joinToString(", ")
-                    )
-                }
-            },
-            initialText = rawValue,
-            title = { Text(setting.title) },
-            description = { Text(setting.description ?: "") },
-            singleLine = false,
-            checkTextValid = { true },
-        )
-    }
-}
-
-@Composable
-private fun VoiceSttDictionaryPreference(setting: Setting) {
-    val ctx = LocalContext.current
-    val prefs = ctx.prefs()
-    var showDialog by rememberSaveable { mutableStateOf(false) }
-    val rawValue by rememberStringPreferenceState(
-        Settings.PREF_VOICE_STT_DICTIONARY,
-        Defaults.PREF_VOICE_STT_DICTIONARY
-    )
-    val displayValue = parseVoiceDictionaryTerms(rawValue).joinToString(", ")
-    Preference(
-        name = setting.title,
-        description = displayValue.ifEmpty { setting.description },
-        onClick = { showDialog = true },
-    )
-    if (showDialog) {
-        TextInputDialog(
-            onDismissRequest = { showDialog = false },
-            onConfirmed = { value ->
-                prefs.edit {
-                    putString(
-                        Settings.PREF_VOICE_STT_DICTIONARY,
-                        parseVoiceDictionaryTerms(value).joinToString(", ")
-                    )
-                }
-            },
-            initialText = rawValue,
-            title = { Text(setting.title) },
-            description = { Text(setting.description ?: "") },
-            singleLine = false,
-            checkTextValid = { true },
-        )
-    }
-}
-
-@Composable
-private fun VoiceSttExpectedLanguagesPreference(setting: Setting) {
-    val ctx = LocalContext.current
-    val prefs = ctx.prefs()
-    var showDialog by rememberSaveable { mutableStateOf(false) }
-    val rawValue by rememberStringPreferenceState(
-        Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES,
-        Defaults.PREF_VOICE_STT_EXPECTED_LANGUAGES
-    )
+    val rawValue by rememberStringPreferenceState(setting.key, default)
     val displayValue = parseExpectedLanguages(rawValue).joinToString(", ")
     Preference(
         name = setting.title,
@@ -818,10 +745,7 @@ private fun VoiceSttExpectedLanguagesPreference(setting: Setting) {
             onDismissRequest = { showDialog = false },
             onConfirmed = { value ->
                 prefs.edit {
-                    putString(
-                        Settings.PREF_VOICE_STT_EXPECTED_LANGUAGES,
-                        parseExpectedLanguages(value).joinToString(", ")
-                    )
+                    putString(setting.key, parseExpectedLanguages(value).joinToString(", "))
                 }
             },
             initialText = rawValue,
@@ -883,41 +807,6 @@ private fun VoicePromptPresetPreference(setting: Setting) {
             },
             title = { Text(stringResource(R.string.voice_prompt_preset_overwrite_title)) },
             content = { Text(stringResource(R.string.voice_prompt_preset_overwrite_message)) },
-        )
-    }
-}
-
-@Composable
-private fun VoiceExpectedLanguagesPreference(setting: Setting) {
-    val ctx = LocalContext.current
-    val prefs = ctx.prefs()
-    var showDialog by rememberSaveable { mutableStateOf(false) }
-    val rawValue by rememberStringPreferenceState(
-        Settings.PREF_VOICE_EXPECTED_LANGUAGES,
-        Defaults.PREF_VOICE_EXPECTED_LANGUAGES
-    )
-    val displayValue = parseExpectedLanguages(rawValue).joinToString(", ")
-    Preference(
-        name = setting.title,
-        description = displayValue.ifEmpty { setting.description },
-        onClick = { showDialog = true },
-    )
-    if (showDialog) {
-        TextInputDialog(
-            onDismissRequest = { showDialog = false },
-            onConfirmed = { value ->
-                prefs.edit {
-                    putString(
-                        Settings.PREF_VOICE_EXPECTED_LANGUAGES,
-                        parseExpectedLanguages(value).joinToString(", ")
-                    )
-                }
-            },
-            initialText = rawValue,
-            title = { Text(setting.title) },
-            description = { Text(setting.description ?: "") },
-            singleLine = false,
-            checkTextValid = { true },
         )
     }
 }

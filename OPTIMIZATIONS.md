@@ -15,7 +15,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 |---|---|---|---|---|---|
 | TURTLEBOARD-OPT-01 | Always show the Translate consent dialog, which names the clipboard | ui-ux | S | low | applied |
 | TURTLEBOARD-OPT-02 | Stop the per-vsync pulse redraw while live audio drives the meter | battery | S | low | applied |
-| TURTLEBOARD-OPT-03 | Replace the four copied term-list rows in VoiceScreen with one composable and one parser | minimalism | S | low | approved |
+| TURTLEBOARD-OPT-03 | Replace the four copied term-list rows in VoiceScreen with one composable and one parser | minimalism | S | low | applied |
 | TURTLEBOARD-OPT-04 | Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first) | ui-ux | M | medium | rejected (owner, 2026-10-30) |
 | TURTLEBOARD-OPT-05 | Do not cache a clip that the database refused to insert | stability | S | low | approved |
 | TURTLEBOARD-OPT-06 | Obey the Voice haptic setting when the maximum duration is reached | ui-ux | S | low | approved |
@@ -57,7 +57,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: Settings UI and a pure parser only. The same four pref keys get the same comma-joined value, so stored data and existing installs do not change. No line comes from a security-review commit. No API key, SecretStore or encryption code changes. No dependency.
 - **Verification**: The lean lens confirmed the four bodies, the call sites, the defaults and the parsers. It also merged the parser half of its 'forwarding aliases' item into this one. Test: run VoiceInputConfigTest (the parser test stays). Verify the UI by hand: edit each of the four rows, then read the stored value in the debug build.
 - **Effort**: S. **Risk**: low. **Net lines**: about -110 (estimate).
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (VoiceInputConfigTest: 9 tests, 0 failures) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the four rows and their stored values on an emulator or device.
+- **Status**: applied
 
 ### TURTLEBOARD-OPT-04: Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first)
 - **What**: All fork messages from the IME process use Toast.makeText: 38 calls. targetSdk is 35, and the merged manifest does not declare POST_NOTIFICATIONS, so on Android 13+ notifications are off for the app. AOSP NotificationManagerService.checkCanEnqueueToast blocks a text toast when notifications are off and the uid importance is not FOREGROUND. A shown IME has FOREGROUND_SERVICE importance. Upstream HeliBoard wrote this rule into KeyboardSwitcher.showToast: a real Toast only on API 32 and lower, an in-keyboard fake toast on 33+. If this is true on the owner's phone (Android 16), none of these messages show: no key, no network, no selection, feature off, toolbar hidden, the voice error after the overlay closes, the clipboard-rescue notices and the PRIV-001 ZDR fallback warning. On a fresh install, a tap on the Text Fix or mic entry in the Return popup shows only a toast, so the key seems to do nothing. Also, a failed Text Fix shows the same text two times: a LENGTH_LONG toast (LatinIME.java:853) and the strip error overlay for 3.5 s. Translate shows only the overlay. After the toast change, this double message becomes visible on Android 13+.

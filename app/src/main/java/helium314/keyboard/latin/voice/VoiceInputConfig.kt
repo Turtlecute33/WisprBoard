@@ -295,7 +295,7 @@ internal fun resolveVoicePrompt(
     expectedLanguagesRaw: String = "",
 ): ResolvedVoicePrompt {
     val base = savedPrompt.trim().takeIf { it.isNotEmpty() } ?: Defaults.PREF_VOICE_TRANSCRIPTION_PROMPT
-    val dictionaryTerms = parseVoiceDictionaryTerms(transcriptionDictionaryRaw)
+    val dictionaryTerms = parseExpectedLanguages(transcriptionDictionaryRaw)
     val expectedLanguages = parseExpectedLanguages(expectedLanguagesRaw)
     val systemPrompt = listOfNotNull(
         base,
@@ -310,13 +310,8 @@ internal fun resolveVoicePrompt(
     )
 }
 
+/** Parses each term list: the expected languages and also the dictionary terms. */
 internal fun parseExpectedLanguages(raw: String): List<String> =
-    raw.split(',', '\n', ';')
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .distinctBy { it.lowercase(Locale.ROOT) }
-
-internal fun parseVoiceDictionaryTerms(raw: String): List<String> =
     raw.split(',', '\n', ';')
         .map { it.trim() }
         .filter { it.isNotEmpty() }
