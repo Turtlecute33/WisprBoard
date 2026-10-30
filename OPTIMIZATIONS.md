@@ -1,7 +1,7 @@
 # Optimizations
 
 Review of TurtleBoard (WisprBoard) on 2026-10-30, at commit 99b28d7d on branch main.
-Status: review only. No change is applied yet. The owner selects the items to apply.
+Status: nine items are applied on branch optimize. One item is not applied. See Results.
 
 Rules for this list: the security-review changes (the audit of 2026-10-27: the commits with a 'Report: <ID>' line, see `git log --grep='Report:' --format='%h %s'`; /Users/user/Documents/Github/android/NEXT-STEPS.md sections 5 and 6 and the appendix section for this app have the status of each item) stay as they are. No change to storage formats, database schemas, preference keys or encryption. Each applied item is one commit, so that you can revert it alone.
 
@@ -16,7 +16,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 | TURTLEBOARD-OPT-01 | Always show the Translate consent dialog, which names the clipboard | ui-ux | S | low | applied |
 | TURTLEBOARD-OPT-02 | Stop the per-vsync pulse redraw while live audio drives the meter | battery | S | low | applied |
 | TURTLEBOARD-OPT-03 | Replace the four copied term-list rows in VoiceScreen with one composable and one parser | minimalism | S | low | applied |
-| TURTLEBOARD-OPT-04 | Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first) | ui-ux | M | medium | rejected (owner, 2026-10-30) |
+| TURTLEBOARD-OPT-04 | Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first) | ui-ux | M | medium | not applied: rejected by the owner (2026-10-30) |
 | TURTLEBOARD-OPT-05 | Do not cache a clip that the database refused to insert | stability | S | low | applied |
 | TURTLEBOARD-OPT-06 | Obey the Voice haptic setting when the maximum duration is reached | ui-ux | S | low | applied |
 | TURTLEBOARD-OPT-07 | Always give the recording watchdog the recorder's completion | stability | S | low | applied |
@@ -75,7 +75,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Verification**: This item includes the ui item 'Show a Text Fix error one time': it changes the same line (LatinIME.java:853), and without it the toast change makes a double message visible on the owner's phone. Commit A also stands alone if the gate shows that toasts appear. Net lines are an estimate. The ui lens raised the risk to medium (37 changed calls in 4 files, 5 of them from 'Report:' commits; the sixth 'Report:' line, LatinIME.java:1821 (UX-009), stays as it is, see step 5) and added step 3. On API 32 and lower, showToast centres the real Toast (Gravity.CENTER), which is a small position change. The overlay status line has maxLines = 2 (TextFixOverlayView.kt:56-59), so a long provider message can be cut, as for Translate today. No tests exist for these paths. Verify on the emulator: for each message group, trigger the condition and look for the in-keyboard toast. Trigger a ZDR fallback and an error together and check that both lines show.
 - **Effort**: M. **Risk**: medium. **Net lines**: about +2 (estimate).
 - **Owner check**: Approve the change of the display call in lines from UX-001, SEC-007, UX-010, PRIV-002 and PRIV-001, and run the step 1 gate first. Confirm that commit A can remove the toast plus overlay for Text Fix errors, and that the UX-020 text check is done again with the fake toast.
-- **Status**: rejected (owner, 2026-10-30)
+- **Status**: not applied: rejected by the owner (2026-10-30)
 
 ### TURTLEBOARD-OPT-05: Do not cache a clip that the database refused to insert
 - **What**: SQLiteDatabase.insert catches SQLException (for example SQLiteFullException) and returns -1. insertNewEntry does not check this and still adds the clip to the in-memory cache with id -1. The fork's Compose clipboard panel uses the clip id as the lazy-list key. Two failed inserts of different texts in one process give two cache entries with id -1. When the panel opens, or when search finds both, Compose throws IllegalArgumentException 'Key -1 was already used' and the IME process crashes. A backup restore whose pinned-clip inserts fail (addPinnedClip goes through insertNewEntry) does the same in the pinned row.
@@ -166,3 +166,51 @@ The fork code is in good shape. It has no background work, bounded network and a
 - Settings, wizard and clipboard UI: strings resolve lazily, list keys are stable, touch targets are 48 dp, dialogs keep their state on rotation, secrets never go to saved state, and empty and no-match states exist.
 - Crash log: the only crashes were DEV-001/002, which 7.13.1/7.13.2 fixed. The phone showed no new crash or ANR.
 - Artifacts: the release APK and R8 mapping are 7.13.2 (versionCode 8025), and HEAD is 7.13.3. No finding depends on an artifact number.
+
+## Results
+Checks on 2026-10-30, branch optimize at 00e38fd4, JDK 21 (`JAVA_HOME=/opt/homebrew/opt/openjdk@21`). Each command ran alone. No adb, emulator or device was used.
+
+| Command | Result |
+|---|---|
+| `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` | pass. The task was UP-TO-DATE, so it ran again with `--rerun`: pass, 376 tests, 0 failures, 0 errors, 7 skipped. |
+| `./gradlew :app:lintDebug` | pass: 0 errors, 14 warnings. lint-baseline.xml filters 64 errors, 85 warnings and 1 hint. |
+| `./gradlew :app:assembleDebug` | pass |
+| `./gradlew :app:assembleRelease` | fail, only on signing: 'Release signing must be provided via KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD.' No signing env vars were set. |
+| `./gradlew :app:assembleRelease -PunsignedRelease=true` | pass. This build gives the size below. |
+
+The lint warnings: 8 for newer Gradle and library versions, 5 IconLauncherShape and 1 UnusedResources for R.string.clipboard_toolbar_keys (strings.xml:454). That string has no use at 99b28d7d too, and the baseline does not list it, so this warning does not come from this branch.
+
+Earlier test runs on this branch printed 'Exception: java.lang.NullPointerException thrown from the UncaughtExceptionHandler in thread DefaultDispatcher-worker-N'. The final run did not print it, and no test failed. Its source is not known.
+
+Size of the unsigned release APK (versionName 7.13.3, versionCode 8026). Both APKs come from `./gradlew :app:assembleRelease -PunsignedRelease=true`.
+- Before (99b28d7d): 22,560,536 bytes.
+- After (00e38fd4): 22,556,576 bytes. This is 3,960 bytes (0.02 %) smaller.
+- By entry (compressed bytes): resources.arsc -4,424 (OPT-10), classes.dex -549, assets/dexopt/baseline.prof +1,021, other entries and zip headers -8.
+
+| ID | Result |
+|---|---|
+| TURTLEBOARD-OPT-01 | applied (4e4d1994) |
+| TURTLEBOARD-OPT-02 | applied (0fc8aba8) |
+| TURTLEBOARD-OPT-03 | applied (fe270df4) |
+| TURTLEBOARD-OPT-04 | not applied: rejected by the owner (2026-10-30) |
+| TURTLEBOARD-OPT-05 | applied (6837a0b0) |
+| TURTLEBOARD-OPT-06 | applied (cb552441) |
+| TURTLEBOARD-OPT-07 | applied (17aff39f) |
+| TURTLEBOARD-OPT-08 | applied (084b5681) |
+| TURTLEBOARD-OPT-09 | applied (700f859a) |
+| TURTLEBOARD-OPT-10 | applied (00e38fd4) |
+
+Not applied: TURTLEBOARD-OPT-04. The 38 Toast calls and the double Text Fix error message stay as they are.
+
+The owner must still check these by hand. No item got a run-time check.
+- Release: build the signed release with the four signing env vars, then install it on the phone.
+- OPT-01: turn on Text Fix, then turn on Translate. The Translate dialog must show and name the clipboard.
+- OPT-02: dictate for 10 s with animations on and with animations off. The meter must look as before. To count frames, compare `adb shell dumpsys gfxinfo helium314.keyboard.wisprboard` before and after.
+- OPT-03: edit each of the four voice term-list rows. Each must keep a comma-joined list.
+- OPT-05: copy some texts and open the clipboard panel. Pin, edit and delete a clip.
+- OPT-06: set the voice length to 15 s, turn off Voice haptics and dictate past the limit. No buzz must occur.
+- OPT-07: block the microphone with another app, then start a dictation. The overlay must close with 'recording interrupted'.
+- OPT-08: save an API key in the setup wizard. The key must show as set, and a dictation must work with it.
+- OPT-09: select a model that only one provider has, then switch the provider in Settings and in the wizard. The model must go back to the default in both.
+- OPT-10: open the Voice, Text Fix and Translate settings and the wizard. No text must be missing.
+- Windows: no item changes a build script or a file path. If you build on Windows, run the unit tests there one time. The Kotlin compiler warns that some test names, which were there before this branch, have characters that can cause problems on Windows.
