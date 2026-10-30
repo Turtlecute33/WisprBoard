@@ -21,7 +21,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 | TURTLEBOARD-OPT-06 | Obey the Voice haptic setting when the maximum duration is reached | ui-ux | S | low | applied |
 | TURTLEBOARD-OPT-07 | Always give the recording watchdog the recorder's completion | stability | S | low | applied |
 | TURTLEBOARD-OPT-08 | Keep the setup wizard's key-save coroutine alive so that a failed save is reported | stability | S | low | applied |
-| TURTLEBOARD-OPT-09 | Move the provider-switch model reset to one function in AiProvider.kt | minimalism | S | low | approved |
+| TURTLEBOARD-OPT-09 | Move the provider-switch model reset to one function in AiProvider.kt | minimalism | S | low | applied |
 | TURTLEBOARD-OPT-10 | Delete the eight fork strings that no code or resource uses | minimalism | S | low | approved |
 
 ### TURTLEBOARD-OPT-01: Always show the Translate consent dialog, which names the clipboard
@@ -135,7 +135,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: The same pref keys get the same default values as now. No new key and no format change. The wizard does two apply() calls in place of one, with the same end state. API key code (refreshApiKeyState, SecretStore) stays where it is. No security-review line changes. No dependency.
 - **Verification**: The lean lens confirmed both copies. No test covers the reset. Verify on the emulator: pick a model that only one provider has, switch the provider in Settings and in the wizard, and check that the model goes back to the default in both.
 - **Effort**: S. **Risk**: low. **Net lines**: about -25 (estimate).
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` (376 tests, 0 failures, with a new reset test in VoiceScreenLogicTest) and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no run-time check of the provider switch in Settings or in the wizard on an emulator or device.
+- **Status**: applied
 
 ### TURTLEBOARD-OPT-10: Delete the eight fork strings that no code or resource uses
 - **What**: Eight English strings that the fork added have no reference in Java, Kotlin, XML, assets or the manifest. No dynamic lookup can reach them: getIdentifier is used only with the prefixes label_, layout_, popup_keys_, toolbar_mode_, !string/ and toolbar key names. Six are left over from removed UI. Two (voice_speech_engine_cloud_description and voice_speech_engine_on_device_description) came with 27f92def and no code ever used them (git log -S). None has translations.

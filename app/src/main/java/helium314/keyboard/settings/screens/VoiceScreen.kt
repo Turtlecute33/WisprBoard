@@ -56,9 +56,8 @@ import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.latin.voice.defaultApiKey
 import helium314.keyboard.latin.voice.isValidCustomModelSlug
 import helium314.keyboard.latin.voice.defaultSttModel
+import helium314.keyboard.latin.voice.resetUnsupportedModels
 import helium314.keyboard.latin.voice.supportsSttSlug
-import helium314.keyboard.latin.voice.supportsTextFixSlug
-import helium314.keyboard.latin.voice.supportsVoiceSlug
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
@@ -309,33 +308,7 @@ fun createVoiceSettings(context: Context) = listOf(
             ctx.getString(R.string.ai_provider_payperq) to AiProvider.PAYPERQ.prefValue,
         )
         ListPreference(setting, items, Defaults.PREF_AI_PROVIDER) { value ->
-            val provider = AiProvider.fromPref(value)
-            // Only swap the saved model when the previous one isn't valid for the new provider:
-            // we don't want to wipe a deliberate user selection just because they re-picked the
-            // same provider, or switched away and back. The defaults are slugs supported by
-            // both providers, so a single fallback works either way.
-            val currentVoice = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
-                ?: Defaults.PREF_VOICE_MODEL
-            val currentStt = prefs.getString(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL)
-                ?: Defaults.PREF_VOICE_STT_MODEL
-            val currentTextFix = prefs.getString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
-                ?: Defaults.PREF_TEXT_FIX_MODEL
-            val currentPolish = prefs.getString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL)
-                ?: Defaults.PREF_VOICE_POLISH_MODEL
-            prefs.edit {
-                if (!provider.supportsVoiceSlug(currentVoice)) {
-                    putString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
-                }
-                if (!provider.supportsSttSlug(currentStt)) {
-                    putString(Settings.PREF_VOICE_STT_MODEL, provider.defaultSttModel())
-                }
-                if (!provider.supportsTextFixSlug(currentTextFix)) {
-                    putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
-                }
-                if (!provider.supportsTextFixSlug(currentPolish)) {
-                    putString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL)
-                }
-            }
+            AiProvider.fromPref(value).resetUnsupportedModels(prefs)
         }
     },
     Setting(context, Settings.PREF_AI_ALLOW_REASONING, R.string.ai_allow_reasoning, R.string.ai_allow_reasoning_summary) {

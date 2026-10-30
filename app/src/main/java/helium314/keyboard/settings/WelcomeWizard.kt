@@ -82,11 +82,8 @@ import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.latin.voice.defaultApiKey
-import helium314.keyboard.latin.voice.defaultSttModel
 import helium314.keyboard.latin.voice.parseExpectedLanguages
-import helium314.keyboard.latin.voice.supportsSttSlug
-import helium314.keyboard.latin.voice.supportsTextFixSlug
-import helium314.keyboard.latin.voice.supportsVoiceSlug
+import helium314.keyboard.latin.voice.resetUnsupportedModels
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.ListPickerDialog
 import helium314.keyboard.settings.dialogs.TextInputDialog
@@ -528,32 +525,8 @@ private fun AiProviderSetupStep(
     }
     fun selectProvider(provider: AiProvider) {
         providerPref = provider.prefValue
-        // Only reset model selections the new provider cannot serve — same policy as VoiceScreen.
-        // Unconditionally resetting here would wipe a deliberate model choice just because the
-        // user re-ran setup (or re-picked the same provider).
-        val currentVoice = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
-            ?: Defaults.PREF_VOICE_MODEL
-        val currentStt = prefs.getString(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL)
-            ?: Defaults.PREF_VOICE_STT_MODEL
-        val currentTextFix = prefs.getString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
-            ?: Defaults.PREF_TEXT_FIX_MODEL
-        val currentPolish = prefs.getString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL)
-            ?: Defaults.PREF_VOICE_POLISH_MODEL
-        prefs.edit {
-            putString(Settings.PREF_AI_PROVIDER, provider.prefValue)
-            if (!provider.supportsVoiceSlug(currentVoice)) {
-                putString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
-            }
-            if (!provider.supportsSttSlug(currentStt)) {
-                putString(Settings.PREF_VOICE_STT_MODEL, provider.defaultSttModel())
-            }
-            if (!provider.supportsTextFixSlug(currentTextFix)) {
-                putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
-            }
-            if (!provider.supportsTextFixSlug(currentPolish)) {
-                putString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL)
-            }
-        }
+        prefs.edit { putString(Settings.PREF_AI_PROVIDER, provider.prefValue) }
+        provider.resetUnsupportedModels(prefs)
         refreshApiKeyState(provider)
     }
     val permissionLauncher = rememberLauncherForActivityResult(

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.voice
 
+import android.content.SharedPreferences
+import androidx.core.content.edit
 import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.Settings
 
 enum class AiProvider(val prefValue: String) {
     OPENROUTER("openrouter"),
@@ -80,6 +83,37 @@ internal fun AiProvider.supportsTextFixSlug(slug: String): Boolean {
     return slug in when (this) {
         AiProvider.OPENROUTER -> OPENROUTER_TEXT_FIX_SLUGS
         AiProvider.PAYPERQ -> PAYPERQ_TEXT_FIX_SLUGS
+    }
+}
+
+/**
+ * Resets each saved model that this provider cannot serve. VoiceScreen and the setup wizard call it
+ * when the user selects a provider. A model that the provider can serve stays, so a re-pick of the
+ * same provider, or a switch away and back, keeps a deliberate choice. The voice and Text Fix
+ * defaults are slugs that both providers support, so one fallback works for each.
+ */
+internal fun AiProvider.resetUnsupportedModels(prefs: SharedPreferences) {
+    val currentVoice = prefs.getString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+        ?: Defaults.PREF_VOICE_MODEL
+    val currentStt = prefs.getString(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL)
+        ?: Defaults.PREF_VOICE_STT_MODEL
+    val currentTextFix = prefs.getString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
+        ?: Defaults.PREF_TEXT_FIX_MODEL
+    val currentPolish = prefs.getString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL)
+        ?: Defaults.PREF_VOICE_POLISH_MODEL
+    prefs.edit {
+        if (!supportsVoiceSlug(currentVoice)) {
+            putString(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+        }
+        if (!supportsSttSlug(currentStt)) {
+            putString(Settings.PREF_VOICE_STT_MODEL, defaultSttModel())
+        }
+        if (!supportsTextFixSlug(currentTextFix)) {
+            putString(Settings.PREF_TEXT_FIX_MODEL, Defaults.PREF_TEXT_FIX_MODEL)
+        }
+        if (!supportsTextFixSlug(currentPolish)) {
+            putString(Settings.PREF_VOICE_POLISH_MODEL, Defaults.PREF_VOICE_POLISH_MODEL)
+        }
     }
 }
 

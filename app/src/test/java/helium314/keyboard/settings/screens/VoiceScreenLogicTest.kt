@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.screens
 
+import android.content.Context
+import androidx.core.content.edit
+import androidx.test.core.app.ApplicationProvider
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.voice.AiProvider
+import helium314.keyboard.latin.voice.MODEL_CUSTOM
 import helium314.keyboard.latin.voice.OpenRouterClient
 import helium314.keyboard.latin.voice.SpeechEngine
 import helium314.keyboard.latin.voice.defaultSttModel
+import helium314.keyboard.latin.voice.resetUnsupportedModels
 import helium314.keyboard.latin.voice.supportsSttSlug
 import helium314.keyboard.latin.voice.supportsTextFixSlug
 import helium314.keyboard.latin.voice.supportsVoiceSlug
@@ -162,6 +167,24 @@ class VoiceScreenLogicTest {
                 "$provider.defaultSttModel() must be an STT slug that provider offers"
             )
         }
+    }
+
+    @Test
+    fun providerSwitchResetsOnlyTheModelsTheProviderCannotServe() {
+        val prefs = ApplicationProvider.getApplicationContext<Context>()
+            .getSharedPreferences("provider_switch_test", Context.MODE_PRIVATE)
+        prefs.edit(commit = true) {
+            clear()
+            putString(Settings.PREF_VOICE_MODEL, "made-up/voice-model")
+            putString(Settings.PREF_VOICE_STT_MODEL, "made-up/stt-model")
+            putString(Settings.PREF_TEXT_FIX_MODEL, MODEL_CUSTOM)
+        }
+
+        AiProvider.PAYPERQ.resetUnsupportedModels(prefs)
+
+        assertEquals(Defaults.PREF_VOICE_MODEL, prefs.getString(Settings.PREF_VOICE_MODEL, null))
+        assertEquals(AiProvider.PAYPERQ.defaultSttModel(), prefs.getString(Settings.PREF_VOICE_STT_MODEL, null))
+        assertEquals(MODEL_CUSTOM, prefs.getString(Settings.PREF_TEXT_FIX_MODEL, null))
     }
 
     @Test
