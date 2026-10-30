@@ -40,7 +40,9 @@ internal class AiPulseView(context: Context) : View(context) {
             interpolator = LinearInterpolator()
             addUpdateListener {
                 pulsePhase = it.animatedValue as Float
-                invalidate()
+                // While audio drives the bars, the pulse has only 15% weight and the 80 ms ticker
+                // redraws them. Redraw at each vsync only when the pulse has full weight.
+                if (level <= 0.01f) invalidate()
             }
             start()
         }

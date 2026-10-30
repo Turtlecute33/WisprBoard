@@ -14,7 +14,7 @@ The fork code is in good shape. It has no background work, bounded network and a
 | ID | Finding | Area | Effort | Risk | Status |
 |---|---|---|---|---|---|
 | TURTLEBOARD-OPT-01 | Always show the Translate consent dialog, which names the clipboard | ui-ux | S | low | applied |
-| TURTLEBOARD-OPT-02 | Stop the per-vsync pulse redraw while live audio drives the meter | battery | S | low | approved |
+| TURTLEBOARD-OPT-02 | Stop the per-vsync pulse redraw while live audio drives the meter | battery | S | low | applied |
 | TURTLEBOARD-OPT-03 | Replace the four copied term-list rows in VoiceScreen with one composable and one parser | minimalism | S | low | approved |
 | TURTLEBOARD-OPT-04 | Show the keyboard's AI messages with the in-keyboard toast on Android 13+ (check first) | ui-ux | M | medium | rejected (owner, 2026-10-30) |
 | TURTLEBOARD-OPT-05 | Do not cache a clip that the database refused to insert | stability | S | low | approved |
@@ -45,7 +45,8 @@ The fork code is in good shape. It has no background work, bounded network and a
 - **Safety**: Only the drawing of one custom view changes. No storage, preference key, schema, network or key-handling change, and no dependency. AiPulseView.kt and RecordingOverlayView.kt:132 come from 0a0ad1c8 (Release 7.9.0), which has no 'Report:' line. The 'Remove animations' behaviour of the bars stays: with animator scale 0 the platform ends the animator at once and the bars stay static, as now. This comes from the platform animator scale, not from UX-008 (32543005), which changed only the key-press ripple in MainKeyboardView.java. The UX-011 Cancel icon (80817a79) is not touched.
 - **Verification**: Read AiPulseView.kt:30-90 again in this pass. The perf lens corrected the first idea (a phase from uptimeMillis in onDraw), because that would move the bars with 'Remove animations' on and would change the decided wait pulse. No tests exist for these views. Verify on the emulator: compare the total frames in `adb shell dumpsys gfxinfo helium314.keyboard.wisprboard` over a 10 s dictation before and after the change, with animations on and off.
 - **Effort**: S. **Risk**: low. **Net lines**: about +1 (estimate).
-- **Status**: approved
+- **Verified**: `./gradlew :app:testDebugNoMinifyUnitTest --no-parallel` and `./gradlew :app:assembleDebugNoMinify` (JDK 21) passed. Not checked: no frame count with gfxinfo and no run-time check of the meter on an emulator or device.
+- **Status**: applied
 
 ### TURTLEBOARD-OPT-03: Replace the four copied term-list rows in VoiceScreen with one composable and one parser
 - **What**: VoiceScreen.kt has four private composables with the same 33-line body: VoiceDictionaryPreference, VoiceSttDictionaryPreference, VoiceSttExpectedLanguagesPreference and VoiceExpectedLanguagesPreference. Only the pref key, the default (all four are "") and the parser name are different. The two parsers parseVoiceDictionaryTerms and parseExpectedLanguages have the same body (split on comma, newline and semicolon, trim, drop empty, distinctBy lowercase). Each Setting already holds its pref key as setting.key.
