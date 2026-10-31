@@ -1,0 +1,6 @@
+# Zapstore listing. The Zapstore indexer reads this file and publishes each new GitHub release.
+# Name, description and screenshots come from fastlane/metadata/android; the icon from the APK.
+repository: https://github.com/Turtlecute33/WisprBoard
+license: GPL-3.0-only
+tags: [keyboard, ai, privacy]
+metadata_sources: [fastlane]
