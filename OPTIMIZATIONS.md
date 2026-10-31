@@ -238,3 +238,13 @@ Still for the owner:
 - OPT-07: on the phone, block the microphone with another app, then start a dictation. The overlay must close with 'recording interrupted'.
 - OPT-08: on the phone, save the real key in the wizard and do a dictation with it. This save also uses the real keystore (StrongBox).
 - Windows: no item changes a build script or a file path. If you build on Windows, run the unit tests there one time. The Kotlin compiler warns that some test names, which were there before this branch, have characters that can cause problems on Windows.
+
+### Phone session (2026-10-31)
+The phone session on 2026-10-31 with the owner was for the owner's Pixel 9 Pro XL (GrapheneOS, Android 17). The owner postponed the phone checks to the next WisprBoard release from GitHub Actions. No build went on the phone.
+
+Reason:
+- The installed WisprBoard has the CI key signature: certificate b6e358e5...3138, V3 signer. The key comes from the KEYSTORE_BASE64 secret.
+- The local release-signing/turtleboard-release.jks holds a different key: certificate 03041fb6...c1e0.
+- Thus a local release build cannot install over the installed app.
+
+The 'Still for the owner' list in Device checks stays as it is. All its items wait for the next CI release.
