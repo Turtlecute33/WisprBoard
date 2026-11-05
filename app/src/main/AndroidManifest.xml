@@ -28,6 +28,7 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
             android:defaultToDeviceProtectedStorage="true"
             android:directBootAware="true"
             android:enableOnBackInvokedCallback="true"
+            android:memtagMode="async"
             android:localeConfig="@xml/locales_config"
             android:networkSecurityConfig="@xml/network_security_config"
             android:usesCleartextTraffic="false"

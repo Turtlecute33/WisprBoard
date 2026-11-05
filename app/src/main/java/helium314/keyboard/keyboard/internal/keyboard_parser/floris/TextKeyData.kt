@@ -231,7 +231,7 @@ sealed interface KeyData : AbstractKeyData {
             // no clipboard history on a locked device (the comma popup and the toolbar also hide it)
             if (params.mId.mElementId == KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW || params.mId.mDeviceLocked)
                 popupKeys.remove("!icon/clipboard_action_key|!code/key_clipboard")
-            applyActionPopupOrder(popupKeys)
+            applyActionPopupOrder(popupKeys, params.mId.mDeviceLocked)
             return SimplePopups(popupKeys)
         }
 
@@ -248,7 +248,7 @@ sealed interface KeyData : AbstractKeyData {
             "translate_key" to "!icon/translate_key|!code/key_translate",
         )
 
-        private fun applyActionPopupOrder(popupKeys: MutableList<String>) {
+        private fun applyActionPopupOrder(popupKeys: MutableList<String>, deviceLocked: Boolean) {
             val nameToEntry = ORDERABLE_ACTION_POPUPS.toMap()
             val entries = nameToEntry.values.toSet()
             // Snapshot the orderable subset that survived the prior filtering passes.
@@ -295,7 +295,11 @@ sealed interface KeyData : AbstractKeyData {
             } else if (sttEnabled) {
                 if (stt !in present) present.add(stt)
             }
-            if (present.isEmpty()) return
+            // No Text Fix or Translate on a locked device (clipboard is removed above). Dictation
+            // stays: it works on the lock screen by design (Vault). Do not return early when the
+            // list is empty, so that the rebuild below removes them.
+            if (deviceLocked) present.removeAll { it.startsWith("!icon/text_fix") || it.startsWith("!icon/translate") }
+            else if (present.isEmpty()) return
 
             val orderPref = Settings.getInstance().current.mActionPopupOrder ?: ""
             val seen = mutableSetOf<String>()

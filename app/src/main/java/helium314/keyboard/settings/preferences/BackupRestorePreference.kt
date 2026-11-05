@@ -80,9 +80,11 @@ fun BackupRestorePreference(setting: Setting) {
     // A read backup waits here until the user confirms it (SEC-002). Its files are not saveable,
     // so a recreated screen deletes them and the user picks the file again.
     var stagedRestore: StagedBackup? by remember { mutableStateOf(null) }
-    DisposableEffect(Unit) { onDispose { stagedRestore?.let(::discardStagedBackup) } }
+    // A backup staged after the screen is gone is deleted at once.
+    val disposed = remember { booleanArrayOf(false) }
+    DisposableEffect(Unit) { onDispose { disposed[0] = true; stagedRestore?.let(::discardStagedBackup) } }
     val backupLauncher = backupLauncher(includeApiKeys) { error = it }
-    val restoreLauncher = restoreLauncher(onStaged = { stagedRestore = it }) { error = it }
+    val restoreLauncher = restoreLauncher(onStaged = { if (disposed[0]) discardStagedBackup(it) else { stagedRestore = it } }) { error = it }
     fun launchBackup(withKeys: Boolean) {
         includeApiKeys.value = withKeys
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Calendar.getInstance().time)
@@ -517,7 +519,12 @@ private fun collectBackupFiles(ctx: android.content.Context): BackupFiles {
     return BackupFiles(files, protectedFiles, filesPrefix, protectedFilesPrefix)
 }
 
+// Once for each process: delete stage and rollback folders that a killed process left.
+private val staleRestoreSwept = java.util.concurrent.atomic.AtomicBoolean(false)
+
 private fun stageBackup(ctx: android.content.Context, inputStream: InputStream): StagedBackup {
+    if (staleRestoreSwept.compareAndSet(false, true))
+        ctx.cacheDir.listFiles { f -> f.name.startsWith("backup_restore_") }?.forEach { it.deleteRecursively() }
     val stageRoot = File(ctx.cacheDir, "backup_restore_stage_${System.currentTimeMillis()}")
     val stageFilesDir = File(stageRoot, "files")
     val stageProtectedFilesDir = File(stageRoot, "device_protected")
@@ -528,41 +535,46 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
     var hasLearnedWords = false
     var hasOtherFiles = false
     var restoredFileBytes = 0L
-    ZipInputStream(inputStream).use { zip ->
-        var entry: ZipEntry? = zip.nextEntry
-        while (entry != null) {
-            val entryName = normalizeBackupEntryName(entry.name)
-            when {
-                entry.isDirectory -> Unit
-                entryName.startsWith("unprotected/") -> {
-                    val adjustedName = entryName.removePrefix("unprotected/")
-                    if (isAllowedBackupFile(adjustedName)) {
-                        restoredFileBytes += copyRestoreEntryToNewFile(zip, File(stageProtectedFilesDir, adjustedName))
+    try {
+        ZipInputStream(inputStream).use { zip ->
+            var entry: ZipEntry? = zip.nextEntry
+            while (entry != null) {
+                val entryName = normalizeBackupEntryName(entry.name)
+                when {
+                    entry.isDirectory -> Unit
+                    entryName.startsWith("unprotected/") -> {
+                        val adjustedName = entryName.removePrefix("unprotected/")
+                        if (isAllowedBackupFile(adjustedName)) {
+                            restoredFileBytes += copyRestoreEntryToNewFile(zip, File(stageProtectedFilesDir, adjustedName))
+                            require(restoredFileBytes <= MAX_RESTORE_TOTAL_BYTES) { "Backup file entries exceed total size limit" }
+                            if (isLearnedWordsFile(adjustedName)) hasLearnedWords = true else hasOtherFiles = true
+                        }
+                    }
+                    isAllowedBackupFile(entryName) -> {
+                        restoredFileBytes += copyRestoreEntryToNewFile(zip, File(stageFilesDir, entryName))
                         require(restoredFileBytes <= MAX_RESTORE_TOTAL_BYTES) { "Backup file entries exceed total size limit" }
-                        if (isLearnedWordsFile(adjustedName)) hasLearnedWords = true else hasOtherFiles = true
+                        if (isLearnedWordsFile(entryName)) hasLearnedWords = true else hasOtherFiles = true
+                    }
+                    entryName == PREFS_FILE_NAME -> {
+                        prefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
+                    }
+                    entryName == PROTECTED_PREFS_FILE_NAME -> {
+                        protectedPrefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
+                    }
+                    entryName == PINNED_CLIPS_FILE_NAME -> {
+                        pinnedClips = parsePinnedClips(readSnapshotCapped(zip, MAX_RESTORE_ENTRY_BYTES.toInt()))
+                    }
+                    entryName == API_KEYS_FILE_NAME -> {
+                        apiKeys = parseApiKeys(readSnapshotCapped(zip))
                     }
                 }
-                isAllowedBackupFile(entryName) -> {
-                    restoredFileBytes += copyRestoreEntryToNewFile(zip, File(stageFilesDir, entryName))
-                    require(restoredFileBytes <= MAX_RESTORE_TOTAL_BYTES) { "Backup file entries exceed total size limit" }
-                    if (isLearnedWordsFile(entryName)) hasLearnedWords = true else hasOtherFiles = true
-                }
-                entryName == PREFS_FILE_NAME -> {
-                    prefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
-                }
-                entryName == PROTECTED_PREFS_FILE_NAME -> {
-                    protectedPrefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
-                }
-                entryName == PINNED_CLIPS_FILE_NAME -> {
-                    pinnedClips = parsePinnedClips(readSnapshotCapped(zip, MAX_RESTORE_ENTRY_BYTES.toInt()))
-                }
-                entryName == API_KEYS_FILE_NAME -> {
-                    apiKeys = parseApiKeys(readSnapshotCapped(zip))
-                }
+                zip.closeEntry()
+                entry = zip.nextEntry
             }
-            zip.closeEntry()
-            entry = zip.nextEntry
         }
+    } catch (t: Throwable) {
+        stageRoot.deleteRecursively()
+        throw t
     }
     return StagedBackup(
         root = stageRoot,
@@ -585,9 +597,29 @@ private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup
     val rollbackProtectedFilesDir = File(rollbackRoot, "device_protected")
     filesDir.mkdirs()
     protectedFilesDir.mkdirs()
+    // Write the keys first: if this fails, no file or pref has changed.
+    // Without secure storage (API < 23) the app can't store keys at all, so skip them.
+    val apiKeys = apiKeysToRestore(backup.apiKeys, replaceApiKeys)
+        .takeIf { it.isNotEmpty() && SecretStore.isSecureStorageAvailable(ctx) }.orEmpty()
+    // Keep the old keys, so that a failed restore writes them back.
+    val oldKeys = apiKeys.keys.associateWith { SecretStore.getApiKey(ctx, it, "") }
+    fun restoreOldKeys() = oldKeys.forEach { (k, v) -> runCatching { SecretStore.setApiKey(ctx, k, v) } }
+    try {
+        apiKeys.forEach { (prefKey, value) -> SecretStore.setApiKey(ctx, prefKey, value) }
+    } catch (t: Throwable) {
+        restoreOldKeys()
+        throw t
+    }
+    // Roll back only from a complete snapshot. A failed snapshot has changed no live file.
     try {
         snapshotAllowedFiles(filesDir, rollbackFilesDir)
         snapshotAllowedFiles(protectedFilesDir, rollbackProtectedFilesDir)
+    } catch (t: Throwable) {
+        restoreOldKeys()
+        rollbackRoot.deleteRecursively()
+        throw t
+    }
+    try {
         copyDirectoryContents(backup.filesDir, filesDir)
         copyDirectoryContents(backup.protectedFilesDir, protectedFilesDir)
         // loaded learned words still use the old files, make them load the restored ones
@@ -616,12 +648,8 @@ private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup
         ctx.protectedPrefs().edit(commit = true) {
             SENSITIVE_BACKUP_KEYS.forEach { remove(it) }
         }
-        // Without secure storage (API < 23) the app can't store keys at all, so skip them.
-        val apiKeys = apiKeysToRestore(backup.apiKeys, replaceApiKeys)
-        if (apiKeys.isNotEmpty() && SecretStore.isSecureStorageAvailable(ctx)) {
-            apiKeys.forEach { (prefKey, value) -> SecretStore.setApiKey(ctx, prefKey, value) }
-        }
     } catch (t: Throwable) {
+        restoreOldKeys()
         restoreAllowedFiles(rollbackFilesDir, filesDir)
         restoreAllowedFiles(rollbackProtectedFilesDir, protectedFilesDir)
         throw t

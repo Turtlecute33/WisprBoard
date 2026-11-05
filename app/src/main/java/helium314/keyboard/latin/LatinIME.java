@@ -160,6 +160,10 @@ public class LatinIME extends InputMethodService implements
     private String mPendingTranslateLanguage;
     /** True when the pending source came from the clipboard, so the result is inserted, not replaced. */
     private boolean mPendingTranslateFromClipboard;
+    /** The field that was focused when Translate was pressed. The result goes only into this field. */
+    private String mTranslateTargetEditorId;
+    private long mTranslateTargetSession;
+    private InputConnection mTranslateTargetConnection;
     /** True while the language middle menu is on screen, so a recreated strip can restore it. */
     private boolean mTranslateMenuOpen;
     /**
@@ -683,6 +687,9 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onRecordingStarted() {
+                // Cancel the other AI features only now, after all voice checks passed.
+                clearPendingTextFixState();
+                clearPendingTranslateState();
                 mVoiceTargetEditorId = currentEditorIdentity();
                 mVoiceTargetSessionGeneration = mInputSessionGeneration;
                 mVoiceTargetInputConnection = getCurrentInputConnection();
@@ -695,6 +702,8 @@ public class LatinIME extends InputMethodService implements
                         new kotlin.Pair<>(mVoiceInputManager.getCurrentAmplitude(),
                             mVoiceInputManager.getCurrentDurationMs()));
                     mSuggestionStripView.showRecordingOverlay();
+                } else {
+                    Toast.makeText(LatinIME.this, R.string.voice_recording, Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -702,6 +711,7 @@ public class LatinIME extends InputMethodService implements
             public void onTranscribing() {
                 if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(15L);
                 if (mSuggestionStripView != null) mSuggestionStripView.showTranscribingOverlay();
+                else Toast.makeText(LatinIME.this, R.string.voice_transcribing, Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -826,6 +836,9 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onWorking() {
+                // Cancel the other AI features only now, after all Text Fix checks passed.
+                cancelVoiceRecordingIfCapturing();
+                clearPendingTranslateState();
                 cancelPendingTextFixErrorOverlayHide();
                 if (mSuggestionStripView != null) {
                     mSuggestionStripView.setOnReplaceTextFix(LatinIME.this::commitTextFixReplacement);
@@ -935,6 +948,8 @@ public class LatinIME extends InputMethodService implements
             clearPendingTranslateState();
             return;
         }
+        // No paid AI request on a locked device (same rule as the toolbar and the clipboard).
+        if (IsLockedCompatKt.isDeviceLocked(this)) return;
         // The language menu shows only in the strip. Check before the clipboard is read.
         if (!hasSuggestionStripView()) {
             Toast.makeText(this, R.string.ai_needs_suggestion_strip, Toast.LENGTH_LONG).show();
@@ -964,6 +979,9 @@ public class LatinIME extends InputMethodService implements
         clearPendingTranslateState();
         mPendingTranslateSource = source.toString();
         mPendingTranslateFromClipboard = fromClipboard;
+        mTranslateTargetEditorId = currentEditorIdentity();
+        mTranslateTargetSession = mInputSessionGeneration;
+        mTranslateTargetConnection = getCurrentInputConnection();
         // Every precondition has passed, so a request is committed bar the language choice. Use
         // the seconds the user spends reading the chips to get the TCP+TLS handshake out of the
         // way — it is 10-30% of a text-only translation.
@@ -1024,11 +1042,15 @@ public class LatinIME extends InputMethodService implements
      * the selection is re-read first: the user may have tapped elsewhere while the request was in
      * flight, and overwriting whatever they selected in the meantime would silently destroy
      * unrelated text. A translation made from the clipboard is inserted at the cursor, like a
-     * paste, and is refused if the user has selected something since.
+     * paste, and is refused if the user has selected something since. The target field is checked
+     * again: if focus moved to a different field, the result goes to the clipboard.
      */
     private void commitTranslation(@NonNull final String translated) {
         final String original = mPendingTranslateSource;
         final boolean fromClipboard = mPendingTranslateFromClipboard;
+        final String targetId = mTranslateTargetEditorId;
+        final long targetSession = mTranslateTargetSession;
+        final InputConnection targetConn = mTranslateTargetConnection;
         clearPendingTranslateState();
         // The field can have changed while the request was in flight. Do the field check again,
         // and drop the text in a blocked field (no clipboard rescue, like the voice path).
@@ -1037,6 +1059,13 @@ public class LatinIME extends InputMethodService implements
             Toast.makeText(this, blocked == R.string.text_fix_error_sensitive_field
                     ? R.string.translate_error_sensitive_field
                     : R.string.translate_error_unsupported_field, Toast.LENGTH_LONG).show();
+            return;
+        }
+        // Compose apps share one InputConnection host, so also compare the connection itself.
+        if (targetConn == null || targetConn != getCurrentInputConnection()
+                || !VoiceDestinationGuard.isUnchanged(targetId, currentEditorIdentity(),
+                        targetSession, mInputSessionGeneration, false)) {
+            rescueTranslation(translated);
             return;
         }
         if (original == null) {
@@ -1062,7 +1091,17 @@ public class LatinIME extends InputMethodService implements
             rescueTranslation(translated);
             return;
         }
-        mInputLogic.mConnection.commitText(translated, 1);
+        mInputLogic.mConnection.commitText(keepEdgeWhitespace(original, translated), 1);
+    }
+
+    /** The AI reply is trimmed, so put back the edge whitespace of the replaced selection. */
+    private static String keepEdgeWhitespace(@NonNull final String original, @NonNull final String result) {
+        int start = 0;
+        while (start < original.length() && Character.isWhitespace(original.charAt(start))) start++;
+        if (start == original.length()) return result;
+        int end = original.length();
+        while (Character.isWhitespace(original.charAt(end - 1))) end--;
+        return original.substring(0, start) + result + original.substring(end);
     }
 
     /**
@@ -1164,6 +1203,8 @@ public class LatinIME extends InputMethodService implements
         mPendingTranslateSource = null;
         mPendingTranslateLanguage = null;
         mPendingTranslateFromClipboard = false;
+        mTranslateTargetEditorId = null;
+        mTranslateTargetConnection = null;
         mTranslateMenuOpen = false;
         if (mTranslateManager != null) mTranslateManager.cancel();
         if (mSuggestionStripView != null) mSuggestionStripView.hideTranslateOverlay();
@@ -1206,7 +1247,7 @@ public class LatinIME extends InputMethodService implements
         mPendingTextFixProposed = null;
         if (mSuggestionStripView != null) mSuggestionStripView.hideTextFixOverlay();
         // Selection is still live at this point — commitText replaces it.
-        mInputLogic.mConnection.commitText(proposed, 1);
+        mInputLogic.mConnection.commitText(keepEdgeWhitespace(original, proposed), 1);
     }
 
     private void discardTextFix() {
@@ -1378,10 +1419,6 @@ public class LatinIME extends InputMethodService implements
     public void onConfigurationChanged(final Configuration conf) {
         SettingsValues settingsValues = mSettings.getCurrent();
         Log.i(TAG, "onConfigurationChanged");
-        // The suggestion strip (and its text-fix overlay) is recreated on orientation change, so any
-        // in-flight text-fix request would resolve onto a stale strip and its result would be lost.
-        // Cancel it instead of leaving the user with a silently dropped Replace/Discard.
-        clearPendingTextFixState();
         SubtypeSettings.INSTANCE.reloadSystemLocales(this);
         if (settingsValues.mDisplayOrientation != conf.orientation) {
             mHandler.startOrientationChanging();
@@ -2219,13 +2256,8 @@ public class LatinIME extends InputMethodService implements
                     // the overlay's Cancel button as the only way out — and that button isn't
                     // reachable at all when the toolbar is hidden.
                     case TRANSCRIBING -> mVoiceInputManager.cancelRecording();
-                    // Voice and Text Fix both take over the suggestion strip, so make them mutually
-                    // exclusive rather than letting the second one stomp the first one's overlay.
-                    case IDLE -> {
-                        clearPendingTextFixState();
-                        clearPendingTranslateState();
-                        mVoiceInputManager.startRecording(KeyCode.VOICE_STT_INPUT == event.getKeyCode());
-                    }
+                    // onRecordingStarted cancels Text Fix and Translate.
+                    case IDLE -> mVoiceInputManager.startRecording(KeyCode.VOICE_STT_INPUT == event.getKeyCode());
                 }
             }
             return;
@@ -2237,14 +2269,15 @@ public class LatinIME extends InputMethodService implements
                 // matters even when starting fresh: a previous proposal left in place would still be
                 // committed by Replace if this new request failed.
                 clearPendingTextFixState();
-                clearPendingTranslateState();
                 if (!wasWorking) {
+                    // No paid AI request on a locked device (same rule as the toolbar and the clipboard).
+                    if (IsLockedCompatKt.isDeviceLocked(this)) return;
                     // The proposal and Replace show only in the strip: no strip, no paid request.
                     if (!hasSuggestionStripView()) {
                         Toast.makeText(this, R.string.ai_needs_suggestion_strip, Toast.LENGTH_LONG).show();
                         return;
                     }
-                    cancelVoiceRecordingIfCapturing();
+                    // onWorking cancels voice and Translate after the checks pass.
                     mTextFixManager.startTextFix(KeyCode.TEXT_FIX_2 == event.getKeyCode()
                             ? TextFixManager.Variant.SECONDARY : TextFixManager.Variant.PRIMARY);
                 }

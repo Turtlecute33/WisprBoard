@@ -211,7 +211,7 @@
     <!-- Preferences item for enabling clipboard history -->
     <string name="enable_clipboard_history">Enable clipboard history</string>
     <!-- Description for enabling/disabling clipboard history mentioning that if disabled, clipboard content is pasted -->
-    <string name="enable_clipboard_history_summary">If disabled, clipboard key will paste clipboard content if any</string>
+    <string name="enable_clipboard_history_summary">If disabled, all clipboard history is deleted, including pinned clips. The clipboard key pastes the current clipboard content.</string>
     <!-- Preferences item for controlling clipboard history retention time -->
     <string name="clipboard_history_retention_time">History retention time</string>
     <!-- Preferences item for showing pinned clipboard items first -->
@@ -1428,6 +1428,7 @@ New dictionary:
     <string name="translate_pick_language">Pick a language</string>
     <string name="translate_source_clipboard">From clipboard</string>
     <string name="translate_working">Translating…</string>
+    <string name="translate_busy">A translation is already running</string>
     <string name="translate_cancel">Cancel</string>
     <string name="translate_retry">Retry</string>
     <!-- Spoken descriptions for the fork's own keys. Kept in values/strings.xml rather than

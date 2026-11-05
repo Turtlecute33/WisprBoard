@@ -183,6 +183,10 @@ class ClipboardHistoryView @JvmOverloads constructor(
     override fun onTranslate(item: ClipItem, language: String) {
         val manager = translateManager ?: return
         performKeyFeedback()
+        if (manager.getState() != TranslateManager.State.IDLE) {
+            KeyboardSwitcher.getInstance().showToast(context.getString(R.string.translate_busy), true)
+            return
+        }
         panelState.pickingLanguage = false
         manager.startTranslate(item.text, language, object : TranslateManager.Callbacks {
             override fun onWorking() {

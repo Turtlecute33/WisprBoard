@@ -112,9 +112,10 @@ fun WelcomeWizard(
     fun isAiProviderReady(): Boolean {
         val prefs = ctx.prefs()
         val provider = AiProvider.fromPref(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
-        return SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).isNotBlank()
-                && prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED)
+        // Cheap checks first: the key read can open the keystore on the main thread.
+        return prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED)
                 && PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO)
+                && SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).isNotBlank()
     }
     fun determineStep(): Int = when {
         !UncachedInputMethodManagerUtils.isThisImeEnabled(ctx, imm) -> welcomeStep
@@ -785,13 +786,9 @@ private fun AiProviderSetupStep(
                             Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
                             return@primaryAction
                         }
-                        if (micGranted) {
-                            prefs.edit { putBoolean(Settings.PREF_VOICE_INPUT_ENABLED, true) }
-                            voiceEnabled = true
-                            onVoiceConfigured()
-                        } else {
-                            showMicRationale = true
-                        }
+                        // Always show the disclosure before voice is turned on. If the mic
+                        // permission is already granted, the launcher returns granted at once.
+                        if (micGranted && voiceEnabled) onVoiceConfigured() else showMicRationale = true
                     }
                     Spacer(Modifier.height(10.dp))
                     secondaryAction(

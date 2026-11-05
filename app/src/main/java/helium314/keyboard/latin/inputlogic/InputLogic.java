@@ -2449,8 +2449,10 @@ public final class InputLogic {
         // counter when it *posts* its result, so between that post and this thread applying it
         // neither of the other two terms is true, and a space landing in that window committed the
         // raw typed word instead of the auto-correction.
-        if (handler.hasPendingUpdateSuggestions() || hasInFlightSuggestionStripUpdate()
-                || handler.hasPendingSetSuggestions()) {
+        // hasPendingSuggestionLookup() covers the time a lookup waits in the worker queue,
+        // before the in-flight counter is incremented.
+        if (handler.hasPendingUpdateSuggestions() || mInputLogicHandler.hasPendingSuggestionLookup()
+                || hasInFlightSuggestionStripUpdate() || handler.hasPendingSetSuggestions()) {
             handler.cancelUpdateSuggestionStrip();
             // To know the input style here, we should retrieve the in-flight "update suggestions"
             // message and read its arg1 member here. However, the Handler class does not let

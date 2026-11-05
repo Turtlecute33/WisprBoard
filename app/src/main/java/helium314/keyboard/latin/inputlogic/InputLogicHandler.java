@@ -93,6 +93,11 @@ class InputLogicHandler implements Handler.Callback {
         }
     }
 
+    /** True while a suggestion lookup waits in the worker queue. */
+    public boolean hasPendingSuggestionLookup() {
+        return mNonUIThreadHandler.hasMessages(MSG_GET_SUGGESTED_WORDS);
+    }
+
     public boolean isInBatchInput() {
         synchronized (mLock) {
             return mInBatchInput;

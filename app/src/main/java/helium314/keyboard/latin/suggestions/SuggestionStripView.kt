@@ -363,6 +363,8 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         isExternalSuggestionVisible = false
         toolbarVisibleBeforeOverlay?.let { setToolbarVisibility(it) }
         toolbarVisibleBeforeOverlay = null
+        // Refill the strip that clear() emptied. Updates were dropped while the overlay was up.
+        if (!hasOverlay) listener.removeExternalSuggestions()
     }
 
     private var recordingOverlay: RecordingOverlayView? = null

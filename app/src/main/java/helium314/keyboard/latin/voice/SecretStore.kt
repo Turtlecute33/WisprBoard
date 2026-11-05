@@ -6,13 +6,17 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.util.Base64
 import androidx.core.content.edit
+import helium314.keyboard.compat.isUserLocked
+import helium314.keyboard.latin.settings.Defaults
+import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
+import java.security.KeyStore
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Stores sensitive values (currently: AI provider API keys) encrypted with [Vault] when the
- * device supports it (API 23+). Each value is Base64(IV + AES-GCM ciphertext) in a normal
+ * device supports it (API 24+). Each value is Base64(IV + AES-GCM ciphertext) in a normal
  * SharedPreferences file, in the same storage as the old encrypted file.
  *
  * Migrates any plaintext value in the normal prefs file on first use.
@@ -21,7 +25,7 @@ object SecretStore {
 
     private const val TAG = "SecretStore"
     private const val VAULT_FILE = "wisprboard_vault"
-    /** The security-crypto file of 7.12.2 and older (TURTLEBOARD-SEC-008). Only a reset deletes it. */
+    /** The security-crypto file of 7.12.2 and older (TURTLEBOARD-SEC-008). Deleted at app start by removeLegacyFile; no code reads it. */
     private const val LEGACY_ENCRYPTED_FILE = "wisprboard_secrets"
     @Volatile private var cachedVault: Vault? = null
     /** Decrypted values, so that a key press does not wait for a StrongBox decrypt each time. */
@@ -30,13 +34,20 @@ object SecretStore {
     fun isSecureStorageAvailable(context: Context): Boolean = vault(context) != null
 
     /**
-     * Loads the vault key from background code. Called at app start when an AI feature is on, so
-     * the IME's first request does not pay this cost on the input thread.
+     * Loads the vault key and decrypts the active provider's key into plainCache, from background
+     * code. Called at app start when an AI feature is on, so the IME's first request does not pay
+     * this cost on the input thread.
      * Best-effort: if the keystore is transiently unhappy at boot, the next real read/write will
      * simply retry.
      */
     fun warmUp(context: Context) {
-        vault(context)
+        vault(context) ?: return
+        // Before the first unlock, skip the prefetch (the IME is directBootAware).
+        if (isUserLocked(context)) return
+        runCatching { // The caller has no exception handler: never throw.
+            val p = AiProvider.fromPref(context.prefs().getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
+            getApiKey(context, p.apiKeyPrefKey(), p.defaultApiKey())
+        }
     }
 
     fun getApiKey(context: Context, prefKey: String, default: String): String {
@@ -97,8 +108,9 @@ object SecretStore {
         context.applicationContext.getSharedPreferences(VAULT_FILE, Context.MODE_PRIVATE)
 
     private fun vault(context: Context): Vault? {
-        // KeyGenParameterSpec needs API 23. API 21-22 installs have no secure storage.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
+        // API 24+ only: below N the network security config is not applied and user CAs are
+        // trusted, so the key and audio could be intercepted. KeyGenParameterSpec also needs API 23.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
         cachedVault?.let { return it }
         return synchronized(this) {
             cachedVault?.let { return@synchronized it }
@@ -116,24 +128,19 @@ object SecretStore {
     }
 
     /**
-     * Explicit user-initiated reset of the secret files. **This destroys all stored API keys.**
-     * Wire from a settings screen, never from automatic recovery — the secret store is sometimes
-     * unreadable for transient reasons (locked keystore, OS update mid-flight) that resolve on
-     * their own.
+     * Deletes the legacy security-crypto file and its master key. Runs at app start, off the main
+     * thread. Does nothing when the file is empty. Never throws: a locked keystore retries next start.
      */
-    fun clearSecureStorage(context: Context) {
-        synchronized(this) {
-            plainCache.clear()
-            try {
-                val app = context.applicationContext
-                for (name in listOf(VAULT_FILE, LEGACY_ENCRYPTED_FILE)) {
-                    app.getSharedPreferences(name, Context.MODE_PRIVATE).edit(commit = true) { clear() }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) app.deleteSharedPreferences(name)
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to clear the secret files: ${e.javaClass.simpleName}")
-            }
-        }
+    fun removeLegacyFile(context: Context) {
+        if (isUserLocked(context)) return // the next start after the unlock removes it
+        runCatching {
+            val app = context.applicationContext
+            val raw = app.getSharedPreferences(LEGACY_ENCRYPTED_FILE, Context.MODE_PRIVATE)
+            if (raw.all.isEmpty()) return
+            raw.edit(commit = true) { clear() }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) app.deleteSharedPreferences(LEGACY_ENCRYPTED_FILE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry("_androidx_security_master_key_")
+        }.onFailure { Log.w(TAG, "Failed to remove the legacy file: ${it.javaClass.simpleName}") }
     }
 }
-

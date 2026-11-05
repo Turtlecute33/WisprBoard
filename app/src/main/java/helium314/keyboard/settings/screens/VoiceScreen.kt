@@ -648,6 +648,7 @@ private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
      */
     fun saveApiKey(key: String) {
         storedLength = key.length
+        apiKeyEdits.intValue++
         scope.launch {
             val failed = withContext(Dispatchers.IO) {
                 runCatching { SecretStore.setApiKey(ctx, provider.apiKeyPrefKey(), key) }.isFailure
@@ -784,6 +785,9 @@ private fun VoicePromptPresetPreference(setting: Setting) {
     }
 }
 
+/** Counts key saves and removals, so that the test row drops a result for an old key. Not persisted. */
+private val apiKeyEdits = mutableIntStateOf(0)
+
 @Composable
 private fun VoiceTestKeyPreference(setting: Setting) {
     val ctx = LocalContext.current
@@ -802,7 +806,13 @@ private fun VoiceTestKeyPreference(setting: Setting) {
     // The outcome used to be a toast only, which is easy to miss and gone a few seconds later —
     // leaving no way to tell whether the key was ever validated. Keep it under the row as well,
     // and keep it across a scroll, which is when the row is disposed and recreated.
-    var lastResult by rememberSaveable { mutableStateOf<TestResult?>(null) }
+    // A change of provider, model or key makes the old result stale, so reset it.
+    val providerPref by rememberStringPreferenceState(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER)
+    val voiceModel by rememberStringPreferenceState(Settings.PREF_VOICE_MODEL, Defaults.PREF_VOICE_MODEL)
+    val sttModel by rememberStringPreferenceState(Settings.PREF_VOICE_STT_MODEL, Defaults.PREF_VOICE_STT_MODEL)
+    var lastResult by rememberSaveable(providerPref, voiceModel, sttModel, apiKeyEdits.intValue) {
+        mutableStateOf<TestResult?>(null)
+    }
     Preference(
         name = setting.title,
         description = when {

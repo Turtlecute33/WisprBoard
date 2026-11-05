@@ -132,8 +132,11 @@ class VoiceInputManager(
     init {
         // A process killed mid-recording leaves a partial rec_*.wav behind, and the only other
         // sweep runs when a recording starts — so a user who then switches to the on-device
-        // engine, loses network, or removes their key would never sweep again.
-        backgroundScope.launch { sweepOrphanRecordings() }
+        // engine, loses network, or removes their key would never sweep again. A new instance owns
+        // no live file, so delete every clip from before this instance. The 60 s cutoff would keep
+        // a clip from a process that was killed a few seconds ago.
+        val createdAt = System.currentTimeMillis()
+        backgroundScope.launch { sweepOrphanRecordings(createdAt) }
     }
 
     fun getState() = state
@@ -241,7 +244,7 @@ class VoiceInputManager(
         // Fresh cache file per recording. Sweeping older ones is pure IO with no bearing on this
         // recording (the 60 s age cutoff cannot touch a live file), so it runs off the main thread
         // rather than making the user wait for a directory listing before the mic opens.
-        backgroundScope.launch { sweepOrphanRecordings() }
+        backgroundScope.launch { sweepOrphanRecordings(System.currentTimeMillis() - ORPHAN_RECORDING_MAX_AGE_MS) }
         val audioFile = File(cacheAudioDir(), "rec_${System.currentTimeMillis()}.wav")
         currentAudioFile = audioFile
         // Tear down the previous recorder (including the placeholder created at construction) so its
@@ -681,9 +684,9 @@ class VoiceInputManager(
         return dir
     }
 
-    private fun sweepOrphanRecordings() {
+    /** Deletes the rec_*.wav clips that were last changed before [cutoff] (epoch ms). */
+    private fun sweepOrphanRecordings(cutoff: Long) {
         runCatching {
-            val cutoff = System.currentTimeMillis() - ORPHAN_RECORDING_MAX_AGE_MS
             // Also sweep the old device-protected dir, so that no clip from an older version stays.
             listOf(File(context.cacheDir, AUDIO_CACHE_SUBDIR), cacheAudioDir()).distinct().forEach { dir ->
                 dir.listFiles()?.forEach { file ->

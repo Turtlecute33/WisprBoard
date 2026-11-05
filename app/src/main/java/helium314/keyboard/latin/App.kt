@@ -27,6 +27,7 @@ class App : Application() {
         scope.launch { // do some uncritical work in background for faster startup
             SupportedEmojis.load(this@App)
             LayoutUtilsCustom.removeMissingLayouts(this@App)
+            SecretStore.removeLegacyFile(this@App)
             // Load the vault key so the first voice/text-fix request doesn't pay this cost on the
             // IME main thread. Only when an AI feature is on: AI is off by default.
             val prefs = prefs()
