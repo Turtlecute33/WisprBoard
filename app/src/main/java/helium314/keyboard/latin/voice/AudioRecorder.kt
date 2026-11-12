@@ -267,9 +267,12 @@ class AudioRecorder(
                 true
             }
         }
+    } catch (e: SecurityException) {
+        Log.e(TAG, "Microphone permission not granted", e)
+        false
     } catch (e: Exception) {
-        // SecurityException (no permission), IllegalArgumentException, UnsupportedOperationException
-        // (parameters the device cannot use), IllegalStateException, IOException (the output file).
+        // IllegalArgumentException, UnsupportedOperationException (parameters the device cannot
+        // use), IllegalStateException, IOException (the output file).
         Log.e(TAG, "Could not open the microphone", e)
         false
     }
