@@ -434,7 +434,6 @@
     <string name="inline_emoji_search">Pesquisa de emoji embutida</string>
     <string name="inline_emoji_search_summary">Apenas sugerir emojis quando uma palavra é precedida por dois pontos</string>
     <string name="emoji_dictionary_required">É necessário um dicionário de emojis para esta funcionalidade. Os dicionários no formato .dict podem ser descarregados %s.</string>
-    <string name="clipboard_history_pinned_first">Mostrar items afixados no topo</string>
     <string name="save_subtype_per_app">Lembrar idioma por app</string>
     <string name="subtype_mhr">Mai (Oriental)</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>

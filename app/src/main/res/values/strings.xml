@@ -214,8 +214,6 @@
     <string name="enable_clipboard_history_summary">If disabled, all clipboard history is deleted, including pinned clips. The clipboard key pastes the current clipboard content.</string>
     <!-- Preferences item for controlling clipboard history retention time -->
     <string name="clipboard_history_retention_time">History retention time</string>
-    <!-- Preferences item for showing pinned clipboard items first -->
-    <string name="clipboard_history_pinned_first">Show pinned items on top</string>
 
     <!-- Clipboard panel: hint in the search field -->
     <string name="clipboard_search">Search clips</string>

@@ -441,7 +441,6 @@
     <string name="about_wiki_link_description">ה-Wiki יכול להיות משופר ע\"י כל משתמש GitHub!</string>
     <string name="subtype_khipro_bn">%s (כיפרו)</string>
     <string name="save_subtype_per_app">שיוך שפה ליישום</string>
-    <string name="clipboard_history_pinned_first">הצגת פריטים נעוצים תחילה</string>
     <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">שורה תחתונה בלוח עם פקד פעולה</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">שורת אמוג\'י תחתונה עם פקד פעולה</string>
     <string name="subtype_mhr">מארי (מזרח אורל)</string>

@@ -218,7 +218,6 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static boolean isClipboardRetentionUnlimited(final long retentionMinutes) {
         return retentionMinutes <= 0 || retentionMinutes == CLIPBOARD_RETENTION_NO_LIMIT_MINUTES;
     }
-    public static final String PREF_CLIPBOARD_HISTORY_PINNED_FIRST = "clipboard_history_pinned_first";
 
     public static final String PREF_ADD_TO_PERSONAL_DICTIONARY = "add_to_personal_dictionary";
     public static final String PREF_NAVBAR_COLOR = "navbar_color";

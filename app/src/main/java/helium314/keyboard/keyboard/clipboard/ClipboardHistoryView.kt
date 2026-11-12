@@ -5,7 +5,6 @@ package helium314.keyboard.keyboard.clipboard
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.text.InputType
 import android.util.AttributeSet
 import android.view.inputmethod.EditorInfo
@@ -50,8 +49,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         attrs: AttributeSet?,
         defStyle: Int = R.attr.clipboardHistoryViewStyle
 ) : LinearLayout(context, attrs, defStyle),
-    ClipboardDao.Listener, ClipboardPanelActions,
-    SharedPreferences.OnSharedPreferenceChangeListener {
+    ClipboardDao.Listener, ClipboardPanelActions {
 
     private val panelState = ClipboardPanelState()
 
@@ -432,16 +430,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
     }
 
     // endregion
-
-    override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?) {
-        // The setting can only be changed from a settings screen, but adding it to this listener seems necessary:
-        // https://github.com/HeliBorg/HeliBoard/pull/1903#issuecomment-3478424606
-        if (clipboardHistoryManager != null && key == Settings.PREF_CLIPBOARD_HISTORY_PINNED_FIRST) {
-            Settings.getInstance().onSharedPreferenceChanged(prefs, key) // ensure settings are reloaded first
-            clipboardHistoryManager?.sortHistoryEntries()
-            refreshClips()
-        }
-    }
 
     companion object {
         private const val TAG = "ClipboardHistoryView"

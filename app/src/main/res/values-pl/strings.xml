@@ -475,7 +475,6 @@
     <string name="space_swipe_hide_keyboard_entry">Ukryj klawiaturę</string>
     <string name="about_wiki_link">Przejdź do Wiki</string>
     <string name="about_wiki_link_description">Każdy użytkownik GitHuba może ulepszać Wiki!</string>
-    <string name="clipboard_history_pinned_first">Pokaż przypięte elementy na górze</string>
     <string name="save_subtype_per_app">Zapamiętaj język dla każdej aplikacji</string>
     <string name="subtype_mhr">Mari (wschodni)</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>

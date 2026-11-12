@@ -159,7 +159,6 @@
     <string name="enable_clipboard_history">இடைநிலைப்பலகை வரலாற்றை இயக்கு</string>
     <string name="enable_clipboard_history_summary">முடக்கப்பட்டிருந்தால், இடைநிலைப்பலகை விசை ஏதேனும் இருந்தால் இடைநிலைப்பலகை உள்ளடக்கத்தை ஒட்டும்</string>
     <string name="clipboard_history_retention_time">வரலாற்றைத் தக்கவைக்கும் நேரம்</string>
-    <string name="clipboard_history_pinned_first">பின் செய்யப்பட்ட பொருட்களை மேலே காட்டு</string>
     <string name="delete_swipe">ச்வைப் செய்வதை நீக்கு</string>
     <string name="delete_swipe_summary">ஒரே நேரத்தில் உரையின் பெரிய பகுதிகளைத் தேர்ந்தெடுத்து அகற்ற, நீக்கு விசையிலிருந்து ச்வைப் செய்யவும்</string>
     <string name="backup_restore_title">காப்பு மற்றும் மீட்டமை</string>

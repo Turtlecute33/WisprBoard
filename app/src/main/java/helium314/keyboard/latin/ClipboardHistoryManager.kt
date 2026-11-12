@@ -100,10 +100,6 @@ class ClipboardHistoryManager(
         clipboardManager.setPrimaryClip(ClipData.newPlainText(null, text))
     }
 
-    fun sortHistoryEntries() {
-        clipboardDao?.sort()
-    }
-
     // We do not want to update history while user is visualizing it, so we check retention only
     // when history is about to be shown
     fun prepareClipboardHistory() = clipboardDao?.clearOldClips(true)

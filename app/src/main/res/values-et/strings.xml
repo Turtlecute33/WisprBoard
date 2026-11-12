@@ -468,7 +468,6 @@
     <string name="suggest_punctuation_summary">Kui muid soovitusi ei leidu, siis näita kirjavahemärkide soovitusi</string>
     <string name="about_wiki_link_description">Iga GitHubi kasutaja võib viki importida!</string>
     <string name="about_wiki_link">Ava viki leht</string>
-    <string name="clipboard_history_pinned_first">Näita esiletõstetud objekte ülal</string>
     <string name="save_subtype_per_app">Jäta kasutatud keel meelde rakendusekohaselt</string>
     <string name="subtype_khipro_bn">%s (khipro)</string>
     <string name="subtype_mhr">idamari</string>

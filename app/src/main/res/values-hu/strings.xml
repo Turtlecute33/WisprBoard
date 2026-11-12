@@ -433,7 +433,6 @@
     <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Vágólap alsó sorának elrendezése</string>
     <string name="save_subtype_per_app">Emlékezzen a kiválasztott nyelvre alkalmazásonként</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>
-    <string name="clipboard_history_pinned_first">Kitűzött elemek megjelenítése felül</string>
     <string name="inline_emoji_search">Beágyazott emodzsi keresése</string>
     <string name="inline_emoji_search_summary">Emodzsik javaslása csak akkor, ha a szó kettősponttal kezdődik</string>
     <string name="emoji_dictionary_required">Ehhez a funkcióhoz emodzsi-szótár szükséges. A .dict formátumú szótárak letölthetők a következő helyről: %s.</string>

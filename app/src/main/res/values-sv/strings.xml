@@ -269,6 +269,5 @@
     <string name="suggest_punctuation_summary">Visa skiljetecken när andra förslag är otillgängliga</string>
     <string name="suggest_clipboard_content">Föreslå urklippsinnehåll</string>
     <string name="gesture_fast_typing_cooldown_instant">Börja alltid omedelbart</string>
-    <string name="clipboard_history_pinned_first">Visa fastnålade objekt överst</string>
     <string name="backup_restored">Säkerhetskopia återställd</string>
 </resources>

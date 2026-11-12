@@ -156,7 +156,6 @@
     <string name="enable_clipboard_history">ယာယီစာထိန်းမှတ်တမ်းကိုအသုံးပြုမည်</string>
     <string name="enable_clipboard_history_summary">ဤခလုပ်ကိုပိတ်ထားပါက လက်ကွက်ပေါ်ရှိ ယာယီစာထိန်းခလုပ်ကိုနှိပ်လျှင် မိမိရေးနေသော စာကြောင်းထံ ယင်းစနစ်တွင် လက်ရှိမှတ်သားထားသောအကြောင်းအရာကို ထည့်သွင်းလိမ့်မည်</string>
     <string name="clipboard_history_retention_time">ယာယီစာထိန်းစနစ်၌ မှတ်တမ်းသိုလှောင်မှု ရှည်ကြာချိန်</string>
-    <string name="clipboard_history_pinned_first">အထူးမှတ်သားထားသော အကြောင်းအရာများကို ထိပ်ဆုံးတွင်ပြရန်</string>
     <string name="delete_swipe">ပွတ်ဆွဲ၍ ဖျက်ရန်</string>
     <string name="delete_swipe_summary">နောက်ကြောင်းပြန်ခလုပ်ကိုဖိ၍ ဘယ်ဘက်သို့ပွတ်ဆွဲခြင်းဖြင့် ရိုက်နှိပ်ထားပြီးသော စာများအားလုံးကို သိမ်းကျုံးဖျက်ပါ</string>
     <string name="backup_restore_title">အရန်သိမ်းဆည်းခြင်းနှင့် ပြန်လည်ထည့်သွင်းခြင်း</string>

@@ -435,7 +435,6 @@
     <string name="custom_subtype">Власний макет</string>
     <string name="landscape">Горизонтальна</string>
     <string name="ask_later">Спитати пізніше</string>
-    <string name="clipboard_history_pinned_first">Показувати прикріплені об\'єкти вгорі</string>
     <string name="inline_emoji_search">Вбудований пошук емодзі</string>
     <string name="inline_emoji_search_summary">Запропонуйте лише емодзі, коли слову передує двокрапка</string>
     <string name="emoji_dictionary_required">Для роботи цієї функції потрібен словник емодзі. Словники у форматі .dict можна завантажити %s.</string>

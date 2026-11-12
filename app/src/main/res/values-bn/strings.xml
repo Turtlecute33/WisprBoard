@@ -434,7 +434,6 @@
     <string name="about_wiki_link_description">যেকোনো গিটহাব ব্যবহারকারী উইকির উন্নয়ন করতে পারবে!</string>
     <string name="save_subtype_per_app">অ্যাপ অনুযায়ী ভাষা সংরক্ষণ</string>
     <string name="subtype_khipro_bn">%s (ক্ষিপ্র)</string>
-    <string name="clipboard_history_pinned_first">পিন করা আইটেম শীর্ষে প্রদর্শন</string>
     <string name="inline_emoji_search">ইনলাইন ইমোজি অনুসন্ধান</string>
     <string name="inline_emoji_search_summary">কোনো শব্দের পূর্বে কোলন থাকলে কেবল ইমোজি পরামর্শ প্রদান</string>
     <string name="emoji_dictionary_required">এই বৈশিষ্ট্য সচল করার জন্য ইমোজি অভিধান প্রয়োজন। %s .dict ফরম্যাটের অভিধান ডাউনলোড করা যেতে পারে।</string>

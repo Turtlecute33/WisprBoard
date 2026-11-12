@@ -436,7 +436,6 @@
     <string name="about_wiki_link">前往 Wiki</string>
     <string name="save_subtype_per_app">为每个应用记住语言设置</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>
-    <string name="clipboard_history_pinned_first">在顶部显示已固定项目</string>
     <string name="subtype_mhr">东马里语</string>
     <string name="inline_emoji_search">内联表情符号搜索</string>
     <string name="inline_emoji_search_summary">仅当字词以冒号开头时建议表情符号</string>

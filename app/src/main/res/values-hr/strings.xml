@@ -173,7 +173,6 @@
     <string name="gesture_floating_preview_static_summary">Prikazuje predloženu riječ tijekom kretnje</string>
     <string name="gesture_floating_preview_dynamic_summary">Pomiče pregled tijekom kretnje</string>
     <string name="gesture_trail_fadeout_duration">Trajanje traga kretnji</string>
-    <string name="clipboard_history_pinned_first">Prikaži prikvačene stavke na vrhu</string>
     <string name="backup_restore_title">Sig. kopiranje i vraćanje</string>
     <string name="backup_error">Greška kod sig. kopiranja: %s</string>
     <string name="restore_error">Greška vraćanja sig. kopije: %s</string>

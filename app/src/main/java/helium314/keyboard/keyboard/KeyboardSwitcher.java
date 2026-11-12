@@ -728,7 +728,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mSuggestionStripView != null)
             prefs.unregisterOnSharedPreferenceChangeListener(mSuggestionStripView);
         if (mClipboardHistoryView != null) {
-            prefs.unregisterOnSharedPreferenceChangeListener(mClipboardHistoryView);
             // The outgoing view still holds the DAO history listener, which blocks clip retention
             // for the whole process, and the global typing listener if the panel editor was open.
             mClipboardHistoryView.stopClipboardHistory();
@@ -759,7 +758,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mStripContainer = mCurrentInputView.findViewById(R.id.strip_container);
 
         prefs.registerOnSharedPreferenceChangeListener(mSuggestionStripView);
-        prefs.registerOnSharedPreferenceChangeListener(mClipboardHistoryView);
         PointerTracker.switchTo(mKeyboardView);
         return mCurrentInputView;
     }

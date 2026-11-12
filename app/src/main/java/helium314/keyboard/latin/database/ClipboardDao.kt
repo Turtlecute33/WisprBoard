@@ -130,11 +130,6 @@ class ClipboardDao private constructor(private val db: Database) {
 
     fun count() = cache.size
 
-    fun sort() {
-        cache.sort()
-        listener?.onClipboardHistoryChanged()
-    }
-
     fun togglePinned(id: Long) {
         val entry = cache.firstOrNull { it.id == id } ?: return
         entry.isPinned = !entry.isPinned

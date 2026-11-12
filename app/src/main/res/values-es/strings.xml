@@ -415,7 +415,6 @@
     <string name="use_apps_dict_summary">Utiliza los nombres de las aplicaciones instaladas para sugerencias y correcciones</string>
     <string name="suggest_punctuation">Sugerencias de puntuación</string>
     <string name="suggest_punctuation_summary">Muestra signos de puntuación cuando no haya otras sugerencias disponibles</string>
-    <string name="clipboard_history_pinned_first">Mostrar los elementos fijados arriba</string>
     <string name="backup_restored">Copia de seguridad restaurada</string>
     <string name="save_subtype_per_app">Recordar el idioma por aplicación</string>
     <string name="subtype_with_layout_generic">%1$s (%2$s)</string>

@@ -483,7 +483,6 @@
     <string name="inline_emoji_search">Inline emoji zoeken</string>
     <string name="inline_emoji_search_summary">Alleen emoji\'s voorstellen als een woord wordt voorafgegaan door een dubbele punt</string>
     <string name="emoji_dictionary_required">Voor deze functie is een emoji-woordenboek vereist. Download woordenboeken in .dict formaat %s.</string>
-    <string name="clipboard_history_pinned_first">Vastgezette items bovenaan tonen</string>
     <string name="timestamp_description">Je kunt de tijdstempeltoets toevoegen met behulp van een aangepaste lay-out met toets \'tijdstempel\', of toetscode -10043</string>
     <string name="number_row_in_symbols">Getallenrij tonen in symbolenweergave</string>
     <string name="save_subtype_per_app">Taal onthouden per app</string>

@@ -442,7 +442,6 @@
     <string name="about_wiki_link_description">يمكن تحسين الويكي من خلال أي مستخدم Github!</string>
     <string name="save_subtype_per_app">تذكر اللغة لكل تطبيق</string>
     <string name="subtype_khipro_bn">%s (خيبرو)</string>
-    <string name="clipboard_history_pinned_first">أظهر العناصر المثبتة في الأعلى</string>
     <string name="inline_emoji_search">البحث عن الرموز التعبيرية المضمنة</string>
     <string name="inline_emoji_search_summary">اقترح رموزًا تعبيرية فقط عندما تسبق الكلمة نقطتان رأسيتان</string>
     <string name="emoji_dictionary_required">مطلوب قاموس رموز تعبيرية لكي تعمل هذه الميزة. يمكن تنزيل القواميس بتنسيق .dict %s.</string>

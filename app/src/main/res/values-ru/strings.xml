@@ -433,7 +433,6 @@
     <string name="about_wiki_link_description">Любой пользователь GitHub может улучшить Wiki!</string>
     <string name="save_subtype_per_app">Запоминать язык для каждого приложения</string>
     <string name="subtype_khipro_bn">%s (Кипро)</string>
-    <string name="clipboard_history_pinned_first">Показывать закреплённые элементы вверху</string>
     <string name="inline_emoji_search">Поиск эмодзи в строке ввода</string>
     <string name="inline_emoji_search_summary">Предлагать эмодзи только, если перед словом стоит двоеточие</string>
     <string name="emoji_dictionary_required">Для работы этой функции требуется словарь эмодзи. Словари в формате \'.dict\' можно загрузить по ссылке %s.</string>

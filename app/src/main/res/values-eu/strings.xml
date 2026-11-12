@@ -443,7 +443,6 @@
     <string name="inline_emoji_search">Sareko emojien bilaketa</string>
     <string name="inline_emoji_search_summary">Iradoki emojiak bakarrik hitz baten aurretik bi puntu daudenean</string>
     <string name="emoji_dictionary_required">Emoji hiztegia behar da funtzio honek funtziona dezan. .dict formatuan dauden hiztegiak %s deskargatu daitezke.</string>
-    <string name="clipboard_history_pinned_first">Erakutsi ainguratutako elementuak goian</string>
     <string name="number_row_in_symbols">Erakutsi zenbaki-lerroa sinboloen ikuspegian</string>
     <string name="save_subtype_per_app">Gororatu hizkuntza aplikazioan</string>
     <string name="custom_emoji_font">Ezarri emoji iturria fitxategitik</string>
