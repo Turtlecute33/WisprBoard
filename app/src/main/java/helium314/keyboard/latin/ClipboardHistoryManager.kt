@@ -3,10 +3,10 @@
 package helium314.keyboard.latin
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.text.InputType
-import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -48,23 +48,18 @@ class ClipboardHistoryManager(
     }
 
     override fun onPrimaryClipChanged() {
+        // A new clip can show as a suggestion again, also when history is off (R-40).
+        dontShowCurrentSuggestion = false
         // Make sure we read clipboard content only if history settings is set
         if (latinIME.mSettings.current.mClipboardHistoryEnabled) {
             fetchPrimaryClip()
-            dontShowCurrentSuggestion = false
         }
     }
 
     private fun fetchPrimaryClip() {
         val clipData = clipboardManager.primaryClip ?: return
-        if (clipData.itemCount == 0 || clipData.description?.hasMimeType("text/*") == false) return
-        clipData.getItemAt(0)?.let { clipItem ->
-            val timeStamp = ClipboardManagerCompat.getClipTimestamp(clipData)
-            val content = clipItem.coerceToText(latinIME)
-            if (TextUtils.isEmpty(content)) return
-            if (ClipboardManagerCompat.getClipSensitivity(clipData.description) == true) return
-            clipboardDao?.addClip(timeStamp, false, content.toString())
-        }
+        val content = clipText(clipData, skipSensitive = true) ?: return
+        clipboardDao?.addClip(ClipboardManagerCompat.getClipTimestamp(clipData), false, content.toString())
     }
 
     fun toggleClipPinned(id: Long) {
@@ -78,12 +73,25 @@ class ClipboardHistoryManager(
     }
 
     fun removeEntry(id: Long) {
+        clearPrimaryClipIfSame(clipboardDao?.get(id)?.text)
         clipboardDao?.deleteClip(id)
     }
 
     fun updateEntryText(id: Long, text: String) {
+        val oldText = clipboardDao?.get(id)?.text
+        if (oldText != text) clearPrimaryClipIfSame(oldText)
         if (text.isEmpty()) clipboardDao?.deleteClip(id)
         else clipboardDao?.updateText(id, text)
+    }
+
+    /**
+     * Clears the system clip when it has [text], as [clearHistory] does. Else [onCreate] reads the
+     * clip again and adds the deleted or old text back to the history (R-11).
+     */
+    private fun clearPrimaryClipIfSame(text: String?) {
+        if (text == null) return
+        if (clipText(clipboardManager.primaryClip, skipSensitive = false)?.toString() != text) return
+        ClipboardManagerCompat.clearPrimaryClip(clipboardManager)
     }
 
     /** Puts [text] back into the system clipboard, so other apps can paste it */
@@ -110,11 +118,8 @@ class ClipboardHistoryManager(
         clipboardDao?.listener = listener
     }
 
-    fun retrieveClipboardContent(): CharSequence {
-        val clipData = clipboardManager.primaryClip ?: return ""
-        if (clipData.itemCount == 0) return ""
-        return clipData.getItemAt(0)?.coerceToText(latinIME) ?: ""
-    }
+    fun retrieveClipboardContent(): CharSequence =
+        clipText(clipboardManager.primaryClip, skipSensitive = false) ?: ""
 
     /**
      * The clipboard text, or "" when the clip is not text or the app that wrote it marked it
@@ -124,14 +129,11 @@ class ClipboardHistoryManager(
      */
     fun retrieveClipboardContentForAi(): CharSequence {
         if (isDeviceLocked(latinIME)) return ""
-        val clipData = clipboardManager.primaryClip ?: return ""
-        if (clipData.itemCount == 0 || clipData.description?.hasMimeType("text/*") == false) return ""
-        if (ClipboardManagerCompat.getClipSensitivity(clipData.description) == true) return ""
-        return clipData.getItemAt(0)?.coerceToText(latinIME) ?: ""
+        return clipText(clipboardManager.primaryClip, skipSensitive = true) ?: ""
     }
 
-    private fun isClipSensitive(inputType: Int): Boolean {
-        ClipboardManagerCompat.getClipSensitivity(clipboardManager.primaryClip?.description)?.let { return it }
+    private fun isClipSensitive(description: ClipDescription?, inputType: Int): Boolean {
+        ClipboardManagerCompat.getClipSensitivity(description)?.let { return it }
         return InputTypeUtils.isPasswordInputType(inputType)
     }
 
@@ -154,10 +156,7 @@ class ClipboardHistoryManager(
         if (!description.hasMimeType("text/*")) return null
         if (System.currentTimeMillis() - ClipboardManagerCompat.getClipTimestamp(description) > RECENT_TIME_MILLIS) return null
         val clipData = clipboardManager.primaryClip ?: return null
-        if (clipData.itemCount == 0) return null
-        val clipItem = clipData.getItemAt(0) ?: return null
-        val content = clipItem.coerceToText(latinIME)
-        if (TextUtils.isEmpty(content)) return null
+        val content = clipText(clipData, skipSensitive = false) ?: return null
         val inputType = editorInfo?.inputType ?: InputType.TYPE_NULL
         if (InputTypeUtils.isNumberInputType(inputType) && !content.isValidNumber()) return null
 
@@ -165,7 +164,7 @@ class ClipboardHistoryManager(
         val binding = ClipboardSuggestionBinding.inflate(LayoutInflater.from(latinIME), parent, false)
         val textView = binding.clipboardSuggestionText
         latinIME.mSettings.getCustomTypeface()?.let { textView.typeface = it }
-        textView.text = (if (isClipSensitive(inputType)) "*".repeat(content.length) else content)
+        textView.text = (if (isClipSensitive(clipData.description, inputType)) "*".repeat(content.length) else content)
             .take(200) // truncate displayed text for performance reasons
         val clipIcon = latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.PASTE.name.lowercase())
         textView.setCompoundDrawablesRelativeWithIntrinsicBounds(clipIcon, null, null, null)
@@ -203,5 +202,25 @@ class ClipboardHistoryManager(
     companion object {
         private var dontShowCurrentSuggestion: Boolean = false
         const val RECENT_TIME_MILLIS = 3 * 60 * 1000L // 3 minutes (for clipboard suggestions)
+        /** The keyboard does not read a clip text that is longer than this, in chars (R-08). */
+        const val MAX_CLIP_TEXT_LENGTH = 100_000
+
+        /**
+         * The one rule for all clipboard reads (R-08): the text of the first item of a text clip,
+         * or null. Only ClipData.Item.getText() is read. coerceToText() opens and reads all of a
+         * URI stream on the main thread, so a URI-only clip gives null. With [skipSensitive], a
+         * clip that its app marked sensitive gives null before the text is read.
+         */
+        fun clipText(clipData: ClipData?, skipSensitive: Boolean): CharSequence? {
+            if (clipData == null || clipData.itemCount == 0) return null
+            val description = clipData.description
+            if (description?.hasMimeType("text/*") == false) return null
+            if (skipSensitive && ClipboardManagerCompat.getClipSensitivity(description) == true) return null
+            return cappedClipText(clipData.getItemAt(0)?.text)
+        }
+
+        /** [text], or null when it is empty or longer than [MAX_CLIP_TEXT_LENGTH]. */
+        fun cappedClipText(text: CharSequence?): CharSequence? =
+            text?.takeIf { it.isNotEmpty() && it.length <= MAX_CLIP_TEXT_LENGTH }
     }
 }
