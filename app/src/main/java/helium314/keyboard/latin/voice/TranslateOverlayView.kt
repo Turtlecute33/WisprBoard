@@ -13,6 +13,9 @@ import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
+import helium314.keyboard.event.HapticEvent
+import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
+import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.R
 
 /**
@@ -204,6 +207,8 @@ class TranslateOverlayView(context: Context) : LinearLayout(context) {
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastClickMs < 300L) return@setOnClickListener
                 lastClickMs = now
+                // The same key feedback as the other strip buttons (R-24).
+                AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(KeyCode.NOT_SPECIFIED, this, HapticEvent.KEY_PRESS)
                 onClick()
             }
             if (textColor != 0) applyPillColors(this, primary)

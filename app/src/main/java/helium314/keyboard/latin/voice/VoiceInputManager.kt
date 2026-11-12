@@ -116,7 +116,8 @@ class VoiceInputManager(
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var audioRecorder: AudioRecorder = AudioRecorder(outputFile = File(cacheAudioDir(), "rec_placeholder.wav"))
+    // A placeholder that never records, so it needs no directory (no disk work at IME start).
+    private var audioRecorder: AudioRecorder = AudioRecorder(outputFile = File(context.cacheDir, "rec_placeholder.wav"))
     @Volatile private var state = State.IDLE
     private var currentAudioFile: File? = null
     @Volatile private var transcriptionJob: Job? = null
@@ -271,7 +272,8 @@ class VoiceInputManager(
         if (!audioRecorder.start()) {
             currentAudioFile?.takeIf { it.exists() }?.delete()
             currentAudioFile = null
-            Toast.makeText(context, R.string.voice_error_transcription_failed, Toast.LENGTH_SHORT).show()
+            // Nothing was recorded or sent, so not "transcription failed" (R-20).
+            Toast.makeText(context, R.string.voice_error_mic_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -304,7 +306,9 @@ class VoiceInputManager(
                     currentUseDedicatedStt = false
                     state = State.IDLE
                     callbacks.onFinished()
-                    callbacks.onError(context.getString(R.string.voice_error_recording_interrupted))
+                    callbacks.onError(context.getString(
+                        if (recorder.startFailed) R.string.voice_error_mic_unavailable else R.string.voice_error_recording_interrupted
+                    ))
                 }
             }
         }

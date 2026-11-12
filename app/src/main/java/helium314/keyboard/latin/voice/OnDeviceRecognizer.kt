@@ -73,7 +73,7 @@ internal fun joinSegments(segments: List<String>): String {
 
 /** CJK radicals to CJK ideographs (kana and CJK punctuation included), compatibility ideographs,
  *  full-width forms and the supplementary ideograph planes. */
-private fun isSpacelessScript(codePoint: Int): Boolean =
+internal fun isSpacelessScript(codePoint: Int): Boolean =
     codePoint in 0x2E80..0x9FFF || codePoint in 0xF900..0xFAFF ||
         codePoint in 0xFF00..0xFFEF || codePoint in 0x20000..0x3FFFF
 

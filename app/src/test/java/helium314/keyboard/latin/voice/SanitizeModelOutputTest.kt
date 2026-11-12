@@ -54,6 +54,18 @@ class SanitizeModelOutputTest {
     }
 
     @Test
+    fun zwnjIsPreservedForPersianAndIndicSpelling() {
+        val persian = "\u0645\u06CC\u200C\u062E\u0648\u0627\u0647\u0645"
+        assertEquals(persian, sanitizeModelOutput(persian, 100))
+    }
+
+    @Test
+    fun cleanModelOutputNeverCuts() {
+        val long = "a".repeat(30_000)
+        assertEquals(long, cleanModelOutput(long))
+    }
+
+    @Test
     fun lrmAndRlmAreStripped() {
         val input = "a\u200Eb\u200Fc"
         assertEquals("abc", sanitizeModelOutput(input, 100))

@@ -183,7 +183,7 @@ class TranslateManager(
             apiKey = apiKey,
             model = model,
             systemPrompt = prompt,
-            runtimeInstruction = "Target language: $language.",
+            runtimeInstruction = null, // text requests send only the prompt, which names the language
             provider = provider,
             useZeroDataRetention = useZdr,
             disableReasoning = !prefs.getBoolean(Settings.PREF_AI_ALLOW_REASONING, Defaults.PREF_AI_ALLOW_REASONING),
@@ -195,12 +195,17 @@ class TranslateManager(
 
         activeJob = backgroundScope.launch(CoroutineName("TranslateRequest")) {
             try {
-                val translated = sanitizeModelOutput(runInterruptible { client.fixText(text) }, TRANSLATE_MAX_OUTPUT_LENGTH)
+                val translated = cleanModelOutput(runInterruptible { client.fixText(text) })
                 if (client.didFallbackFromZdr) {
                     mainHandler.post { warnAfterZdrFallback(context, model) }
                 }
                 if (translated.isBlank()) {
                     finish(token, error = context.getString(R.string.translate_error_empty))
+                    return@launch
+                }
+                // Refused, never cut: the result replaces the selection (R-02).
+                if (translated.length > TRANSLATE_MAX_OUTPUT_LENGTH) {
+                    finish(token, error = context.getString(R.string.ai_error_result_too_long))
                     return@launch
                 }
                 finish(token, original = text, result = translated)

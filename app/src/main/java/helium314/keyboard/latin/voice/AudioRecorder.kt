@@ -70,7 +70,7 @@ class AudioRecorder(
         )
     }
 
-    private var audioRecord: AudioRecord? = null
+    @Volatile private var audioRecord: AudioRecord? = null
     private val recordingScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     // Written on the IO recording thread, read on the main thread in cancel()/finalize — keep visible.
     @Volatile private var recordingJob: Job? = null
@@ -144,6 +144,16 @@ class AudioRecorder(
     var onMaxDurationReached: (() -> Unit)? = null
     var onAutoStopSilence: (() -> Unit)? = null
 
+    /** True when the last [start] could not open the microphone or the output file. */
+    @Volatile var startFailed = false
+        private set
+
+    /**
+     * Starts a recording and returns at once. The microphone and the output file open on the IO
+     * thread: the AudioRecord build, the effects and startRecording() are binder calls to the
+     * audio server, and on the main thread they delayed the haptic and the overlay (R-09). An open
+     * failure completes [completionOrNull] with null and sets [startFailed].
+     */
     fun start(): Boolean {
         if (isRecording) {
             // A second start would overwrite audioRecord while the first loop still reads it,
@@ -160,8 +170,69 @@ class AudioRecorder(
         // buffer sized exactly at the minimum underruns more easily on slow devices.
         val bufferSize = minBufferSize * 2
 
-        return try {
-            audioRecord = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        pcmBytesWritten = 0L
+        amplitudeSum = 0L
+        amplitudeCount = 0L
+        amplitudePeak = 0.0
+        stoppedDurationMs = 0L
+        currentAmplitude = 0.0
+        cancelRequested = false
+        startFailed = false
+        isRecording = true
+        recordingStartMs = SystemClock.elapsedRealtime()
+
+        val deferred = CompletableDeferred<File?>()
+        completion = deferred
+        recordingJob = recordingScope.launch(CoroutineName("AudioRecorder")) {
+            try {
+                if (!openMicrophone(bufferSize)) {
+                    startFailed = true
+                    cleanupRecordingFailure()
+                    return@launch
+                }
+                // Finalize and hand the file over BEFORE tearing the microphone down. The WAV
+                // header depends only on the byte counters, so making the upload wait for
+                // AudioRecord.stop() + release() + two effect releases — all serialized behind
+                // teardownLock, and documented at stop() as 150–500 ms on some OEM HALs — was
+                // pure dead time between the user pressing Stop and the first byte going out.
+                try {
+                    runRecordingLoop(readChunkBytes(bufferSize))
+                } finally {
+                    freezeDuration()
+                }
+                deferred.complete(finalizeOutputFile())
+            } catch (_: CancellationException) {
+                cleanupRecordingFailure()
+                deferred.complete(null)
+            } catch (t: Throwable) {
+                Log.e(TAG, "Recording failed", t)
+                cleanupRecordingFailure()
+                deferred.complete(null)
+            } finally {
+                cleanupAudioRecord()
+                // A loop that exits on its own — audioserver death, a cache write failure, an open
+                // failure — never reaches stop(), so nobody would ever await this deferred.
+                // Completing it unconditionally is what lets the watchdog in VoiceInputManager notice.
+                deferred.complete(null)
+            }
+        }
+        return true
+    }
+
+    /**
+     * Opens the output file and the microphone, on the recording thread. False on failure. A stop
+     * or a cancel during the open is seen by the loop, which then ends at once.
+     */
+    private fun openMicrophone(bufferSize: Int): Boolean = try {
+        outputFile.parentFile?.mkdirs()
+        val raf = RandomAccessFile(outputFile, "rw")
+        raf.setLength(0L)
+        // Write a 44-byte placeholder; finalizeOutputFile rewrites with accurate sizes.
+        raf.write(ByteArray(WAV_HEADER_SIZE))
+        pcmOutputFile = raf
+        // Under teardownLock, so an async stop() cannot run while the record starts.
+        synchronized(teardownLock) {
+            val record = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 // Privacy-sensitive capture (PRIV-004): no other app, the assistant included, can
                 // record the microphone at the same time.
                 AudioRecord.Builder()
@@ -185,85 +256,22 @@ class AudioRecorder(
                     bufferSize
                 )
             }
-            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+            audioRecord = record
+            if (record.state != AudioRecord.STATE_INITIALIZED) {
                 Log.e(TAG, "AudioRecord failed to initialize")
-                audioRecord?.release()
-                audioRecord = null
-                return false
+                false
+            } else {
+                attachAudioEffects(record.audioSessionId)
+                // Do not open the microphone for a recording that was stopped during the open.
+                if (isRecording) record.startRecording()
+                true
             }
-
-            attachAudioEffects(audioRecord!!.audioSessionId)
-
-            outputFile.parentFile?.mkdirs()
-            val raf = RandomAccessFile(outputFile, "rw")
-            raf.setLength(0L)
-            // Write a 44-byte placeholder; finalizeOutputFile rewrites with accurate sizes.
-            raf.write(ByteArray(WAV_HEADER_SIZE))
-            pcmOutputFile = raf
-            pcmBytesWritten = 0L
-            amplitudeSum = 0L
-            amplitudeCount = 0L
-            amplitudePeak = 0.0
-            stoppedDurationMs = 0L
-            currentAmplitude = 0.0
-            cancelRequested = false
-            isRecording = true
-            recordingStartMs = SystemClock.elapsedRealtime()
-            audioRecord?.startRecording()
-
-            val deferred = CompletableDeferred<File?>()
-            completion = deferred
-            recordingJob = recordingScope.launch(CoroutineName("AudioRecorder")) {
-                try {
-                    // Finalize and hand the file over BEFORE tearing the microphone down. The WAV
-                    // header depends only on the byte counters, so making the upload wait for
-                    // AudioRecord.stop() + release() + two effect releases — all serialized behind
-                    // teardownLock, and documented at stop() as 150–500 ms on some OEM HALs — was
-                    // pure dead time between the user pressing Stop and the first byte going out.
-                    try {
-                        runRecordingLoop(readChunkBytes(bufferSize))
-                    } finally {
-                        freezeDuration()
-                    }
-                    deferred.complete(finalizeOutputFile())
-                } catch (_: CancellationException) {
-                    cleanupRecordingFailure()
-                    deferred.complete(null)
-                } catch (t: Throwable) {
-                    Log.e(TAG, "Recording failed", t)
-                    cleanupRecordingFailure()
-                    deferred.complete(null)
-                } finally {
-                    cleanupAudioRecord()
-                    // A loop that exits on its own — audioserver death, a cache write failure —
-                    // never reaches stop(), so nobody would ever await this deferred. Completing
-                    // it unconditionally is what lets the watchdog in VoiceInputManager notice.
-                    deferred.complete(null)
-                }
-            }
-            true
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Microphone permission not granted", e)
-            cleanupStartFailure()
-            false
-        } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "AudioRecord construction failed", e)
-            cleanupStartFailure()
-            false
-        } catch (e: UnsupportedOperationException) {
-            // AudioRecord.Builder.build() throws this when the device cannot use the parameters.
-            Log.e(TAG, "AudioRecord parameters not supported", e)
-            cleanupStartFailure()
-            false
-        } catch (e: IllegalStateException) {
-            Log.e(TAG, "AudioRecord failed to start", e)
-            cleanupStartFailure()
-            false
-        } catch (e: java.io.IOException) {
-            Log.e(TAG, "Failed to open recording output file", e)
-            cleanupStartFailure()
-            false
         }
+    } catch (e: Exception) {
+        // SecurityException (no permission), IllegalArgumentException, UnsupportedOperationException
+        // (parameters the device cannot use), IllegalStateException, IOException (the output file).
+        Log.e(TAG, "Could not open the microphone", e)
+        false
     }
 
     /**
@@ -450,14 +458,6 @@ class AudioRecorder(
         lastMeanAmplitude = 0.0
         lastPeakAmplitude = 0.0
         currentAmplitude = 0.0
-    }
-
-    private fun cleanupStartFailure() {
-        isRecording = false
-        recordingStartMs = 0L
-        closeOutputSafely()
-        releaseAudioEffects()
-        stopAndReleaseAudioRecord()
     }
 
     private fun cleanupRecordingFailure() {

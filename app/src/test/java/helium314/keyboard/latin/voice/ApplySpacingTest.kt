@@ -27,6 +27,15 @@ class ApplySpacingTest {
     }
 
     @Test
+    fun noSpaceNextToCjkOrKana() {
+        // 今日は + 元気です: Japanese does not use spaces between words (review R-17)
+        val result = applySpacing("\u5143\u6C17\u3067\u3059", SpacingContext(charBefore = 0x306F, charAfter = 0x3002))
+        assertEquals("\u5143\u6C17\u3067\u3059", result)
+        // Latin text after a CJK character also gets no space
+        assertEquals("OK", applySpacing("OK", SpacingContext(charBefore = 0x5929, charAfter = null)))
+    }
+
+    @Test
     fun spaceOnBothSidesLeavesTextUntouched() {
         val result = applySpacing("hello", SpacingContext(charBefore = ' '.code, charAfter = ' '.code))
         assertEquals("hello", result)

@@ -1268,16 +1268,19 @@ New dictionary:
     <!-- HTTP 403: on OpenRouter a moderation refusal, not a bad API key -->
     <string name="ai_error_refused_content">The AI provider refused this content.</string>
     <string name="ai_error_too_large">The request is too large for this model. Make it shorter.</string>
+    <!-- Text Fix or Translate: the model reply is longer than the limit; the app does not cut it (review R-02) -->
+    <string name="ai_error_result_too_long">The result is too long. Select less text.</string>
     <string name="ai_error_provider_down">The AI provider has a problem. Try again later.</string>
     <string name="ai_error_timeout">The AI provider did not reply in time. Try again.</string>
     <string name="voice_error_rate_limited">AI provider rate limit reached — try again in a moment</string>
     <string name="voice_max_duration_reached">Maximum recording length reached — transcribing&#8230;</string>
+    <!-- The microphone or the recording file could not open (busy microphone, full storage). Nothing was sent -->
+    <string name="voice_error_mic_unavailable">Could not start the microphone</string>
     <string name="voice_error_secure_storage_unavailable">Secure storage is unavailable on this device</string>
     <!-- Shown after a restart, before the first unlock: the recording cannot go to encrypted storage yet -->
     <string name="voice_error_user_locked">Unlock the device to use voice input</string>
     <!-- %1$s is a model ID. The request went to a provider that does not collect data (PRIV-001) -->
     <string name="voice_warning_zdr_unenforceable">No ZDR route for <xliff:g id="slug">%1$s</xliff:g>. Sent without ZDR, data collection off.</string>
-    <string name="voice_error_field_changed">Transcription discarded — the text field changed while it was being transcribed</string>
     <!-- Shown when a finished dictation cannot be written back, so it is put on the clipboard -->
     <string name="voice_copied_field_changed">The field changed. Your dictation is on the clipboard.</string>
     <!-- Shown when the keyboard closes or the field changes while a dictation, Text Fix or Translate request runs -->
@@ -1446,7 +1449,6 @@ New dictionary:
     <string name="translate_error_too_long">The text is too long to translate</string>
     <!-- Shown when a finished translation cannot be written back, so it is put on the clipboard instead -->
     <string name="translate_copied_selection_changed">The text moved, so the translation was copied to your clipboard. Paste it where you want it.</string>
-    <string name="translate_error_selection_changed">Selection changed; select the same text and try again</string>
     <string name="translate_error_sensitive_field">Translate is unavailable in sensitive fields</string>
     <string name="translate_error_unsupported_field">Translate is unavailable in this field</string>
     <string name="translate_error_empty">The model returned no text</string>

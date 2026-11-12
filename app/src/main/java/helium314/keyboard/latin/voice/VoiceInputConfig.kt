@@ -16,7 +16,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 private val SANITIZE_OUTPUT_REGEX =
-    Regex("[[\\p{Cc}&&[^\\n\\r\\t]]\\u200B\\u200C\\u200E\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\u2066-\\u2069\\uFEFF]")
+    Regex("[[\\p{Cc}&&[^\\n\\r\\t]]\\u200B\\u200E\\u200F\\u2028\\u2029\\u202A-\\u202E\\u2060-\\u2064\\u2066-\\u2069\\uFEFF]")
 
 /**
  * Tag characters (U+E0000-U+E007F) are invisible, so they can hide text in the output (SEC-012).
@@ -29,14 +29,21 @@ private val TAG_CHARACTER_REGEX =
 /**
  * Strip control characters (Cc), invisible format marks (bidi marks, U+2060-U+2064, line and
  * paragraph separators, tag characters outside a flag) that corrupt host editors or hide text,
- * but intentionally preserve U+200D (ZWJ) so emoji sequences survive, and newline/carriage-return/tab
+ * but intentionally preserve U+200D (ZWJ) so emoji sequences survive, U+200C (ZWNJ), which is part
+ * of the spelling of Persian and of Indic scripts (R-03), and newline/carriage-return/tab
  * so the model's requested line breaks and spacing survive (otherwise "end.\nNext" collapses to
  * "end.Next", losing both the line break and the space after punctuation).
  */
+internal fun cleanModelOutput(raw: String): String = raw.replace(SANITIZE_OUTPUT_REGEX, "")
+    .replace(TAG_CHARACTER_REGEX) { it.groupValues[1] }
+    .trim()
+
+/**
+ * [cleanModelOutput], then cut to [maxLength] for dictation. Text Fix and Translate replace the
+ * user's text, so they must refuse a long result, not cut it (R-02).
+ */
 internal fun sanitizeModelOutput(raw: String, maxLength: Int): String {
-    val cleaned = raw.replace(SANITIZE_OUTPUT_REGEX, "")
-        .replace(TAG_CHARACTER_REGEX) { it.groupValues[1] }
-        .trim()
+    val cleaned = cleanModelOutput(raw)
     if (cleaned.length <= maxLength) return cleaned
     // Truncate at a grapheme cluster boundary so we never split a surrogate pair, a ZWJ emoji
     // sequence, or a base+combining-mark cluster - any of which would render as broken glyphs.
@@ -80,8 +87,13 @@ internal fun applySpacing(text: String, ctx: VoiceInputManager.SpacingContext?):
     val trailingCp = Character.codePointBefore(text, text.length)
     val leadingIsWhitespace = Character.isWhitespace(leadingCp)
     val trailingIsWhitespace = Character.isWhitespace(trailingCp)
-    val needsLeading = ctx.charBefore?.let { Character.isLetterOrDigit(it) && !leadingIsWhitespace } == true
-    val needsTrailing = ctx.charAfter?.let { Character.isLetterOrDigit(it) && !trailingIsWhitespace } == true
+    // No space next to a script that does not use spaces (CJK, kana), as in joinSegments (R-17).
+    val needsLeading = ctx.charBefore?.let {
+        Character.isLetterOrDigit(it) && !leadingIsWhitespace && !isSpacelessScript(it) && !isSpacelessScript(leadingCp)
+    } == true
+    val needsTrailing = ctx.charAfter?.let {
+        Character.isLetterOrDigit(it) && !trailingIsWhitespace && !isSpacelessScript(it) && !isSpacelessScript(trailingCp)
+    } == true
     val prefix = if (needsLeading) " " else ""
     val suffix = if (needsTrailing) " " else ""
     return prefix + text + suffix
@@ -201,16 +213,12 @@ internal fun isReasoningControlKnownRejected(model: String): Boolean =
     isRouteFactFresh(reasoningControlRejectedSince, model)
 
 internal fun isNetworkAvailable(context: Context): Boolean {
+    // The AI features need API 24 (SecretStore.vault), so there is no older path.
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        val network = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(network) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-    @Suppress("DEPRECATION")
-    val activeNetwork = cm.activeNetworkInfo ?: return false
-    @Suppress("DEPRECATION")
-    return activeNetwork.isConnected
+    val network = cm.activeNetwork ?: return false
+    val caps = cm.getNetworkCapabilities(network) ?: return false
+    return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 }
 
 internal data class ResolvedVoicePrompt(

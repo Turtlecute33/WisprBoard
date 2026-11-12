@@ -36,7 +36,8 @@ class TextFixManager(
     companion object {
         private const val TAG = "TextFixManager"
         private const val MAX_INPUT_LENGTH = 10_000
-        private const val MAX_OUTPUT_LENGTH = 10_000
+        /** Room for a fix that adds text; a longer reply is refused, never cut (R-02). */
+        private const val MAX_OUTPUT_LENGTH = 2 * MAX_INPUT_LENGTH
 
         @JvmStatic
         @StringRes
@@ -179,12 +180,16 @@ class TextFixManager(
 
         activeJob = backgroundScope.launch(CoroutineName("TextFixRequest")) {
             try {
-                val proposed = sanitize(runInterruptible { client.fixText(input) })
+                val proposed = cleanModelOutput(runInterruptible { client.fixText(input) })
                 if (client.didFallbackFromZdr) {
                     mainHandler.post { warnAfterZdrFallback(context, model) }
                 }
                 if (proposed.isBlank()) {
                     finish(token, error = context.getString(R.string.text_fix_error_empty))
+                    return@launch
+                }
+                if (proposed.length > MAX_OUTPUT_LENGTH) {
+                    finish(token, error = context.getString(R.string.ai_error_result_too_long))
                     return@launch
                 }
                 finish(token, original = input, result = proposed)
@@ -239,6 +244,4 @@ class TextFixManager(
             }
         }
     }
-
-    private fun sanitize(raw: String): String = sanitizeModelOutput(raw, MAX_OUTPUT_LENGTH)
 }

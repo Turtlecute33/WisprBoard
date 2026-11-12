@@ -92,6 +92,7 @@ import helium314.keyboard.latin.voice.AiProvider;
 import helium314.keyboard.latin.voice.OpenRouterClient;
 import helium314.keyboard.latin.voice.TextFixManager;
 import helium314.keyboard.latin.voice.TranslateManager;
+import helium314.keyboard.latin.voice.TranslateManagerKt;
 import helium314.keyboard.latin.voice.VoiceDestinationGuard;
 import helium314.keyboard.latin.voice.VoiceInputManager;
 import helium314.keyboard.settings.SettingsActivity2;
@@ -863,11 +864,12 @@ public class LatinIME extends InputMethodService implements
             @Override
             public void onError(@NonNull final String message) {
                 cancelPendingTextFixErrorOverlayHide();
-                Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
-                // Surface the error in the overlay too — the toast can flash by before the user
-                // notices, while the overlay was the surface they were already watching. Auto-hide
-                // a few seconds later so it doesn't linger after they move on.
-                if (mSuggestionStripView != null) {
+                // The overlay is the surface the user watches. A toast only when the strip is not
+                // shown: both together made TalkBack say the error two times (R-24). Auto-hide a
+                // few seconds later so it doesn't linger after they move on.
+                if (!isSuggestionStripShown()) {
+                    Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
+                } else {
                     mSuggestionStripView.showTextFixError(message);
                     final SuggestionStripView strip = mSuggestionStripView;
                     final Runnable hideRunnable = new Runnable() {
@@ -951,7 +953,7 @@ public class LatinIME extends InputMethodService implements
         // No paid AI request on a locked device (same rule as the toolbar and the clipboard).
         if (IsLockedCompatKt.isDeviceLocked(this)) return;
         // The language menu shows only in the strip. Check before the clipboard is read.
-        if (!hasSuggestionStripView()) {
+        if (!isSuggestionStripShown()) {
             Toast.makeText(this, R.string.ai_needs_suggestion_strip, Toast.LENGTH_LONG).show();
             return;
         }
@@ -960,14 +962,26 @@ public class LatinIME extends InputMethodService implements
             Toast.makeText(this, reason, Toast.LENGTH_LONG).show();
             return;
         }
-        CharSequence source;
-        try {
-            source = mInputLogic.mConnection.getSelectedText(0);
-        } catch (Exception e) {
-            source = null;
+        CharSequence source = null;
+        final boolean fromClipboard = !mInputLogic.mConnection.hasSelection();
+        if (fromClipboard) {
+            source = mClipboardHistoryManager.retrieveClipboardContentForAi();
+        } else {
+            // With a selection, the selection is the only source: an unreadable selection must
+            // not silently send the clipboard instead. A too long selection is refused before the
+            // read, which is a binder call on this thread (R-16).
+            final int selectionLength = Math.abs(mInputLogic.mConnection.getExpectedSelectionEnd()
+                    - mInputLogic.mConnection.getExpectedSelectionStart());
+            if (selectionLength > TranslateManagerKt.TRANSLATE_MAX_INPUT_LENGTH) {
+                Toast.makeText(this, R.string.translate_error_too_long, Toast.LENGTH_LONG).show();
+                return;
+            }
+            try {
+                source = mInputLogic.mConnection.getSelectedText(0);
+            } catch (Exception e) {
+                source = null;
+            }
         }
-        final boolean fromClipboard = source == null || source.toString().trim().isEmpty();
-        if (fromClipboard) source = mClipboardHistoryManager.retrieveClipboardContentForAi();
         if (source == null || source.toString().trim().isEmpty()) {
             Toast.makeText(this, R.string.translate_error_no_selection, Toast.LENGTH_LONG).show();
             return;
@@ -1011,8 +1025,12 @@ public class LatinIME extends InputMethodService implements
         mTranslateMenuOpen = false;
         mPendingTranslateLanguage = language;
         mTranslateManager.startTranslate(mPendingTranslateSource, language, new TranslateManager.Callbacks() {
+            /** An error before onWorking (too long, no key, blocked field) does not pass on Retry (R-26). */
+            private boolean mSent;
+
             @Override
             public void onWorking() {
+                mSent = true;
                 cancelPendingTranslateErrorOverlayHide();
                 if (mSuggestionStripView != null) {
                     mSuggestionStripView.setOnCancelTranslate(LatinIME.this::clearPendingTranslateState);
@@ -1032,7 +1050,7 @@ public class LatinIME extends InputMethodService implements
 
             @Override
             public void onError(@NonNull final String message) {
-                showTranslateError(message);
+                showTranslateError(message, mSent);
             }
         });
     }
@@ -1105,18 +1123,6 @@ public class LatinIME extends InputMethodService implements
     }
 
     /**
-     * Last resort for a translation the user has already paid for but that can no longer be
-     * written where it was meant to go — they moved the caret, changed the selection, or the host
-     * replaced the editor while the request was in flight.
-     *
-     * Every one of these paths used to drop the finished string on the floor and show "selection
-     * changed; select the same text and try again", which means paying for the same translation
-     * twice. Putting it on the clipboard costs nothing and makes the work recoverable with one
-     * paste. Deliberately not marked EXTRA_IS_SENSITIVE: that would suppress the Android 13+
-     * clipboard preview but also keep the text out of clipboard history, which is the whole
-     * recovery mechanism.
-     */
-    /**
      * The dictation equivalent of {@link #rescueTranslation}: the user has already paid for this
      * transcription, so a destination that can no longer accept it should not mean the words are
      * simply deleted. The old message ("the text field changed, try again") also asserted
@@ -1126,19 +1132,18 @@ public class LatinIME extends InputMethodService implements
      * exactly where dictated text must not be quietly parked on the clipboard.
      */
     private void rescueTranscription(@NonNull final String text) {
-        if (mClipboardHistoryManager == null) {
-            Toast.makeText(this, R.string.voice_error_field_changed, Toast.LENGTH_LONG).show();
-            return;
-        }
         mClipboardHistoryManager.copyToSystemClipboard(text);
         Toast.makeText(this, R.string.voice_copied_field_changed, Toast.LENGTH_LONG).show();
     }
 
+    /**
+     * Last resort for a translation the user has already paid for but that can no longer be
+     * written where it was meant to go — they moved the caret, changed the selection, or the host
+     * replaced the editor while the request was in flight. The clipboard keeps the work for one
+     * paste. Deliberately not marked EXTRA_IS_SENSITIVE: that would also keep the text out of
+     * clipboard history, which is the whole recovery mechanism.
+     */
     private void rescueTranslation(@NonNull final String translated) {
-        if (mClipboardHistoryManager == null) {
-            Toast.makeText(this, R.string.translate_error_selection_changed, Toast.LENGTH_LONG).show();
-            return;
-        }
         mClipboardHistoryManager.copyToSystemClipboard(translated);
         Toast.makeText(this, R.string.translate_copied_selection_changed, Toast.LENGTH_LONG).show();
     }
@@ -1154,13 +1159,13 @@ public class LatinIME extends InputMethodService implements
      * overlay directly: leaving {@code mTranslateMenuOpen} true would make the next Translate press
      * a dead key, which is exactly the 6.8.x bug class.
      */
-    private void showTranslateError(@NonNull final String message) {
+    private void showTranslateError(@NonNull final String message, final boolean retryable) {
         cancelPendingTranslateErrorOverlayHide();
         mTranslateMenuOpen = false;
-        final boolean canRetry = mPendingTranslateSource != null && mPendingTranslateLanguage != null;
+        final boolean canRetry = retryable && mPendingTranslateSource != null && mPendingTranslateLanguage != null;
         // The strip is unavailable in ToolbarMode.HIDDEN, during emoji search, and while the
         // clipboard panel owns the view, so a toast is the only channel there.
-        if (mSuggestionStripView == null || !mSuggestionStripView.isShown()) {
+        if (!isSuggestionStripShown()) {
             Toast.makeText(this, message, Toast.LENGTH_LONG).show();
             clearPendingTranslateState();
             return;
@@ -1674,8 +1679,10 @@ public class LatinIME extends InputMethodService implements
         // that the selection still matches before replacing anything.
         if (isDifferentTextField) {
             clearPendingTextFixState();
-            // restartInput() to a new field does not call onFinishInput, so drop Translate here too.
+            // restartInput() to a new field does not call onFinishInput, so drop Translate and
+            // stop the microphone here too (R-18).
             clearPendingTranslateState();
+            cancelVoiceRecordingIfCapturing();
         }
 
         StatsUtils.onStartInputView(editorInfo.inputType,
@@ -1896,9 +1903,10 @@ public class LatinIME extends InputMethodService implements
         // still holds what the IME predicted before this report — which is exactly what makes
         // "did we cause this?" answerable here. Sticky, so moving away and back is still caught.
         if (mVoiceTargetEditorId != null && !mVoiceTargetSelectionChanged) {
-            final boolean imeExpectedThisMove =
-                    newSelStart == mInputLogic.mConnection.getExpectedSelectionStart()
-                            && newSelEnd == mInputLogic.mConnection.getExpectedSelectionEnd();
+            // The same test as InputLogic.onUpdateSelection: a slow editor reports a move for an
+            // earlier key after the expected selection moved on, and that is not a user move (R-19).
+            final boolean imeExpectedThisMove = mInputLogic.mConnection.isBelatedExpectedUpdate(
+                    oldSelStart, newSelStart, oldSelEnd, newSelEnd, composingSpanStart, composingSpanEnd);
             if (!imeExpectedThisMove) mVoiceTargetSelectionChanged = true;
         }
 
@@ -2273,7 +2281,7 @@ public class LatinIME extends InputMethodService implements
                     // No paid AI request on a locked device (same rule as the toolbar and the clipboard).
                     if (IsLockedCompatKt.isDeviceLocked(this)) return;
                     // The proposal and Replace show only in the strip: no strip, no paid request.
-                    if (!hasSuggestionStripView()) {
+                    if (!isSuggestionStripShown()) {
                         Toast.makeText(this, R.string.ai_needs_suggestion_strip, Toast.LENGTH_LONG).show();
                         return;
                     }
@@ -2314,10 +2322,8 @@ public class LatinIME extends InputMethodService implements
      * scrolled, or switched layout to check something.
      */
     private void releaseAiOverlayIfEditingText(@NonNull final Event event) {
-        if (mPendingTextFixProposed == null && !mTranslateMenuOpen) return;
         if (!changesEditorText(event)) return;
-        clearPendingTextFixState();
-        clearPendingTranslateState();
+        releaseAiOverlaysForCommittedText();
     }
 
     /**
@@ -2334,6 +2340,10 @@ public class LatinIME extends InputMethodService implements
         if (mPendingTextFixProposed == null && !mTranslateMenuOpen) return;
         clearPendingTextFixState();
         clearPendingTranslateState();
+        // Closing the overlay posts a resume of suggestions. It would run after this input and
+        // mark the new word as resumed, and a resumed word is never autocorrected (R-05). The
+        // input that follows updates the strip itself.
+        mHandler.cancelResumeSuggestions();
     }
 
     private static boolean changesEditorText(@NonNull final Event event) {
@@ -2402,6 +2412,14 @@ public class LatinIME extends InputMethodService implements
 
     public boolean hasSuggestionStripView() {
         return null != mSuggestionStripView;
+    }
+
+    /**
+     * The AI overlays show only in the strip. In emoji mode and with the toolbar hidden the strip
+     * exists but is GONE, so a request there had no visible progress or result (R-25).
+     */
+    private boolean isSuggestionStripShown() {
+        return mSuggestionStripView != null && mSuggestionStripView.isShown();
     }
 
     private void setSuggestedWords(final SuggestedWords suggestedWords) {
