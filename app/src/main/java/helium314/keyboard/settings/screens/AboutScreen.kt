@@ -15,6 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -37,10 +38,12 @@ import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.preferences.Preference
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.SettingsActivity
+import helium314.keyboard.settings.dialogs.InfoDialog
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.previewDark
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import androidx.core.content.edit
@@ -162,21 +165,29 @@ fun createAboutSettings(context: Context) = listOf(
     Setting(context, SettingsWithoutKey.SAVE_LOG, R.string.save_log) { setting ->
         val ctx = LocalContext.current
         val scope = rememberCoroutineScope()
+        var showErrorDialog by rememberSaveable { mutableStateOf(false) }
         val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
             val uri = result.data?.data ?: return@rememberLauncherForActivityResult
-            scope.launch(Dispatchers.IO) {
-                ctx.getActivity()?.contentResolver?.openOutputStream(uri)?.use { os ->
-                    os.writer().use { writer ->
-                        val exportDate = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Calendar.getInstance().time)
-                        writer.write("WisprBoard internal log export\n")
-                        writer.write("Version: ${BuildConfig.VERSION_NAME}\n")
-                        writer.write("Generated: $exportDate\n\n")
-                        writer.write(Log.getLogForExport().joinToString("\n"))
-                    }
+            scope.launch {
+                // A failed write must not crash the process, which the keyboard shares (R-07).
+                val ok = withContext(Dispatchers.IO) {
+                    runCatching {
+                        requireNotNull(ctx.getActivity()?.contentResolver?.openOutputStream(uri)).use { os ->
+                            os.writer().use { writer ->
+                                val exportDate = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Calendar.getInstance().time)
+                                writer.write("WisprBoard internal log export\n")
+                                writer.write("Version: ${BuildConfig.VERSION_NAME}\n")
+                                writer.write("Generated: $exportDate\n\n")
+                                writer.write(Log.getLogForExport().joinToString("\n"))
+                            }
+                        }
+                    }.isSuccess
                 }
+                if (!ok) showErrorDialog = true
             }
         }
+        if (showErrorDialog) InfoDialog(stringResource(R.string.file_read_error)) { showErrorDialog = false }
         Preference(
             name = setting.title,
             description = setting.description,

@@ -55,7 +55,9 @@ fun BackgroundImagePref(setting: Setting, isLandscape: Boolean) {
         showSelectionDialog = false
         showDayNightDialog = false
         scope.launch(Dispatchers.IO) {
-            val ok = setBackgroundImage(ctx, uri, isNight, isLandscape)
+            // A failed read (for example a cloud file with no network) must not crash the
+            // process: the keyboard runs in it too (R-07).
+            val ok = runCatching { setBackgroundImage(ctx, uri, isNight, isLandscape) }.getOrDefault(false)
             // Flip the dialog flag back on Main: writing Compose state from an IO dispatcher races
             // with the snapshot the recomposer is reading and can drop the update entirely.
             if (!ok) withContext(Dispatchers.Main) { showErrorDialog = true }

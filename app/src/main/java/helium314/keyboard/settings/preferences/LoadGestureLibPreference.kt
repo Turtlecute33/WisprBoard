@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -25,8 +26,13 @@ import helium314.keyboard.settings.filePicker
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.IOException
 import androidx.core.content.edit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** A gesture library is a few MB; the limit stops a wrong pick from filling the storage. */
+private const val MAX_GESTURE_LIB_BYTES = 16L * 1024 * 1024
 
 @SuppressLint("ApplySharedPref")
 @Composable
@@ -52,28 +58,34 @@ fun LoadGestureLibPreference(setting: Setting) {
         Runtime.getRuntime().exit(0) // exit will restart the app, so library will be loaded
     }
     var tempFilePath: String? by rememberSaveable { mutableStateOf(null) }
+    val scope = rememberCoroutineScope()
     val launcher = filePicker { uri ->
         val tmpfile = File(ctx.filesDir.absolutePath + File.separator + "tmplib")
-        try {
-            val otherTemporaryFile = File(ctx.filesDir.absolutePath + File.separator + "tmpfile")
-            FileUtils.copyContentUriToNewFile(uri, ctx, otherTemporaryFile)
-            val inputStream = FileInputStream(otherTemporaryFile)
-            val outputStream = FileOutputStream(tmpfile)
-            outputStream.use {
-                tmpfile.setReadOnly() // as per recommendations in https://developer.android.com/about/versions/14/behavior-changes-14#safer-dynamic-code-loading
-                FileUtils.copyStreamToOtherStream(inputStream, it)
-            }
-            otherTemporaryFile.delete()
-
-            val checksum = ChecksumCalculator.checksum(tmpfile) ?: ""
+        scope.launch {
+            // Off the main thread with a size limit (R-31).
+            val checksum = withContext(Dispatchers.IO) {
+                try {
+                    val otherTemporaryFile = File(ctx.filesDir.absolutePath + File.separator + "tmpfile")
+                    FileUtils.copyContentUriToNewFile(uri, ctx, otherTemporaryFile, MAX_GESTURE_LIB_BYTES)
+                    val inputStream = FileInputStream(otherTemporaryFile)
+                    val outputStream = FileOutputStream(tmpfile)
+                    outputStream.use {
+                        tmpfile.setReadOnly() // as per recommendations in https://developer.android.com/about/versions/14/behavior-changes-14#safer-dynamic-code-loading
+                        FileUtils.copyStreamToOtherStream(inputStream, it)
+                    }
+                    otherTemporaryFile.delete()
+                    ChecksumCalculator.checksum(tmpfile) ?: ""
+                } catch (_: Exception) { // also a SecurityException of the provider: no crash
+                    tmpfile.delete()
+                    // should inform user, but probably the issues will only come when reading the library
+                    null
+                }
+            } ?: return@launch
             if (checksum == JniUtils.expectedDefaultChecksum()) {
                 renameToLibFileAndRestart(tmpfile, checksum)
             } else {
                 tempFilePath = tmpfile.absolutePath
             }
-        } catch (e: IOException) {
-            tmpfile.delete()
-            // should inform user, but probably the issues will only come when reading the library
         }
     }
     Preference(
