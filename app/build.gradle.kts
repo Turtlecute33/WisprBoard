@@ -69,13 +69,6 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
-        create("nouserlib") { // retained for compatibility; production builds disable external JNI by default
-            isMinifyEnabled = true
-            isShrinkResources = false
-            isDebuggable = false
-            isJniDebuggable = false
-            vcsInfo { include = false } // no commit data in the APK
-        }
         debug {
             // "normal" debug has minify for smaller APK to fit the GitHub 25 MB limit when zipped
             // and for better performance in case users want to install a debug APK
@@ -183,7 +176,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
     // compose
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // newer than 2025.11.01 contains androidx.compose.material:material-android:1.10.0, which requires minSdk 23
     // maybe it's possible to use tools:overrideLibrary="androidx.compose.material" as it's not used explicitly, but probably this is just going to crash
     implementation(platform("androidx.compose:compose-bom:2025.11.01"))
