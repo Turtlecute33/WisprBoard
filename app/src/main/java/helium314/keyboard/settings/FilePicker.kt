@@ -21,6 +21,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.getActivity
+import helium314.keyboard.latin.utils.readTextCapped
 import helium314.keyboard.settings.dialogs.InfoDialog
 import helium314.keyboard.settings.dialogs.NewDictionaryDialog
 import java.io.File
@@ -83,20 +84,6 @@ fun layoutFilePicker(
     if (errorDialog)
         InfoDialog(stringResource(R.string.file_read_error)) { errorDialog = false }
     return loadFilePicker
-}
-
-private fun readTextCapped(input: java.io.InputStream, maxBytes: Int): String {
-    val out = java.io.ByteArrayOutputStream()
-    val buffer = ByteArray(8 * 1024)
-    var total = 0
-    while (true) {
-        val read = input.read(buffer)
-        if (read == -1) break
-        total += read
-        if (total > maxBytes) throw IllegalArgumentException("layout file is too large")
-        out.write(buffer, 0, read)
-    }
-    return out.toString(Charsets.UTF_8.name())
 }
 
 @Composable

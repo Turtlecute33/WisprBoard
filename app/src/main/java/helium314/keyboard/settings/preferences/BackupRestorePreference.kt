@@ -8,16 +8,21 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import helium314.keyboard.dictionarypack.DictionaryPackConstants
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.emoji.SupportedEmojis
@@ -46,9 +52,11 @@ import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.protectedPrefs
+import helium314.keyboard.latin.utils.readTextCapped
 import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
+import helium314.keyboard.latin.voice.resetUnsupportedModels
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
@@ -83,8 +91,11 @@ fun BackupRestorePreference(setting: Setting) {
     // A backup staged after the screen is gone is deleted at once.
     val disposed = remember { booleanArrayOf(false) }
     DisposableEffect(Unit) { onDispose { disposed[0] = true; stagedRestore?.let(::discardStagedBackup) } }
-    val backupLauncher = backupLauncher(includeApiKeys) { error = it }
-    val restoreLauncher = restoreLauncher(onStaged = { if (disposed[0]) discardStagedBackup(it) else { stagedRestore = it } }) { error = it }
+    // The text of the modal dialog while background work runs, or null (R-30). Not saveable: the
+    // work does not continue in a recreated screen.
+    val busy = remember { mutableStateOf<Int?>(null) }
+    val backupLauncher = backupLauncher(includeApiKeys, busy) { error = it }
+    val restoreLauncher = restoreLauncher(busy, onStaged = { if (disposed[0]) discardStagedBackup(it) else { stagedRestore = it } }) { error = it }
     fun launchBackup(withKeys: Boolean) {
         includeApiKeys.value = withKeys
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Calendar.getInstance().time)
@@ -143,10 +154,11 @@ fun BackupRestorePreference(setting: Setting) {
             },
             onRestore = { replaceApiKeys ->
                 stagedRestore = null
-                applyRestore(ctx, staged, replaceApiKeys) { error = it }
+                applyRestore(ctx, staged, replaceApiKeys, busy) { error = it }
             },
         )
     }
+    busy.value?.let { BusyDialog(stringResource(it)) }
     if (error != null) {
         InfoDialog(
             if (error!!.startsWith("b"))
@@ -156,9 +168,38 @@ fun BackupRestorePreference(setting: Setting) {
     }
 }
 
+/** A modal dialog with no buttons. Back and a tap outside do not close it (R-30). */
+@Composable
+private fun BusyDialog(text: String) {
+    AlertDialog(
+        onDismissRequest = { },
+        confirmButton = { },
+        text = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(32.dp))
+                Text(text, Modifier.padding(start = 16.dp))
+            }
+        },
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+    )
+}
+
+/**
+ * Runs [work] on the background executor, and shows [text] in a modal dialog until it ends (R-30).
+ * The dialog stops a scroll, so this row stays composed and can show the result.
+ */
+private fun runBusy(busy: MutableState<Int?>, @StringRes text: Int, work: () -> Unit) {
+    busy.value = text
+    ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+        // Posted after the posts of work, so the result shows when the dialog closes.
+        try { work() } finally { postToMain { busy.value = null } }
+    }
+}
+
 @Composable
 private fun backupLauncher(
     includeApiKeys: State<Boolean>,
+    busy: MutableState<Int?>,
     onError: (String) -> Unit,
 ): ManagedActivityResultLauncher<Intent, ActivityResult> {
     val ctx = LocalContext.current
@@ -168,7 +209,7 @@ private fun backupLauncher(
         val pinnedClips = ClipboardDao.getInstance(ctx)?.getAll().orEmpty()
             .filter { it.isPinned }
             .map { BackupClip(it.timeStamp, it.text) }
-        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+        runBusy(busy, R.string.backup_in_progress) {
             try {
                 val backupPayload = collectBackupFiles(ctx)
                 val apiKeys = if (withKeys) {
@@ -224,12 +265,13 @@ private fun backupLauncher(
 /** Reads the picked file into a staged backup. Nothing changes until the user confirms it. */
 @Composable
 private fun restoreLauncher(
+    busy: MutableState<Int?>,
     onStaged: (StagedBackup) -> Unit,
     onError: (String) -> Unit,
 ): ManagedActivityResultLauncher<Intent, ActivityResult> {
     val ctx = LocalContext.current
     return filePicker { uri ->
-        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+        runBusy(busy, R.string.restore_in_progress) {
             try {
                 val restoreInputStream = requireNotNull(ctx.getActivity()?.contentResolver?.openInputStream(uri)) {
                     "Unable to open backup archive"
@@ -298,9 +340,10 @@ private fun applyRestore(
     ctx: android.content.Context,
     staged: StagedBackup,
     replaceApiKeys: Boolean,
+    busy: MutableState<Int?>,
     onError: (String) -> Unit,
 ) {
-    ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+    runBusy(busy, R.string.restore_in_progress) {
         var listenerStopped = false
         try {
             LayoutUtilsCustom.onLayoutFileChanged()
@@ -391,8 +434,9 @@ internal fun parseSettingsSnapshot(list: List<String>): SettingsSnapshot {
         }
         return SettingsSnapshot(booleans, ints, longs, floats, strings, stringSets)
             .withoutSensitiveKeys()
-    } catch (e: Exception) {
-        throw IllegalArgumentException("Malformed settings backup", e)
+    } catch (_: Exception) {
+        // No cause: the serialization message quotes the input, and the log gets it (R-29).
+        throw IllegalArgumentException("Malformed settings backup")
     }
 }
 
@@ -430,15 +474,21 @@ internal data class BackupClip(val timestamp: Long, val text: String)
 
 // Parse errors are rethrown without cause: serialization messages quote the input, which here
 // is clip text or API keys, and the message ends up in the error dialog and the log.
-internal fun parsePinnedClips(json: String): List<BackupClip> = try {
-    Json.decodeFromString(json)
-} catch (_: Exception) {
-    throw IllegalArgumentException("Malformed pinned clips in backup")
+internal fun parsePinnedClips(json: String): List<BackupClip> {
+    val clips = try {
+        Json.decodeFromString<List<BackupClip>>(json)
+    } catch (_: Exception) {
+        throw IllegalArgumentException("Malformed pinned clips in backup")
+    }
+    require(clips.size <= MAX_RESTORE_PINNED_CLIPS) { "Too many pinned clips in backup" }
+    return clips
 }
 
+/** A value that cannot go into an HTTP header is dropped (R-01); the rest of the restore continues. */
 internal fun parseApiKeys(json: String): Map<String, String> = try {
     Json.decodeFromString<Map<String, String>>(json)
-        .filter { it.key in API_KEY_PREFS && it.value.isNotBlank() }
+        .mapValues { it.value.trim() }
+        .filter { it.key in API_KEY_PREFS && SecretStore.isValidApiKey(it.value) }
 } catch (_: Exception) {
     throw IllegalArgumentException("Malformed API keys in backup")
 }
@@ -447,26 +497,26 @@ internal fun parseApiKeys(json: String): Map<String, String> = try {
 internal fun apiKeysToRestore(backupKeys: Map<String, String>, replaceApiKeys: Boolean): Map<String, String> =
     if (replaceApiKeys) backupKeys else emptyMap()
 
+/** Settings that a restore does not change: a file from another person cannot turn off ZDR (SEC-002) or change where the audio and text go (D-2). */
+private val KEPT_BOOLEANS = setOf(Settings.PREF_OPENROUTER_ZDR_ENABLED)
+private val KEPT_STRINGS = setOf(Settings.PREF_AI_PROVIDER, Settings.PREF_VOICE_SPEECH_ENGINE)
+
 /**
- * A restore keeps the current ZDR choice (SEC-002), so a file from another person cannot turn off
- * zero data retention. [current] null means that the choice is not set (the default applies).
- * The key is valid only as a boolean, so the restore removes it from all other types.
+ * Keeps the values of the kept settings in [current] (the prefs file before the restore). A kept
+ * setting that is not in [current] stays not set, so the default applies. A value of the wrong
+ * type counts as not set, and the restore removes each kept key from all other types.
  */
-internal fun SettingsSnapshot.keepingZdrChoice(current: Boolean?): SettingsSnapshot {
-    val key = Settings.PREF_OPENROUTER_ZDR_ENABLED
-    val others = booleans - key
+internal fun SettingsSnapshot.keepingCurrent(current: Map<String, *>): SettingsSnapshot {
+    val keys = KEPT_BOOLEANS + KEPT_STRINGS
     return SettingsSnapshot(
-        booleans = if (current == null) others else others + (key to current),
-        ints = ints - key,
-        longs = longs - key,
-        floats = floats - key,
-        strings = strings - key,
-        stringSets = stringSets - key,
+        booleans = booleans - keys + KEPT_BOOLEANS.mapNotNull { k -> (current[k] as? Boolean)?.let { k to it } },
+        ints = ints - keys,
+        longs = longs - keys,
+        floats = floats - keys,
+        strings = strings - keys + KEPT_STRINGS.mapNotNull { k -> (current[k] as? String)?.let { k to it } },
+        stringSets = stringSets - keys,
     )
 }
-
-// A value that is not a boolean counts as not set, so the restore removes it and the default applies.
-private fun SharedPreferences.zdrChoice(): Boolean? = all[Settings.PREF_OPENROUTER_ZDR_ENABLED] as? Boolean
 
 private val AI_SETTING_PREFIXES = listOf("ai_", "voice_", "text_fix_", "translate_", "openrouter_")
 
@@ -556,16 +606,16 @@ private fun stageBackup(ctx: android.content.Context, inputStream: InputStream):
                         if (isLearnedWordsFile(entryName)) hasLearnedWords = true else hasOtherFiles = true
                     }
                     entryName == PREFS_FILE_NAME -> {
-                        prefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
+                        prefsSnapshot = parseSettingsSnapshot(readTextCapped(zip, MAX_SNAPSHOT_BYTES).split("\n"))
                     }
                     entryName == PROTECTED_PREFS_FILE_NAME -> {
-                        protectedPrefsSnapshot = parseSettingsSnapshot(readSnapshotCapped(zip).split("\n"))
+                        protectedPrefsSnapshot = parseSettingsSnapshot(readTextCapped(zip, MAX_SNAPSHOT_BYTES).split("\n"))
                     }
                     entryName == PINNED_CLIPS_FILE_NAME -> {
-                        pinnedClips = parsePinnedClips(readSnapshotCapped(zip, MAX_RESTORE_ENTRY_BYTES.toInt()))
+                        pinnedClips = parsePinnedClips(readTextCapped(zip, MAX_RESTORE_ENTRY_BYTES.toInt()))
                     }
                     entryName == API_KEYS_FILE_NAME -> {
-                        apiKeys = parseApiKeys(readSnapshotCapped(zip))
+                        apiKeys = parseApiKeys(readTextCapped(zip, MAX_SNAPSHOT_BYTES))
                     }
                 }
                 zip.closeEntry()
@@ -620,24 +670,37 @@ private fun applyStagedBackup(ctx: android.content.Context, backup: StagedBackup
         throw t
     }
     try {
+        // A full backup replaces the files too, so a file that the backup does not have goes
+        // (R-14). The rollback snapshot above puts the files back if a later step fails. A zip
+        // without the settings file is not a full backup (for example a wrong file): keep the files.
+        if (backup.prefs != null) {
+            deleteAllowedBackupFiles(filesDir)
+            deleteAllowedBackupFiles(protectedFilesDir)
+        }
         copyDirectoryContents(backup.filesDir, filesDir)
         copyDirectoryContents(backup.protectedFilesDir, protectedFilesDir)
         // loaded learned words still use the old files, make them load the restored ones
         PersonalizationHelper.closeAllUserHistoryDictionaries()
-        // Read both ZDR choices before either file is cleared: the two can be the same file.
-        val zdrChoice = ctx.prefs().zdrChoice()
-        val protectedZdrChoice = ctx.protectedPrefs().zdrChoice()
+        // Read both files before either is cleared: the two can be the same file.
+        val current = ctx.prefs().all
+        val protectedCurrent = ctx.protectedPrefs().all
         backup.prefs?.let { snapshot ->
             ctx.prefs().edit {
                 clear()
-                putAll(snapshot.keepingZdrChoice(zdrChoice))
+                putAll(snapshot.keepingCurrent(current))
             }
         }
         backup.protectedPrefs?.let { snapshot ->
             ctx.protectedPrefs().edit {
                 clear()
-                putAll(snapshot.keepingZdrChoice(protectedZdrChoice))
+                putAll(snapshot.keepingCurrent(protectedCurrent))
             }
+        }
+        // The provider stays the same, so a restored model of the other provider goes back to the
+        // default (D-2). Never throw here: the rollback does not cover the prefs that are now written.
+        runCatching {
+            val prefs = ctx.prefs()
+            AiProvider.fromPref(prefs.all[Settings.PREF_AI_PROVIDER] as? String).resetUnsupportedModels(prefs)
         }
         // Old or hand-crafted backups may contain provider keys in either plaintext prefs file.
         // Scrub them even when an encrypted key already exists, since SecretStore then has no
@@ -752,22 +815,8 @@ private fun copyRestoreEntry(input: InputStream, output: OutputStream): Long {
 private const val MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024
 private const val MAX_RESTORE_ENTRY_BYTES = 32L * 1024L * 1024L
 private const val MAX_RESTORE_TOTAL_BYTES = 64L * 1024L * 1024L
-
-private fun readSnapshotCapped(input: InputStream, maxBytes: Int = MAX_SNAPSHOT_BYTES): String {
-    val buf = java.io.ByteArrayOutputStream()
-    val chunk = ByteArray(8 * 1024)
-    var total = 0
-    while (true) {
-        val n = input.read(chunk)
-        if (n == -1) break
-        total += n
-        if (total > maxBytes) {
-            throw IllegalArgumentException("Settings snapshot exceeds size limit")
-        }
-        buf.write(chunk, 0, n)
-    }
-    return buf.toString(Charsets.UTF_8.name())
-}
+/** Each clip is added on the main thread (R-32). */
+internal const val MAX_RESTORE_PINNED_CLIPS = 1000
 
 private fun refreshAfterRestore(ctx: android.content.Context) {
     checkVersionUpgrade(ctx)
@@ -781,6 +830,9 @@ private fun refreshAfterRestore(ctx: android.content.Context) {
     LayoutUtilsCustom.removeMissingLayouts(ctx)
     (ctx.getActivity() as? SettingsActivity)?.prefChanged()
     SupportedEmojis.load(ctx)
+    // The restore can replace or remove the image and font files (R-14).
+    Settings.clearCachedBackgroundImages()
+    Settings.clearCachedTypeface()
     KeyboardSwitcher.getInstance().setThemeNeedsReload()
 }
 

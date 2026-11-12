@@ -89,6 +89,20 @@ class PreferenceStateTest {
     }
 
     @Test
+    fun clearNotifiesEveryWatcher() {
+        var first = 0
+        var second = 0
+        subscribeForTest(prefs, "first") { first++ }
+        subscribeForTest(prefs, "second") { second++ }
+
+        // clear() gives a null key, and a restore uses clear() (R-14).
+        prefs.edit(commit = true) { clear() }
+
+        assertEquals(1, first)
+        assertEquals(1, second)
+    }
+
+    @Test
     fun unsubscribingTwiceIsHarmless() {
         var count = 0
         subscribeForTest(prefs, "watched") { count++ }

@@ -85,7 +85,10 @@ internal object PreferenceWatchers {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
             // Snapshotted under the lock before dispatch: a callback may add or remove rows, and
             // mutating the list mid-iteration would throw.
-            val callbacks = synchronized(PreferenceWatchers) { changedKey?.let { byKey[it]?.toList() } }
+            // A null key comes after clear() (for example a restore): each row can have changed (R-14).
+            val callbacks = synchronized(PreferenceWatchers) {
+                if (changedKey == null) byKey.values.flatten() else byKey[changedKey]?.toList()
+            }
             callbacks?.forEach { it() }
         }
 

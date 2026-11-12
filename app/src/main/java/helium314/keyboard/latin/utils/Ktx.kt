@@ -22,6 +22,8 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.withLink
 import androidx.core.util.TypedValueCompat
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 
 // generic extension functions
 
@@ -75,6 +77,27 @@ fun <T> MutableList<T>.removeFirst(predicate: (T) -> Boolean) {
 fun <T> MutableList<T>.replaceFirst(predicate: (T) -> Boolean, with: (T) -> T) {
     val i = indexOfFirst(predicate)
     if (i >= 0) this[i] = with(this[i])
+}
+
+/** [readTextCapped] found more than its limit. The message never quotes the data. */
+class InputTooLargeException : IllegalArgumentException("Data exceeds size limit")
+
+/**
+ * Reads [input] as UTF-8 text, and throws [InputTooLargeException] after more than [maxBytes].
+ * Does not close [input]: a zip stream must stay open for the next entry.
+ */
+fun readTextCapped(input: InputStream, maxBytes: Int): String {
+    val out = ByteArrayOutputStream()
+    val buffer = ByteArray(8 * 1024)
+    var total = 0
+    while (true) {
+        val read = input.read(buffer)
+        if (read == -1) break
+        total += read
+        if (total > maxBytes) throw InputTooLargeException()
+        out.write(buffer, 0, read)
+    }
+    return out.toString(Charsets.UTF_8.name())
 }
 
 fun Context.getActivity(): ComponentActivity? {
