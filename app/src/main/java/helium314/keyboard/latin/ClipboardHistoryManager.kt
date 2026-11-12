@@ -45,6 +45,7 @@ class ClipboardHistoryManager(
 
     fun onDestroy() {
         clipboardManager.removePrimaryClipChangedListener(this)
+        clipboardDao?.cancelScheduledClear()
     }
 
     override fun onPrimaryClipChanged() {
