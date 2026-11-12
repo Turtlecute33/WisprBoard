@@ -19,7 +19,6 @@ fun TextInputPreference(
     setting: Setting,
     default: String,
     info: String? = null,
-    isPassword: Boolean = false,
     singleLine: Boolean = true,
     neutralButtonText: String? = null,
     onNeutral: (() -> Unit)? = null,
@@ -32,7 +31,9 @@ fun TextInputPreference(
     Preference(
         name = setting.title,
         onClick = { showDialog = true },
-        description = if (isPassword && displayValue != null) "••••••••" else displayValue
+        description = displayValue,
+        // A long text (a prompt) would fill the screen (R-34). The dialog shows all of it.
+        descriptionMaxLines = if (singleLine) Int.MAX_VALUE else 2,
     )
     if (showDialog) {
         TextInputDialog(
@@ -43,14 +44,14 @@ fun TextInputPreference(
             },
             initialText = prefs.getString(setting.key, default) ?: "",
             title = { Text(setting.title) },
-            description = if (info == null) null else { { Text(info) } },
+            // The row shows the value, so the dialog shows the summary, for example the language hint of the Translate prompt (R-34).
+            description = (info ?: setting.description)?.let { { Text(it) } },
             neutralButtonText = neutralButtonText,
             onNeutral = {
                 onNeutral?.invoke()
                 KeyboardSwitcher.getInstance().setThemeNeedsReload()
             },
             singleLine = singleLine,
-            isPassword = isPassword,
             checkTextValid = checkTextValid
         )
     }

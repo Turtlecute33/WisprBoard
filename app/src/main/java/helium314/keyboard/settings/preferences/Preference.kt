@@ -27,6 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
@@ -129,6 +130,8 @@ fun Preference(
      * semantics of its own.
      */
     switchState: Boolean? = null,
+    /** At most this many lines of [description], then an ellipsis. */
+    descriptionMaxLines: Int = Int.MAX_VALUE,
     value: @Composable (RowScope.() -> Unit)? = null,
 ) {
     Row(
@@ -159,7 +162,9 @@ fun Preference(
                 ) {
                     Text(
                         text = description,
-                        modifier = Modifier.padding(top = 2.dp)
+                        modifier = Modifier.padding(top = 2.dp),
+                        maxLines = descriptionMaxLines,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

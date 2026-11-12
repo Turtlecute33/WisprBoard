@@ -3,6 +3,7 @@ package helium314.keyboard.settings.screens
 
 import android.content.Context
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,12 +73,19 @@ fun TextFixScreen(
 }
 
 /**
- * The enable switch for a Text Fix button, gated on secure storage plus a one-time privacy
- * disclosure. Both buttons hit the same network path with the same API key, so both need the same
- * gate — the second one used to skip it entirely and could be turned on with neither check.
+ * The enable switch of an AI text feature (a Text Fix button, Translate): it needs secure storage
+ * and the privacy disclosure. Each feature has the same gate, because each sends the text on the
+ * same network path with the same API key. [disclosureAccepted] true skips the disclosure.
  */
 @Composable
-private fun TextFixEnableSwitch(setting: Setting, default: Boolean) {
+internal fun AiFeatureEnableSwitch(
+    setting: Setting,
+    default: Boolean,
+    @StringRes privacyTitle: Int,
+    @StringRes privacyMessage: Int,
+    @StringRes privacyConfirm: Int,
+    disclosureAccepted: () -> Boolean = { false },
+) {
     val ctx = LocalContext.current
     val prefs = ctx.prefs()
     val secureStorageMessage = stringResource(R.string.voice_error_secure_storage_unavailable)
@@ -89,12 +97,12 @@ private fun TextFixEnableSwitch(setting: Setting, default: Boolean) {
                 showPrivacyDialog.value = false
                 prefs.edit { putBoolean(setting.key, true) }
                 // The flag is read when the keyboard is parsed and baked into the layout cache,
-                // so without this the button stays absent until the next theme change.
+                // so without this the key stays absent until the next theme change.
                 KeyboardSwitcher.getInstance().setThemeNeedsReload()
             },
-            title = { Text(stringResource(R.string.text_fix_enable_privacy_title)) },
-            content = { Text(stringResource(R.string.text_fix_enable_privacy_message)) },
-            confirmButtonText = stringResource(R.string.text_fix_enable_privacy_confirm),
+            title = { Text(stringResource(privacyTitle)) },
+            content = { Text(stringResource(privacyMessage)) },
+            confirmButtonText = stringResource(privacyConfirm),
         )
     }
     SwitchPreference(
@@ -105,10 +113,7 @@ private fun TextFixEnableSwitch(setting: Setting, default: Boolean) {
             else if (!SecretStore.isSecureStorageAvailable(ctx)) {
                 Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
                 false
-            } else if (prefs.getBoolean(Settings.PREF_TEXT_FIX_ENABLED, Defaults.PREF_TEXT_FIX_ENABLED)
-                || prefs.getBoolean(Settings.PREF_TEXT_FIX_2_ENABLED, Defaults.PREF_TEXT_FIX_2_ENABLED)) {
-                // The other button is already on, so the disclosure has been accepted. Don't make
-                // the user re-read it to enable the second one.
+            } else if (disclosureAccepted()) {
                 true
             } else {
                 showPrivacyDialog.value = true
@@ -117,6 +122,27 @@ private fun TextFixEnableSwitch(setting: Setting, default: Boolean) {
         },
         onCheckedChange = { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
     )
+}
+
+/**
+ * The enable switch for a Text Fix button. Both buttons hit the same network path with the same
+ * API key, so both need the same gate — the second one used to skip it entirely.
+ */
+@Composable
+private fun TextFixEnableSwitch(setting: Setting, default: Boolean) {
+    val prefs = LocalContext.current.prefs()
+    AiFeatureEnableSwitch(
+        setting,
+        default,
+        R.string.text_fix_enable_privacy_title,
+        R.string.text_fix_enable_privacy_message,
+        R.string.text_fix_enable_privacy_confirm,
+    ) {
+        // The other button is already on, so the disclosure has been accepted. Don't make
+        // the user re-read it to enable the second one.
+        prefs.getBoolean(Settings.PREF_TEXT_FIX_ENABLED, Defaults.PREF_TEXT_FIX_ENABLED)
+            || prefs.getBoolean(Settings.PREF_TEXT_FIX_2_ENABLED, Defaults.PREF_TEXT_FIX_2_ENABLED)
+    }
 }
 
 fun createTextFixSettings(context: Context) = listOf(

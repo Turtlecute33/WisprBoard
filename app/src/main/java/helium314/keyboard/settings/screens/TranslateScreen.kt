@@ -2,18 +2,13 @@
 package helium314.keyboard.settings.screens
 
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.edit
-import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
@@ -22,16 +17,13 @@ import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.ModelCatalog
-import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.latin.voice.apiKeyPrefKey
 import helium314.keyboard.latin.voice.isValidCustomModelSlug
 import helium314.keyboard.latin.voice.parseTranslateLanguages
 import helium314.keyboard.settings.SearchSettingsScreen
 import helium314.keyboard.settings.Setting
-import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.ModelListPreference
-import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import helium314.keyboard.settings.preferences.rememberBooleanPreferenceState
 import helium314.keyboard.settings.preferences.rememberStringPreferenceState
@@ -64,51 +56,16 @@ fun TranslateScreen(
     )
 }
 
-/**
- * The enable switch, gated on secure storage plus a one-time privacy disclosure — the same gate
- * Text Fix uses, because it is the same network path with the same user-supplied API key.
- */
-@Composable
-private fun TranslateEnableSwitch(setting: Setting) {
-    val ctx = LocalContext.current
-    val prefs = ctx.prefs()
-    val secureStorageMessage = stringResource(R.string.voice_error_secure_storage_unavailable)
-    val showPrivacyDialog = rememberSaveable { mutableStateOf(false) }
-    if (showPrivacyDialog.value) {
-        ConfirmationDialog(
-            onDismissRequest = { showPrivacyDialog.value = false },
-            onConfirmed = {
-                showPrivacyDialog.value = false
-                prefs.edit { putBoolean(setting.key, true) }
-                // The flag is read when the keyboard is parsed and baked into the layout cache,
-                // so without this the Translate key stays absent until the next theme change.
-                KeyboardSwitcher.getInstance().setThemeNeedsReload()
-            },
-            title = { Text(stringResource(R.string.translate_enable_privacy_title)) },
-            content = { Text(stringResource(R.string.translate_enable_privacy_message)) },
-            confirmButtonText = stringResource(R.string.translate_enable_privacy_confirm),
-        )
-    }
-    SwitchPreference(
-        setting,
-        Defaults.PREF_TRANSLATE_ENABLED,
-        allowCheckedChange = { enabling ->
-            if (!enabling) true
-            else if (!SecretStore.isSecureStorageAvailable(ctx)) {
-                Toast.makeText(ctx, secureStorageMessage, Toast.LENGTH_SHORT).show()
-                false
-            } else {
-                showPrivacyDialog.value = true
-                false
-            }
-        },
-        onCheckedChange = { KeyboardSwitcher.getInstance().setThemeNeedsReload() }
-    )
-}
-
 fun createTranslateSettings(context: Context) = listOf(
     Setting(context, Settings.PREF_TRANSLATE_ENABLED, R.string.translate_enabled, R.string.translate_enabled_summary) {
-        TranslateEnableSwitch(it)
+        // No skip: the Translate disclosure names the clipboard, so it shows also when Text Fix is on.
+        AiFeatureEnableSwitch(
+            it,
+            Defaults.PREF_TRANSLATE_ENABLED,
+            R.string.translate_enable_privacy_title,
+            R.string.translate_enable_privacy_message,
+            R.string.translate_enable_privacy_confirm,
+        )
     },
     Setting(context, Settings.PREF_TRANSLATE_LANGUAGES, R.string.translate_languages, R.string.translate_languages_summary) {
         val prefs = LocalContext.current.prefs()
