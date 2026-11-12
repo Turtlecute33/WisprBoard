@@ -638,6 +638,13 @@ private object AppUpgrade {
                 else Settings.CLIPBOARD_RETENTION_PRESETS.minBy { kotlin.math.abs(it - stored) }
             prefs.edit { putInt(Settings.PREF_CLIPBOARD_HISTORY_RETENTION_TIME, retention) }
         }
+        // 6.1.0 to 7.7.0 named the learned-words folders with a short R8 class name. Later
+        // releases cannot read them, and "delete learned words" did not find them (R-12).
+        if (oldVersion <= 7700) {
+            DeviceProtectedUtils.getFilesDir(context).listFiles()?.forEach {
+                if (isOrphanedLearnedWordsDict(it.name)) it.deleteRecursively()
+            }
+        }
         upgradeToolbarPrefs(prefs)
         LayoutUtilsCustom.onLayoutFileChanged() // just to be sure
         prefs.edit { putInt(Settings.PREF_VERSION_CODE, BuildConfig.VERSION_CODE) }
@@ -647,3 +654,14 @@ private object AppUpgrade {
     private fun getCustomLayoutFile(layoutName: String, context: Context): File =
         File(File(DeviceProtectedUtils.getFilesDir(context), "layouts"), layoutName)
 }
+
+/**
+ * The names of the writable dictionaries ("<prefix><name>.<language tag>.dict" in filesDir):
+ * UserHistoryDictionary, UserBinaryDictionary, ContactsBinaryDictionary, AppsBinaryDictionary.
+ * The spell checker adds the prefix "spellcheck_".
+ */
+private val WRITABLE_DICT_NAMES = setOf("UserHistoryDictionary", "userunigram", "contacts", "apps")
+
+/** True for a top-level "*.dict" entry in filesDir that no current dictionary uses (R-12). */
+internal fun isOrphanedLearnedWordsDict(fileName: String): Boolean =
+    fileName.endsWith(".dict") && fileName.substringBefore('.').removePrefix("spellcheck_") !in WRITABLE_DICT_NAMES

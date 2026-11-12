@@ -34,9 +34,11 @@ public final class AudioAndHapticFeedbackManager {
     private SettingsValues mSettingsValues;
     private boolean mSoundOn;
     private boolean mDoNotDisturb;
-    // areAllPrimitivesSupported is a binder IPC and the answer is static per device — cache it
+    // hasVibrator, hasAmplitudeControl and areAllPrimitivesSupported are binder calls on old
+    // Android versions, and the answers do not change: read them one time, not per key (R-23).
+    private boolean mHasVibrator;
+    private boolean mHasAmplitudeControl;
     private Boolean mTickPrimitiveSupported;
-    private Boolean mClickPrimitiveSupported;
 
     private static final AudioAndHapticFeedbackManager sInstance =
             new AudioAndHapticFeedbackManager();
@@ -56,6 +58,9 @@ public final class AudioAndHapticFeedbackManager {
     private void initInternal(final Context context) {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        mHasVibrator = mVibrator != null && mVibrator.hasVibrator();
+        mHasAmplitudeControl = mHasVibrator && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && mVibrator.hasAmplitudeControl();
     }
 
     public void performHapticAndAudioFeedback(
@@ -68,7 +73,19 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     public boolean hasVibrator() {
-        return mVibrator != null && mVibrator.hasVibrator();
+        return mHasVibrator;
+    }
+
+    /**
+     * True when the haptics that bypass the keypress switch (voice cues, the popup tick) must stay
+     * off: Do Not Disturb without "vibrate in DND", like key presses (R-21).
+     */
+    private boolean isQuietForCues() {
+        return mDoNotDisturb && (mSettingsValues == null || !mSettingsValues.mVibrateInDndMode);
+    }
+
+    private int userIntensity() {
+        return mSettingsValues != null ? mSettingsValues.mKeypressVibrationIntensity : -1;
     }
 
     /**
@@ -78,7 +95,7 @@ public final class AudioAndHapticFeedbackManager {
      * platform offers so it doesn't feel like a buzz.
      */
     public void vibrateTick() {
-        if (mVibrator == null || !mVibrator.hasVibrator()) return;
+        if (!mHasVibrator || isQuietForCues() || userIntensity() == 0) return;
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // EFFECT_TICK is the OS-defined "scroll-tick"-style pulse: shorter and
@@ -98,7 +115,7 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     public void vibrate(final long milliseconds) {
-        if (mVibrator == null || milliseconds <= 0) {
+        if (!mHasVibrator || milliseconds <= 0 || isQuietForCues() || userIntensity() == 0) {
             return;
         }
         vibrateOneShot(milliseconds, -1);
@@ -119,10 +136,10 @@ public final class AudioAndHapticFeedbackManager {
      * keypress vibration intensity so cues match the feel the user dialled in.
      */
     private void vibratePattern(final long[] timings) {
-        if (mVibrator == null || timings == null || timings.length == 0) return;
+        final int intensity = userIntensity();
+        if (!mHasVibrator || timings == null || timings.length == 0 || isQuietForCues() || intensity == 0) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            final int intensity = mSettingsValues != null ? mSettingsValues.mKeypressVibrationIntensity : -1;
-            final int amplitude = (intensity >= 0 && mVibrator.hasAmplitudeControl())
+            final int amplitude = (intensity >= 0 && mHasAmplitudeControl)
                     ? Math.min(Math.max(intensity * 255 / 100, 1), 255)
                     : VibrationEffect.DEFAULT_AMPLITUDE;
             final int[] amplitudes = new int[timings.length];
@@ -142,7 +159,7 @@ public final class AudioAndHapticFeedbackManager {
      * the vibrate-on-keypress toggle.
      */
     public void vibratePreview(final int durationMs, final int intensityPercent) {
-        vibrateForEvent(HapticEvent.KEY_PRESS, durationMs, intensityPercent);
+        vibrateForEvent(durationMs, intensityPercent);
     }
 
     /**
@@ -153,25 +170,26 @@ public final class AudioAndHapticFeedbackManager {
      *   2. Amplitude-controlled one-shot (Android 8+) — honours an explicit duration and intensity.
      *   3. Legacy timed buzz — last resort on old/limited vibrators.
      */
-    private void vibrateForEvent(final HapticEvent hapticEvent, final int durationPref, final int intensityPref) {
-        if (mVibrator == null || !mVibrator.hasVibrator()) return;
+    private void vibrateForEvent(final int durationPref, final int intensityPref) {
+        if (!mHasVibrator) return;
         if (intensityPref == 0) return;
         if (durationPref < 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                && vibrateComposed(hapticEvent, intensityPref)) {
+                && vibrateComposed(intensityPref)) {
             return;
         }
-        final long duration = durationPref >= 0 ? durationPref : defaultDurationMs(hapticEvent);
+        final long duration = durationPref >= 0 ? durationPref : DEFAULT_DURATION_MS;
         if (duration <= 0) return;
         vibrateOneShot(duration, intensityPref);
     }
 
+    /** No code sends KEY_LONG_PRESS any more, so each event is a tick. */
+    private static final long DEFAULT_DURATION_MS = 10L;
+
     @RequiresApi(Build.VERSION_CODES.R)
-    private boolean vibrateComposed(final HapticEvent hapticEvent, final int intensityPref) {
-        final int primitive = hapticEvent == HapticEvent.KEY_LONG_PRESS
-                ? VibrationEffect.Composition.PRIMITIVE_CLICK
-                : VibrationEffect.Composition.PRIMITIVE_TICK;
+    private boolean vibrateComposed(final int intensityPref) {
+        final int primitive = VibrationEffect.Composition.PRIMITIVE_TICK;
         try {
-            if (!isPrimitiveSupported(primitive)) return false;
+            if (!isTickSupported()) return false;
             final float scale = intensityPref >= 0
                     ? Math.min(intensityPref / 100f, 1f)
                     : 1f;
@@ -186,21 +204,16 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    private boolean isPrimitiveSupported(final int primitive) {
-        if (primitive == VibrationEffect.Composition.PRIMITIVE_CLICK) {
-            if (mClickPrimitiveSupported == null)
-                mClickPrimitiveSupported = mVibrator.areAllPrimitivesSupported(primitive);
-            return mClickPrimitiveSupported;
-        }
+    private boolean isTickSupported() {
         if (mTickPrimitiveSupported == null)
-            mTickPrimitiveSupported = mVibrator.areAllPrimitivesSupported(primitive);
+            mTickPrimitiveSupported = mVibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK);
         return mTickPrimitiveSupported;
     }
 
     private void vibrateOneShot(final long duration, final int intensityPref) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                final int amplitude = (intensityPref >= 0 && mVibrator.hasAmplitudeControl())
+                final int amplitude = (intensityPref >= 0 && mHasAmplitudeControl)
                         ? Math.min(Math.max(intensityPref * 255 / 100, 1), 255)
                         : VibrationEffect.DEFAULT_AMPLITUDE;
                 mVibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude));
@@ -210,10 +223,6 @@ public final class AudioAndHapticFeedbackManager {
             }
         }
         mVibrator.vibrate(duration);
-    }
-
-    private static long defaultDurationMs(final HapticEvent hapticEvent) {
-        return hapticEvent == HapticEvent.KEY_LONG_PRESS ? 20L : 10L;
     }
 
     private boolean reevaluateIfSoundIsOn() {
@@ -259,7 +268,7 @@ public final class AudioAndHapticFeedbackManager {
         if (hapticEvent.allowCustomDuration && (duration >= 0 || intensity >= 0)) {
             // The user dialled in a duration and/or intensity: build a precise effect so the feel is
             // consistent across devices instead of deferring to each OEM's haptic constant.
-            vibrateForEvent(hapticEvent, duration, intensity);
+            vibrateForEvent(duration, intensity);
             return;
         }
         // Go ahead with the system default

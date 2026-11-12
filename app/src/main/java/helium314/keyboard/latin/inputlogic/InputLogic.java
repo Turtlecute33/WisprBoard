@@ -272,7 +272,9 @@ public final class InputLogic {
         }
         handler.postUpdateSuggestionStrip(SuggestedWords.INPUT_STYLE_TYPING);
         final String text = performSpecificTldProcessingOnTextInput(rawText);
-        if (SpaceState.PHANTOM == mSpaceState) {
+        // A dictation already starts with the space it needs; a phantom space here doubled it (R-04).
+        if (SpaceState.PHANTOM == mSpaceState
+                && !(text.length() > 0 && Character.isWhitespace(text.codePointAt(0)))) {
             insertAutomaticSpaceIfOptionsAndTextAllow(settingsValues);
         }
         mConnection.commitText(text, 1);

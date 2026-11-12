@@ -495,6 +495,14 @@ class InputLogicTest {
         assertEquals("b", composingText)
     }
 
+    @Test fun `no second space when text input after a suggestion starts with a space`() {
+        // a dictation after a picked suggestion already has its leading space (review R-04)
+        reset()
+        pickSuggestion("hello")
+        input(" world")
+        assertEquals("hello world", text)
+    }
+
     @Test fun `autospace works in URL field when input isn't URL`() {
         reset()
         latinIME.prefs().edit { putBoolean(Settings.PREF_URL_DETECTION, true) }

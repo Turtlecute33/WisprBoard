@@ -258,7 +258,19 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         suggestionsStrip.layoutDirection = newLayoutDirection
     }
 
+    /**
+     * While an AI overlay shows, only remember the request: "auto show/hide toolbar" and the
+     * pinned keys must not cover the overlay and its Cancel or Replace button (R-44).
+     */
     fun setToolbarVisibility(toolbarVisible: Boolean) {
+        if (hasOverlay) {
+            toolbarVisibleBeforeOverlay = toolbarVisible
+            return
+        }
+        applyToolbarVisibility(toolbarVisible)
+    }
+
+    private fun applyToolbarVisibility(toolbarVisible: Boolean) {
         toolbarWanted = toolbarVisible
         // avoid showing toolbar keys when locked
         val locked = deviceLocked
@@ -291,8 +303,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // Typing refreshes the strip on every keystroke; fading each of those refreshes
         // allocates an animator plus a hardware layer in the most latency-sensitive path in
         // the app, and mostly animates flicker since every word changes anyway. Fade only
-        // non-typing updates (predictions after commit, recorrection, batch results).
-        if (suggestions.mInputStyle != SuggestedWords.INPUT_STYLE_TYPING) animateSuggestionsIn()
+        // non-typing updates (predictions after commit, recorrection, batch results). The
+        // gesture updates come about each 100 ms during a glide, so they do not fade (R-06).
+        if (suggestions.mInputStyle != SuggestedWords.INPUT_STYLE_TYPING
+            && suggestions.mInputStyle != SuggestedWords.INPUT_STYLE_UPDATE_BATCH) animateSuggestionsIn()
     }
 
     // Gentle, fast fade so refreshed suggestions ease in instead of hard-swapping on every keystroke.
@@ -353,7 +367,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
      */
     private fun showOverlay(view: View) {
         if (toolbarVisibleBeforeOverlay == null) toolbarVisibleBeforeOverlay = toolbarContainer.isVisible
-        setToolbarVisibility(false)
+        applyToolbarVisibility(false)
         pinnedKeys.isVisible = false // an unweighted sibling would squeeze the overlay off-screen
         attachExternalSuggestionView(view, false)
     }
@@ -361,7 +375,7 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private fun hideOverlay() {
         clear()
         isExternalSuggestionVisible = false
-        toolbarVisibleBeforeOverlay?.let { setToolbarVisibility(it) }
+        toolbarVisibleBeforeOverlay?.let { applyToolbarVisibility(it) }
         toolbarVisibleBeforeOverlay = null
         // Refill the strip that clear() emptied. Updates were dropped while the overlay was up.
         if (!hasOverlay) listener.removeExternalSuggestions()
