@@ -135,6 +135,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
         panelState.translateLanguages = if (translateManager != null && Settings.getValues().mTranslateEnabled)
             translateManager.languages() else emptyList()
         refreshClips()
+        // after refreshClips: the next layout puts the newest clip at the top, not the old first clip
+        panelState.gridState.requestScrollToItem(0)
 
         // browsing needs no keys at all: the list gets the whole panel until typing starts
         bottomRowKeyboardView.visibility = GONE

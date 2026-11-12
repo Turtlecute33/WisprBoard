@@ -3,6 +3,7 @@
 package helium314.keyboard.keyboard.clipboard
 
 import android.util.Patterns
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -136,6 +137,13 @@ class ClipboardPanelState {
      * anything that must not, keys on this.
      */
     var sessionId by mutableIntStateOf(0)
+
+    /**
+     * Scroll state of the clip list. It is here, not in a `remember`, so that it stays when the
+     * list leaves the composition for search or edit. [ClipboardHistoryView] scrolls it to the
+     * top at each open, else a new clip comes above the visible part of the list (R-38).
+     */
+    val gridState = LazyGridState()
 
     fun setClips(entries: List<ClipboardHistoryEntry>) {
         val items = entries.map { ClipItem(it) }

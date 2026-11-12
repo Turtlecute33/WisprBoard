@@ -225,6 +225,8 @@
     <string name="clipboard_clear_all_confirm">Tap again to clear all clips</string>
     <!-- Clipboard panel: button that opens the actions of a clip -->
     <string name="clipboard_actions">Clip actions</string>
+    <!-- Clipboard panel: accessibility label of the long press on a clip, which opens its actions -->
+    <string name="clipboard_show_actions">Show clip actions</string>
     <!-- Clipboard panel: button that shows the full text of a clip -->
     <string name="clipboard_show_more">Show more</string>
     <!-- Clipboard panel: button that shows the short text of a clip again -->

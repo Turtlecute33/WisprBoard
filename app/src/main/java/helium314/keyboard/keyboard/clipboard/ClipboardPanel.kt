@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -132,6 +134,7 @@ private fun BrowseLayer(state: ClipboardPanelState, actions: ClipboardPanelActio
         else LazyVerticalGrid(
             columns = GridCells.Fixed(integerResource(R.integer.config_clipboard_keyboard_col_count).coerceAtLeast(1)),
             modifier = Modifier.fillMaxSize(),
+            state = state.gridState,
             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -183,7 +186,7 @@ private fun PanelTopBar(state: ClipboardPanelState, actions: ClipboardPanelActio
                             enabled = true, selected = false,
                             borderColor = MaterialTheme.colorScheme.outlineVariant
                         ),
-                        modifier = Modifier.height(32.dp)
+                        modifier = Modifier.heightIn(min = 32.dp)
                     )
                 }
             }
@@ -231,8 +234,9 @@ private fun PanelTopBar(state: ClipboardPanelState, actions: ClipboardPanelActio
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PinnedRow(pinned: List<ClipItem>, state: ClipboardPanelState, actions: ClipboardPanelActions) {
+    // Minimum heights, not fixed heights: a large font scale must not cut the text (R-43).
     LazyRow(
-        modifier = Modifier.fillMaxWidth().height(54.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -243,9 +247,11 @@ private fun PinnedRow(pinned: List<ClipItem>, state: ClipboardPanelState, action
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 shape = RoundedCornerShape(ClipboardShapes.pinnedCard),
                 modifier = Modifier
-                    .fillMaxHeight()
+                    .heightIn(min = 48.dp)
                     .widthIn(min = 72.dp, max = 190.dp)
                     .combinedClickable(
+                        onClickLabel = stringResource(R.string.clipboard_action_paste),
+                        onLongClickLabel = stringResource(R.string.clipboard_show_actions),
                         onClick = { actions.onPaste(item) },
                         onLongClick = { state.menuFor = item.id }
                     )
@@ -333,6 +339,8 @@ private fun ClipCard(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
+                onClickLabel = stringResource(R.string.clipboard_action_paste),
+                onLongClickLabel = stringResource(R.string.clipboard_show_actions),
                 onClick = { actions.onPaste(item) },
                 onLongClick = { state.menuFor = item.id }
             )
@@ -350,7 +358,7 @@ private fun ClipCard(
                     onTextLayout = { clamped = it.hasVisualOverflow || item.isTruncated }
                 )
                 Spacer(Modifier.height(2.dp))
-                ClipMeta(item)
+                ClipMeta(item, state.sessionId)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 SmallIconButton(
@@ -374,7 +382,7 @@ private fun ClipCard(
 }
 
 @Composable
-private fun ClipMeta(item: ClipItem) {
+private fun ClipMeta(item: ClipItem, sessionId: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painterResource(item.kind.iconRes()), null,
@@ -382,7 +390,9 @@ private fun ClipMeta(item: ClipItem) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.width(5.dp))
-        val time = remember(item.id, item.timeStamp) {
+        // Keyed on the session too: the panel content stays across sessions, so "x minutes ago"
+        // must be made again at each open (R-41).
+        val time = remember(item.id, item.timeStamp, sessionId) {
             DateUtils.getRelativeTimeSpanString(
                 item.timeStamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS
             ).toString()
@@ -490,11 +500,14 @@ private fun BoxScope.ClipActionSheet(state: ClipboardPanelState, actions: Clipbo
                 when {
                     state.translating -> TranslatingRow(actions)
                     state.pickingLanguage -> LanguageRow(sheetItem, state, actions)
-                    else -> Row(
+                    // A wrapping row: 7 actions are wider than a phone, and in a scrolling row
+                    // Delete was off screen with no sign that it is there (R-43).
+                    else -> FlowRow(
                         Modifier
-                            .horizontalScroll(rememberScrollState())
+                            .fillMaxWidth()
                             .padding(horizontal = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         SheetAction(R.drawable.sym_keyboard_paste, R.string.clipboard_action_paste) {
                             state.menuFor = null
@@ -563,7 +576,7 @@ private fun LanguageRow(item: ClipItem, state: ClipboardPanelState, actions: Cli
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 shape = CircleShape,
-                modifier = Modifier.height(38.dp).clickable { actions.onTranslate(item, language) }
+                modifier = Modifier.heightIn(min = 38.dp).clickable { actions.onTranslate(item, language) }
             ) {
                 Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                     Text(language, style = MaterialTheme.typography.labelLarge, maxLines = 1)
@@ -588,7 +601,7 @@ private fun TranslatingRow(actions: ClipboardPanelActions) {
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shape = CircleShape,
-            modifier = Modifier.height(38.dp).clickable { actions.onCancelTranslate() }
+            modifier = Modifier.heightIn(min = 38.dp).clickable { actions.onCancelTranslate() }
         ) {
             Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.translate_cancel), style = MaterialTheme.typography.labelLarge)
@@ -617,7 +630,7 @@ private fun SheetAction(
     }
     Column(
         modifier = Modifier
-            .width(66.dp)
+            .widthIn(min = 66.dp)
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
@@ -645,14 +658,16 @@ private fun SheetAction(
 @Composable
 private fun SearchLayer(state: ClipboardPanelState, actions: ClipboardPanelActions) {
     Column(Modifier.fillMaxSize()) {
+        // Minimum heights, so a large font scale does not cut the query (R-43). The buttons keep
+        // their old 38 dp box, so at a normal font scale the bar stays 46 dp.
         Row(
-            modifier = Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp).padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = CircleShape,
-                modifier = Modifier.weight(1f).fillMaxHeight()
+                modifier = Modifier.weight(1f).heightIn(min = 38.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
                     Icon(
@@ -667,7 +682,10 @@ private fun SearchLayer(state: ClipboardPanelState, actions: ClipboardPanelActio
                         modifier = Modifier.weight(1f)
                     )
                     if (state.buffer.text.isNotEmpty()) {
-                        SmallIconButton(R.drawable.ic_close, stringResource(R.string.dialog_close)) {
+                        SmallIconButton(
+                            R.drawable.ic_close, stringResource(R.string.dialog_close),
+                            modifier = Modifier.heightIn(max = 38.dp)
+                        ) {
                             state.buffer.clear()
                         }
                     }
@@ -677,6 +695,7 @@ private fun SearchLayer(state: ClipboardPanelState, actions: ClipboardPanelActio
             RoundIconButton(
                 iconRes = R.drawable.ic_arrow_back,
                 description = stringResource(R.string.spoken_description_action_previous),
+                modifier = Modifier.heightIn(max = 38.dp),
                 onClick = { actions.onFinishTyping(false) }
             )
         }
@@ -704,7 +723,7 @@ private fun SearchLayer(state: ClipboardPanelState, actions: ClipboardPanelActio
                         contentColor = MaterialTheme.colorScheme.onSurface,
                         shape = RoundedCornerShape(ClipboardShapes.pinnedCard),
                         modifier = Modifier.fillMaxHeight().widthIn(min = 72.dp, max = 220.dp)
-                            .clickable { actions.onPaste(item) }
+                            .clickable(onClickLabel = stringResource(R.string.clipboard_action_paste)) { actions.onPaste(item) }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp),
@@ -751,7 +770,7 @@ private fun EditLayer(state: ClipboardPanelState, actions: ClipboardPanelActions
                 color = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,
-                modifier = Modifier.height(34.dp).clickable { actions.onFinishTyping(true) }
+                modifier = Modifier.heightIn(min = 34.dp).clickable { actions.onFinishTyping(true) }
             ) {
                 Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                     Text(stringResource(R.string.save), style = MaterialTheme.typography.labelLarge)
@@ -844,6 +863,7 @@ private fun KeyboardTextView(
 private fun RoundIconButton(
     iconRes: Int,
     description: String,
+    modifier: Modifier = Modifier,
     tonal: Boolean = false,
     danger: Boolean = false,
     onClick: () -> Unit
@@ -862,7 +882,7 @@ private fun RoundIconButton(
         shape = CircleShape,
         // 36dp is below the 48dp minimum touch target, and these sit shoulder to shoulder with
         // Close — which is how a mis-tap used to wipe the whole history.
-        modifier = Modifier
+        modifier = modifier
             .minimumInteractiveComponentSize()
             .size(36.dp)
             .clickable(onClick = onClick)
@@ -877,12 +897,13 @@ private fun RoundIconButton(
 private fun SmallIconButton(
     iconRes: Int,
     description: String,
+    modifier: Modifier = Modifier,
     rotation: Float = 0f,
     onClick: () -> Unit
 ) {
     // The visible circle stays 30dp; the layout box and touch target are 48dp (UX-007).
     Box(
-        modifier = Modifier
+        modifier = modifier
             .minimumInteractiveComponentSize()
             .size(30.dp)
             .clip(CircleShape)
