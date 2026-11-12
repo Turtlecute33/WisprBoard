@@ -33,9 +33,10 @@ class ClipboardDao private constructor(private val db: Database) {
 
     var listener: Listener? = null
         set(value) {
+            val closed = field != null && value == null
             field = value
             // clearOldClips does nothing while the panel shows, so plan it again when the panel closes
-            if (value == null) scheduleClearOldClips()
+            if (closed) scheduleClearOldClips()
         }
 
     // we clean up old clips when a new clip is added, but not too frequently

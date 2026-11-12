@@ -45,6 +45,9 @@ class ClipboardHistoryManager(
 
     fun onDestroy() {
         clipboardManager.removePrimaryClipChangedListener(this)
+        // Remove the panel listener first: the IME closes an open panel after this call, and
+        // that close must not post the clean again.
+        clipboardDao?.listener = null
         clipboardDao?.cancelScheduledClear()
     }
 
