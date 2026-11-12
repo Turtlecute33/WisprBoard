@@ -44,6 +44,7 @@ import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.UncachedInputMethodManagerUtils
 import helium314.keyboard.latin.utils.cleanUnusedMainDicts
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.voice.SecretStore
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.InfoDialog
 import helium314.keyboard.settings.dialogs.NewDictionaryDialog
@@ -79,7 +80,12 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
             val inputAttributes = InputAttributes(EditorInfo(), false, packageName)
             Settings.getInstance().loadSettings(this, resources.configuration.locale(), inputAttributes)
         }
-        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute { cleanUnusedMainDicts(this) }
+        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
+            cleanUnusedMainDicts(this)
+            // Open (on a new install: make) the vault key here, so that the wizard and the enable
+            // switches do not do this keystore work on the UI thread (R-13).
+            SecretStore.isSecureStorageAvailable(this)
+        }
         crashReportFiles.value = findCrashReports(!BuildConfig.DEBUG && !DebugFlags.DEBUG_ENABLED)
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
 
@@ -115,11 +121,14 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                 settingsContainer[Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE]!!.Preference()
                             }
                         }
-                    else {
+                    // Not both: TalkBack must not go into the settings list behind the wizard (R-37).
+                    // A navigation request that the wizard makes before it closes waits in
+                    // SettingsDestination.navTarget, and the new SettingsNavHost does it.
+                    else if (showWelcomeWizard) {
+                        WelcomeWizard(close = { showWelcomeWizard = false }, finish = this::finish)
+                    } else {
                         SettingsNavHost(onClickBack = { this.finish() })
-                        if (showWelcomeWizard) {
-                            WelcomeWizard(close = { showWelcomeWizard = false }, finish = this::finish)
-                        } else if (crashReports.isNotEmpty()) {
+                        if (crashReports.isNotEmpty()) {
                             ConfirmationDialog(
                                 cancelButtonText = stringResource(R.string.crash_report_ignore),
                                 onDismissRequest = { crashReportFiles.value = emptyList() },
