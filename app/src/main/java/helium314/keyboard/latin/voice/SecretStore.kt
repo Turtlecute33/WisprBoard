@@ -34,6 +34,12 @@ object SecretStore {
     fun isSecureStorageAvailable(context: Context): Boolean = vault(context) != null
 
     /**
+     * True when [key] can go into an HTTP header: printable ASCII, no space (R-01). The HTTP stack
+     * of Android rejects other characters, and its exception text holds the full header value.
+     */
+    fun isValidApiKey(key: String): Boolean = key.isNotEmpty() && key.all { it in '!'..'~' }
+
+    /**
      * Loads the vault key and decrypts the active provider's key into plainCache, from background
      * code. Called at app start when an AI feature is on, so the IME's first request does not pay
      * this cost on the input thread.
@@ -65,7 +71,10 @@ object SecretStore {
             // the keystore) reports "no key", because every caller is on the IME main thread and
             // an escaping exception kills the keyboard. Re-entering the key in Settings overwrites
             // the bad blob. Deliberately does NOT fall through to the plaintext-legacy branch.
-            return runCatching { vault.decrypt(Base64.decode(stored, Base64.NO_WRAP)).toString(Charsets.UTF_8) }
+            // A key that is not valid (saved by an older version) reads as "no key" (R-01).
+            return runCatching {
+                vault.decrypt(Base64.decode(stored, Base64.NO_WRAP)).toString(Charsets.UTF_8).takeIf(::isValidApiKey) ?: default
+            }
                 .onSuccess { plainCache[prefKey] = it }
                 .getOrElse { e ->
                     Log.w(TAG, "Failed to read stored key: ${e.javaClass.simpleName}")
@@ -75,7 +84,7 @@ object SecretStore {
         // First-run migration: if a plaintext value exists in normal prefs, move it here
         // and scrub the original.
         val legacy = context.prefs().getString(prefKey, null)
-        if (!legacy.isNullOrBlank()) {
+        if (legacy != null && isValidApiKey(legacy)) {
             // Only scrub the plaintext copy once the encrypted one is actually on disk, or the
             // migration would destroy the user's key. If the process dies in between, the worst
             // case is a leftover plaintext key that gets re-scrubbed on the next read.
@@ -86,7 +95,9 @@ object SecretStore {
         return default
     }
 
+    /** Saves [value], or removes the key when [value] is empty. Throws for a key that is not valid. */
     fun setApiKey(context: Context, prefKey: String, value: String) {
+        require(value.isEmpty() || isValidApiKey(value)) { "Invalid API key" }
         val vault = vault(context) ?: throw IllegalStateException("Secure storage unavailable")
         // A false commit() means the key is not on disk: report it, like a missing store.
         check(synchronized(this) { put(context, vault, prefKey, value) }) { "Secure storage write failed" }

@@ -1,6 +1,7 @@
 package helium314.keyboard.latin.utils
 
 import android.os.Build
+import helium314.keyboard.latin.BuildConfig
 import java.time.LocalDateTime
 import java.util.Date
 
@@ -22,8 +23,8 @@ object Log {
 
     @JvmStatic
     fun e(tag: String?, message: String, e: Throwable?) {
-        log(LogLine('E', tag, "$message\n${e?.stackTraceToString()}"))
-        android.util.Log.e(tag, message, e)
+        log(LogLine('E', tag, withDetail(message, e)))
+        if (BuildConfig.DEBUG) android.util.Log.e(tag, message, e) else android.util.Log.e(tag, withDetail(message, e))
     }
 
     @JvmStatic
@@ -34,8 +35,8 @@ object Log {
 
     @JvmStatic
     fun w(tag: String?, message: String, e: Throwable?) {
-        log(LogLine('W', tag, "$message\n${e?.stackTraceToString()}"))
-        android.util.Log.w(tag, message, e)
+        log(LogLine('W', tag, withDetail(message, e)))
+        if (BuildConfig.DEBUG) android.util.Log.w(tag, message, e) else android.util.Log.w(tag, withDetail(message, e))
     }
 
     @JvmStatic
@@ -46,8 +47,8 @@ object Log {
 
     @JvmStatic
     fun i(tag: String?, message: String, e: Throwable?) {
-        log(LogLine('I', tag, "$message\n${e?.stackTraceToString()}"))
-        android.util.Log.i(tag, message, e)
+        log(LogLine('I', tag, withDetail(message, e)))
+        if (BuildConfig.DEBUG) android.util.Log.i(tag, message, e) else android.util.Log.i(tag, withDetail(message, e))
     }
 
     @JvmStatic
@@ -58,8 +59,8 @@ object Log {
 
     @JvmStatic
     fun d(tag: String?, message: String, e: Throwable?) {
-        log(LogLine('D', tag, "$message\n${e?.stackTraceToString()}"))
-        android.util.Log.d(tag, message, e)
+        log(LogLine('D', tag, withDetail(message, e)))
+        if (BuildConfig.DEBUG) android.util.Log.d(tag, message, e) else android.util.Log.d(tag, withDetail(message, e))
     }
 
     @JvmStatic
@@ -72,6 +73,16 @@ object Log {
     fun v(tag: String?, message: String) {
         log(LogLine('V', tag, message))
         android.util.Log.v(tag, message)
+    }
+
+    /**
+     * Debug builds: the message and the stack trace. Release builds: the message and only the
+     * class of [e]. An exception message can hold user data or a key (R-01).
+     */
+    private fun withDetail(message: String, e: Throwable?): String = when {
+        e == null -> message
+        BuildConfig.DEBUG -> "$message\n${e.stackTraceToString()}"
+        else -> "$message: ${e.javaClass.name}"
     }
 
     private fun log(line: LogLine) {
