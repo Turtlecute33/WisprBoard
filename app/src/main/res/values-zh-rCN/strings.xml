@@ -345,7 +345,6 @@
     <string name="layout_number_row" tools:keep="@string/layout_number_row">数字行</string>
     <string name="prefs_space_bar_text">空格键上的自定义文本</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">表情符号底行</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">剪贴板底行</string>
     <string name="label_delete_key" tools:keep="@string/label_delete_key">Delete</string>
     <string name="label_shift_key_locked" tools:keep="@string/label_shift_key_locked">Caps lock</string>
     <string name="label_shift_key_shifted" tools:keep="@string/label_shift_key_shifted">Shift（已按下）</string>
@@ -441,7 +440,6 @@
     <string name="inline_emoji_search_summary">仅当字词以冒号开头时建议表情符号</string>
     <string name="emoji_dictionary_required">此功能需要表情符号字典才能使用。可以在 %s 下载 .dict 格式的字典。</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">带操作键的表情符号底行</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">带操作键的剪贴板底行</string>
     <string name="number_row_in_symbols">在符号视图中显示数字行</string>
     <string name="custom_emoji_font">从文件设置自定义表情符号字体</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">功能键（Khipro）</string>

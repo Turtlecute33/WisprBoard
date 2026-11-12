@@ -311,8 +311,6 @@
     <string name="layout_number_row_basic" tools:keep="@string/layout_number_row_basic">Redak brojeva (osnovno)</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Donji redak emojija</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Donji redak emojija s tipkom za radnju</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Donji redak međuspremnika</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Donji redak međuspremnika s tipkom za radnju</string>
     <string name="customize_background_image">Postavi pozadinsku sliku</string>
     <string name="customize_background_image_landscape">Postavi pozadinsku sliku (horizontalno)</string>
     <string name="summary_customize_background_image_landscape">Ako nije postavljeno, koristit će se slika za vertikalni način rada</string>

@@ -37,7 +37,6 @@ object Defaults {
         LayoutType.PHONE -> "phone"
         LayoutType.PHONE_SYMBOLS -> "phone_symbols"
         LayoutType.EMOJI_BOTTOM -> "emoji_bottom_row"
-        LayoutType.CLIPBOARD_BOTTOM -> "clip_bottom_row"
     }
 
     private const val DEFAULT_SIZE_SCALE = 1.0f // 100%

@@ -387,7 +387,6 @@
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Rząd numeryczny</string>
     <string name="prefs_space_bar_text">Własny tekst na klawiszu spacji</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Dolny rząd w widoku emotikonów</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Dolny rząd w widoku schowka</string>
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Enter</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">Tabulator</string>
     <string name="label_shift_key" tools:keep="@string/label_shift_key">Shift</string>
@@ -485,7 +484,6 @@
     <string name="custom_emoji_font">Dodaj niestandardową czcionkę emotikonów z pliku</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Klawisze funkcyjne (Khipro)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Dolny rząd z klawiszem enter w widoku emotikonów</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Dolny rząd z klawiszem enter w widoku schowka</string>
     <string name="emoji_search_title">Znajdź emotikon</string>
     <string name="search_field_placeholder">Szukaj</string>
     <string name="gesture_data_screen">Gromadzenie danych o gestach</string>

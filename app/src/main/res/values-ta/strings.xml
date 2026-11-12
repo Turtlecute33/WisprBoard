@@ -305,8 +305,6 @@
     <string name="layout_number_row_basic" tools:keep="@string/layout_number_row_basic">எண் வரிசை (அடிப்படை)</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">ஈமோசி கீழ் வரிசை</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">செயல் விசையுடன் ஈமோசியின் கீழ் வரிசை</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">இடைநிலைப்பலகை கீழ் வரிசை</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">செயல் விசையுடன் இடைநிலைப்பலகை கீழ் வரிசை</string>
     <string name="customize_background_image">பின்னணி படத்தை அமைக்கவும்</string>
     <string name="customize_background_image_landscape">பின்னணி படத்தை அமைக்கவும் (இயற்கை)</string>
     <string name="summary_customize_background_image_landscape">அமைக்கப்படவில்லை என்றால், உருவப்படம் பயன்படுத்தப்படும்</string>

@@ -343,7 +343,6 @@
     <string name="checksum_mismatch_message">Óþekkt orðasafnsskrá. Ertu viss um að þú hafi fengið hana frá áreiðanlegum aðila og að hún sé fyrir \'%s\'?</string>
     <string name="load_gesture_library_summary">Gefðu upp innfellt aðgerðasafn til að virkja innslátt með bendingum</string>
     <string name="backup_restore_message">Vista eða hlaða inn úr skrá. Aðvörun: endurheimta mun yfirskrifa fyrirliggjandi gögn</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Neðsta röð klippispjalds</string>
     <string name="auto_hide_toolbar_summary">Fela verkfærastikuna þegar tillögur eru í boði</string>
     <string name="prefs_always_show_suggestions_summary">Hunsa beiðnir frá öðrum forritum um að gera tillögur óvirkar (gæti valdið vandamálum)</string>
     <string name="incognito">Þvinga fram nafnleysisham</string>

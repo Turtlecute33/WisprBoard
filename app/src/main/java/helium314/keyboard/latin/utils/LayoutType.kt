@@ -6,9 +6,13 @@ import helium314.keyboard.latin.common.Constants.Subtype.ExtraValue
 import java.io.File
 import java.util.EnumMap
 
+/**
+ * The names are stored in prefs and subtypes. A removed name (CLIPBOARD_BOTTOM, D-5) can still be
+ * there: [getLayoutMap] ignores an unknown name, and nothing reads its pref or its folder.
+ */
 enum class LayoutType {
     MAIN, SYMBOLS, MORE_SYMBOLS, FUNCTIONAL, NUMBER, NUMBER_ROW, NUMPAD,
-    NUMPAD_LANDSCAPE, PHONE, PHONE_SYMBOLS, EMOJI_BOTTOM, CLIPBOARD_BOTTOM;
+    NUMPAD_LANDSCAPE, PHONE, PHONE_SYMBOLS, EMOJI_BOTTOM;
 
     companion object {
         fun EnumMap<LayoutType, String>.toExtraValue() = map { it.key.name + Separators.KV + it.value }.joinToString(Separators.ENTRY)
@@ -36,7 +40,6 @@ enum class LayoutType {
             PHONE -> R.string.layout_phone
             PHONE_SYMBOLS -> R.string.layout_phone_symbols
             EMOJI_BOTTOM -> R.string.layout_emoji_bottom_row
-            CLIPBOARD_BOTTOM -> R.string.layout_clip_bottom_row
         }
 
         fun getMainLayoutFromExtraValue(extraValue: String): String? {

@@ -287,7 +287,6 @@
     <string name="theme_name_cloudy" tools:keep="@string/theme_name_cloudy">Pilvine</string>
     <string name="theme_name_indigo" tools:keep="@string/theme_name_indigo">Indigosinine</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Emojide alumine rida</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Lõikelaua alumine rida</string>
     <string name="day_night_mode_summary">Välimus järgib süsteemi seadistusi</string>
     <string name="theme_navbar">Navigatsiooniriba värv</string>
     <string name="theme_name_ocean" tools:keep="@string/theme_name_ocean">Ookeanisinine</string>
@@ -475,7 +474,6 @@
     <string name="inline_emoji_search_summary">Soovita emojisid vaid siis, kui sõna ees on koolon</string>
     <string name="emoji_dictionary_required">Et see funktsionaalsus toimiks, vajada emojide sõnastikku. Nõutavas .dict vormingus sõnastikke saad alla laadida siit: %s.</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Alumine emojide rida tegevusnupu vajutamisel</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Lõikelaua kirjete alumine rida tegevusnupu vajutamisel</string>
     <string name="number_row_in_symbols">Näita sümbolite vaates numbririda</string>
     <string name="custom_emoji_font">Lisa failist endavalitud emojid</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Funktsiooniklahvid (khipro)</string>

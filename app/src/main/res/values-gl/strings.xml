@@ -352,7 +352,6 @@
     <string name="icon_style">Estilo da icona</string>
     <string name="prefs_space_bar_text">Texto persoal na barra de espazo</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Liña inferior de emoji</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Liña inferior de portapapeis</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">Tab</string>
     <string name="label_delete_key" tools:keep="@string/label_delete_key">Eliminar</string>
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Enter</string>
@@ -449,7 +448,6 @@
     <string name="number_row_in_symbols">Mostrar fila de número na vista de símbolos</string>
     <string name="custom_emoji_font">Escoller emojis persoais desde ficheiro</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Fila inferior de emojis coa tecla de acción</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Fila inferior do portapapeis coa tecla de acción</string>
     <string name="timestamp_description">Podes engadir a telca de marca de tempo usando unha disposición persoal coa tecla \'marca de tempo\', ou código de tecla -10043</string>
     <string name="prefs_bottom_row_scale">Escala da fila inferior</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Teclas de función (Khipro)</string>

@@ -350,7 +350,6 @@
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Riga dei numeri</string>
     <string name="prefs_space_bar_text">Testo personalizzato sulla barra spaziatrice</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Selettore emoji (ultima riga in basso)</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Cronologia appunti (ultima riga in basso)</string>
     <string name="label_stop_onehanded_mode_key" tools:keep="@string/label_stop_onehanded_mode_key">Esci dalla modalità a una mano</string>
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Invio</string>
     <string name="label_shift_key_locked" tools:keep="@string/label_shift_key_locked">Blocco maiuscole</string>
@@ -446,7 +445,6 @@
     <string name="subtype_mhr">Mari orientale</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Riga emoji inferiore con tasto azione</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Riga appunti inferiore con tasto azione</string>
     <string name="number_row_in_symbols">Mostra la riga dei numeri nel layout simboli</string>
     <string name="custom_emoji_font">Scegli un font emoji personalizzato</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Tasti funzione (Khipro)</string>

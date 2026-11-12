@@ -324,7 +324,6 @@
     <string name="prefs_space_bar_text">Texto personalizado en la barra de espacio</string>
     <string name="customize_currencies">Personalizar divisas</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Fila inferior de Emoji</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Fila inferior del portapapeles</string>
     <string name="button_save_file">Guardar en un archivo</string>
     <string name="copy_to_clipboard">Copiar al portapapeles</string>
     <string name="load">Cargar</string>
@@ -420,7 +419,6 @@
     <string name="subtype_with_layout_generic">%1$s (%2$s)</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Sección inferior de emoticonos con tecla de acción</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Sección inferior de portapapeles con tecla de acción</string>
     <string name="about_wiki_link">Ir a la Wiki</string>
     <string name="about_wiki_link_description">¡La Wiki puede ser mejorada por cualquier usuario de GitHub!</string>
     <string name="space_swipe_hide_keyboard_entry">Ocultar el teclado</string>

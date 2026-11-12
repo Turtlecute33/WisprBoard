@@ -301,7 +301,6 @@
     <string name="center_suggestion_text_to_enter">Folosește întotdeauna sugestia de mijloc</string>
     <string name="center_suggestion_text_to_enter_summary">La apăsarea pe spațiu sau pe semnul de punctuație, va fi introdusă sugestia din mijloc</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Rândul Emoji de jos</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Rândul de jos al clipboardului</string>
     <string name="auto_hide_toolbar">Ascundere automată a barei de instrumente</string>
     <string name="auto_hide_toolbar_summary">Ascunde bara de instrumente când sugestiile devin disponibile</string>
     <string name="subtype_generic_extended">%s (Extins)</string>

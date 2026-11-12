@@ -430,7 +430,6 @@
     <string name="show_tld_popup_keys">TLD felugró billentyűk megjelenítése</string>
     <string name="quick_pin_toolbar_keys_summary">Ez letiltja a többi nyomva tartásos műveletet a nem rögzített eszköztárbillentyűknél</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Emodzsi alsó sorának elrendezése</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Vágólap alsó sorának elrendezése</string>
     <string name="save_subtype_per_app">Emlékezzen a kiválasztott nyelvre alkalmazásonként</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>
     <string name="inline_emoji_search">Beágyazott emodzsi keresése</string>
@@ -438,7 +437,6 @@
     <string name="emoji_dictionary_required">Ehhez a funkcióhoz emodzsi-szótár szükséges. A .dict formátumú szótárak letölthetők a következő helyről: %s.</string>
     <string name="subtype_mhr">Mari (keleti)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Emodzsik alsó sora akciógombbal</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Vágólap alsó sora akciógombbal</string>
     <string name="number_row_in_symbols">Számsor megjelenítése a szimbólumnézetben</string>
     <string name="custom_emoji_font">Egyéni emodzsi-betűtípus beállítása fájlból</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Funkcióbillentyűk (Khipro)</string>

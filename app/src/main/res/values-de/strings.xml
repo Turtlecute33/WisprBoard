@@ -342,7 +342,6 @@
     <string name="prefs_space_bar_text">Benutzerdefinierter Text auf der Leertaste</string>
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Zahlenzeile</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Emoji untere Zeile</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Zwischenablage untere Zeile</string>
     <string name="icon_style">Symbolstil</string>
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Eingabe</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">Tabulator</string>
@@ -436,7 +435,6 @@
     <string name="emoji_dictionary_required">Ein Emoji-Wörterbuch wird für diese Funktion benötigt. Wörterbücher im .dict-Format können %s heruntergeladen werden.</string>
     <string name="save_subtype_per_app">Sprache pro App merken</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Emoji untere Zeile mit Aktions-Taste</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Zwischenablage untere Zeile mit Aktions-Taste</string>
     <string name="custom_emoji_font">Benutzerdefinierte Emoji-Schriftart aus Datei festlegen</string>
     <string name="number_row_in_symbols">Zeilenzeile in Symbol-Ansicht anzeigen</string>
     <string name="subtype_mhr">Ostmari</string>

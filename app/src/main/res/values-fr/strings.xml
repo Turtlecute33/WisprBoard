@@ -348,7 +348,6 @@ Nouveau dictionnaire:
     <string name="icon_style">Style de l\'icône</string>
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Rangée de chiffres</string>
     <string name="prefs_space_bar_text">Texte personnalisé sur la barre d\'espace</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Rangée inférieure du presse-papier</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Rangée inférieure des émojis</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">Tabulation</string>
     <string name="label_delete_key" tools:keep="@string/label_delete_key">Supprimer</string>
@@ -444,7 +443,6 @@ Nouveau dictionnaire:
     <string name="emoji_dictionary_required">Un dictionnaire d\'émojis est nécessaire pour que cette fonctionnalité soit opérationnelle. Les dictionnaires au format .dict peuvent être téléchargés ici : %s.</string>
     <string name="subtype_mhr">Mari (Eastern)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Rangée inférieure (emoji) avec touche d\'action</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Rangée inférieure du presse-papiers avec touche d\'action</string>
     <string name="number_row_in_symbols">Afficher la ligne numérique en mode symboles</string>
     <string name="custom_emoji_font">Définir une police d\'emoji personnalisée à partir d\'un fichier</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Touches fonctionnelles (Khipro)</string>

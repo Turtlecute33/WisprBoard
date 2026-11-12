@@ -344,7 +344,6 @@
     <string name="gesture_trail_fadeout_duration">Тривалість сліду жесту</string>
     <string name="prefs_space_bar_text">Свій текст на клавіші пробілу</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Ряд емоджі знизу</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Ряд буфера обміну внизу</string>
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Enter</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">Tab</string>
     <string name="label_delete_key" tools:keep="@string/label_delete_key">Видалити</string>
@@ -446,7 +445,6 @@
     <string name="prefs_bottom_row_scale">Масштаб нижнього рядка</string>
     <string name="custom_emoji_font">Встановити користувацький шрифт емодзі з файлу</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Нижній ряд емодзі з кнопкою дії</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Нижній ряд буфера обміну з кнопкою дії</string>
     <string name="emoji_search_title">Пошук емодзі</string>
     <string name="search_field_placeholder">Пошук</string>
     <string name="gesture_data_screen">Збір даних жестів</string>

@@ -201,7 +201,6 @@
     <string name="voice" tools:keep="@string/voice">Гласово въвеждане</string>
     <string name="clear_clipboard" tools:keep="@string/clear_clipboard">Изчистване на клипборда</string>
     <string name="prefs_long_press_symbol_for_numpad">Продължителното натискане на клавиш със символи за цифровата клавиатура</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Клипборда долен ред</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Емотикони долен ред</string>
     <string name="customize_background_image">Задаване на фоново изображение</string>
     <string name="button_select_language">Изберете език</string>
@@ -475,7 +474,6 @@
     <string name="emoji_dictionary_required">За да работи тази функция, е необходим речник с емотикони. Речници във формат .dict могат да бъдат изтеглени %s.</string>
     <string name="subtype_mhr">Мари (Източен)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Долен ред емотикони с клавиш за действие</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Долен ред на клипборда с клавиш за действие</string>
     <string name="number_row_in_symbols">Показване на числовия ред в изглед със символи</string>
     <string name="custom_emoji_font">Задаване на персонализиран шрифт за емтикони от файл</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Функционални клавиши (Khipro)</string>

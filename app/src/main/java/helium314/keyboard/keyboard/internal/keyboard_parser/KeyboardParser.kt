@@ -56,13 +56,12 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
             KeyboardId.ELEMENT_NUMPAD -> if (Settings.getValues().mDisplayOrientation == Configuration.ORIENTATION_LANDSCAPE)
                 LayoutType.NUMPAD_LANDSCAPE else LayoutType.NUMPAD
             KeyboardId.ELEMENT_EMOJI_BOTTOM_ROW -> LayoutType.EMOJI_BOTTOM
-            KeyboardId.ELEMENT_CLIPBOARD_BOTTOM_ROW -> LayoutType.CLIPBOARD_BOTTOM
             else -> LayoutType.MAIN
         }
         val baseKeys = LayoutParser.parseLayout(layoutType, params, context)
         val keysInRows = createRows(baseKeys)
         val heightRescale: Float
-        if (params.mId.isEmojiClipBottomRow) {
+        if (params.mId.isEmojiBottomRow) {
             heightRescale = 4f
             // to have same height as alpha keyboard we act as if we had the default number of rows
             val virtualRows = if (Settings.getValues().mShowsNumberRow) 5 else 4

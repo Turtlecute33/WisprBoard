@@ -312,7 +312,6 @@
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Funkciniai klavišai (Simboliai)</string>
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Funkciniai klavišai (Daugiau simbolių)</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Jaustukų apatinė eilė</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Iškarpinės apatinė eilė</string>
     <string name="customize_background_image_landscape">Nustatyti fono paveikslėlį (horizontaliai)</string>
     <string name="summary_customize_background_image_landscape">Jei nenustatyta, bus naudojamas vertikalus paveikslėlis</string>
     <string name="customize_currencies">Derinti valiutas</string>

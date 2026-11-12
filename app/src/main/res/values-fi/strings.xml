@@ -157,7 +157,6 @@
     <string name="license">Avoimen lähdekoodin lisenssi</string>
     <string name="prefs_keyboard_height_scale">Näppäimistön korkeusskaalaus</string>
     <string name="prefs_narrow_key_gaps">Kapeat näppäinvälit</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Leikepöydän alarivi</string>
     <string name="user_dict_add_word_button">Lisää sana</string>
     <string name="theme_name_light" tools:keep="@string/theme_name_light">Vaalea</string>
     <string name="auto_show_toolbar_summary">Näytä työkalupalkki jos syöte aloitetaan tai tekstiä valitaan</string>

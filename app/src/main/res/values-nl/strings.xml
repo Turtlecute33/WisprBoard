@@ -386,7 +386,6 @@
     <string name="icon_style">Pictogramstijl</string>
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Cijferregel</string>
     <string name="prefs_space_bar_text">Aangepaste tekst op spatiebalk</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Klembord onderste regel</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Emoji onderste regel</string>
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Enter</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">Tab</string>
@@ -492,7 +491,6 @@
     <string name="subtype_khipro_bn">%s (Khipro)</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Functionele toetsen (Khipro)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Emoji onderste rij met actietoets</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Klembord onderste rij met actietoets</string>
     <string name="emoji_search_title">Emoji zoeken</string>
     <string name="ask_later">Vraag het me later</string>
     <string name="gesture_data_screen">Verzameling van gebaren</string>

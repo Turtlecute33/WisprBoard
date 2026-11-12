@@ -351,7 +351,6 @@
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Linha de números</string>
     <string name="prefs_space_bar_text">Texto customizado na barra de espaço</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Linha inferior de emojis</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Linha inferior da área de transferência</string>
     <string name="label_enter_key" tools:keep="@string/label_enter_key">Enter</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">Tab</string>
     <string name="label_delete_key" tools:keep="@string/label_delete_key">Delete</string>
@@ -447,7 +446,6 @@
     <string name="emoji_dictionary_required">Um dicionário de emoji é necessário para esta funcionalidade. Dicionários no formato .dict podem ser baixados %s.</string>
     <string name="subtype_mhr">Mari (Oriental)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Fileira inferior de emojis com tecla de ação</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Fileira inferior da área de transferência com tecla de ação</string>
     <string name="number_row_in_symbols">Mostrar linha de números no modo de símbolos</string>
     <string name="custom_emoji_font">Definir fonte de emojis personalizada a partir de um arquivo</string>
     <string name="gesture_data_links">Informações sobre a coleta de dados de gestos em:</string>

@@ -350,7 +350,6 @@
     <string name="locales_with_dict">Мовы са слоўнікамі</string>
     <string name="custom_subtype">Карыстацкі падтып</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Радок эмодзі ўнізе</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Радок буфера абмену ўнізе</string>
     <string name="layout_in_use">Папярэджанне: раскладка ў дадзены момант выкарыстоўваецца</string>
     <string name="customize_icons">Наладзіць значкі</string>
     <string name="customize_icons_reset_message">Сапраўды скінуць усе настроеныя значкі?</string>

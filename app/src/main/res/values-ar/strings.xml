@@ -351,7 +351,6 @@
     <string name="icon_style">نمط الأيقونة</string>
     <string name="layout_number_row" tools:keep="@string/layout_number_row">صف الأرقام</string>
     <string name="prefs_space_bar_text">نص مخصص على شريط المسافة</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">الصف السفلي للحافظة</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">الصف السفلي من الرموز التعبيرية</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">تبويب</string>
     <string name="label_delete_key" tools:keep="@string/label_delete_key">احذف</string>
@@ -446,7 +445,6 @@
     <string name="inline_emoji_search_summary">اقترح رموزًا تعبيرية فقط عندما تسبق الكلمة نقطتان رأسيتان</string>
     <string name="emoji_dictionary_required">مطلوب قاموس رموز تعبيرية لكي تعمل هذه الميزة. يمكن تنزيل القواميس بتنسيق .dict %s.</string>
     <string name="subtype_mhr">ماري (شرقي)</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">الصف السفلي للحافظة مع مفتاح الإجراء</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">صف الرموز التعبيرية السفلي مع مفتاح الإجراء</string>
     <string name="custom_emoji_font">عيِّن خط رموز التعبيرية مخصّص من ملف</string>
     <string name="number_row_in_symbols">أظهر صف الأرقام في عرض الرموز</string>

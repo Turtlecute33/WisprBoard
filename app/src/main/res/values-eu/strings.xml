@@ -351,7 +351,6 @@
     <string name="remove_redundant_popups_summary">Kendu oinarrizko diseinuan dauden popup teklak</string>
     <string name="space_swipe_toggle_numpad_entry">Aktibatu/desaktibatu zenbaki-teklatua</string>
     <string name="prefs_space_bar_text">Testu pertsonalizatua zuriune-barran</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Arbelaren beheko errenkada</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Emojien beheko errenkada</string>
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Zenbakien errenkada</string>
     <string name="icon_style">Ikonoen estiloa</string>
@@ -449,6 +448,5 @@
     <string name="subtype_mhr">Mari (ekialdekoa)</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Emojien beheko errenkada ekintza-teklarekin</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Arbelaren beheko errenkada ekintza-teklarekin</string>
     <string name="prefs_bottom_row_scale">Beheko lerroaren eskala</string>
 </resources>

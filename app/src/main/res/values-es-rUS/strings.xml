@@ -351,7 +351,6 @@
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Fila numérica</string>
     <string name="prefs_space_bar_text">Texto personalizado en la barra espaciadora</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Fila inferior de emojis</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Fila inferior del portapapeles</string>
     <string name="label_tab_key" tools:keep="@string/label_tab_key">Tab</string>
     <string name="label_delete_key" tools:keep="@string/label_delete_key">Eliminar</string>
     <string name="label_shift_key" tools:keep="@string/label_shift_key">Shift</string>

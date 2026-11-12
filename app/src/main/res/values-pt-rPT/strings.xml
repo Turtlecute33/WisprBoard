@@ -234,7 +234,6 @@
     <string name="layout_symbols_arabic" tools:keep="@string/layout_symbols_arabic">Símbolos (Árabe)</string>
     <string name="select_color_background">Fundo do teclado</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Fila inferior de emojis</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Fila inferior da área de transferência</string>
     <string name="theme_name_violette" tools:keep="@string/theme_name_violette">Violeta</string>
     <string name="prefs_always_show_suggestions_except_web_text">Não mostrar sempre sugestões para campos de edição web</string>
     <string name="prefs_always_show_suggestions_except_web_text_summary">Os campos de edição na Web (encontrados principalmente nos navegadores) são uma causa muito comum de problemas com a configuração de mostrar sempre sugestões</string>
@@ -438,7 +437,6 @@
     <string name="subtype_mhr">Mai (Oriental)</string>
     <string name="subtype_khipro_bn">%s (Khipro)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Fila inferior de emoji com tecla de ação</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Fila inferior da área de transferência com tecla de ação</string>
     <string name="custom_emoji_font">Definir fonte de emoji a partir de ficheiro</string>
     <string name="number_row_in_symbols">Mostrar linha de números no ecrã de símbolos</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Teclas funcionais (Khipro)</string>

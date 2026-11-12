@@ -336,7 +336,6 @@
     <string name="quick_pin_toolbar_keys">Připnout klávesu do panelu nástrojů při dlouhém podržení</string>
     <string name="customize_currencies_detail">Nastavit hlavní a až 6 dalších symbolů měny, oddělených mezerami</string>
     <string name="name_invalid">Neplatný název</string>
-    <string name="layout_clip_bottom_row" tools:keep="@string/layout_clip_bottom_row">Dolní řádek schránky</string>
     <string name="layout_emoji_bottom_row" tools:keep="@string/layout_emoji_bottom_row">Dolní řádek emodži</string>
     <string name="after_numpad_and_space">Stisknutí klávesy Enter nebo mezerníku po ostatních klávesách v numerické klávesnici</string>
     <string name="label_space_key_for_number_layout" tools:keep="@string/label_space_key_for_number_layout">Mezerník (číselné rozložení)</string>
@@ -440,7 +439,6 @@
     <string name="emoji_dictionary_required">Aby tato funkce fungovala, je nutný slovník emodži. Slovníky ve formátu .dict lze stáhnout %s.</string>
     <string name="subtype_mhr">Mari (východní)</string>
     <string name="layout_emoji_bottom_row_with_action" tools:keep="@string/layout_emoji_bottom_row_with_action">Spodní řádek emodži s akční klávesou</string>
-    <string name="layout_clip_bottom_row_with_action" tools:keep="@string/layout_clip_bottom_row_with_action">Spodní řádek schránky s akční klávesou</string>
     <string name="number_row_in_symbols">Zobrazit číselný řádek na obrazovce znaků</string>
     <string name="custom_emoji_font">Nastavit vlastní písmo emodži ze souboru</string>
     <string name="layout_functional_keys_khipro" tools:keep="@string/layout_functional_keys">Funkční klávesy (Khipro)</string>
