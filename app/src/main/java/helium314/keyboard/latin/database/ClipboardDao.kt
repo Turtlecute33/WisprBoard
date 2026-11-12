@@ -119,10 +119,6 @@ class ClipboardDao private constructor(private val db: Database) {
         write { update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null) }
     }
 
-    fun isPinned(index: Int) = cache[index].isPinned
-
-    fun getAt(index: Int) = cache[index]
-
     fun get(id: Long) = cache.firstOrNull { it.id == id }
 
     /** Snapshot of all entries, sorted the same way as the cache */

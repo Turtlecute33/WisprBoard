@@ -19,7 +19,6 @@ import helium314.keyboard.keyboard.KeyboardLayoutSet
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.PointerTracker
-import helium314.keyboard.keyboard.internal.KeyVisualAttributes
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.ClipboardHistoryManager
@@ -108,13 +107,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         setLayerType(LAYER_TYPE_HARDWARE, null)
     }
 
-    fun startClipboardHistory(
-            historyManager: ClipboardHistoryManager,
-            keyVisualAttr: KeyVisualAttributes?,
-            editorInfo: EditorInfo,
-            keyboardActionListener: KeyboardActionListener,
-            translateManager: TranslateManager?
-    ) {
+    fun startClipboardHistory(historyManager: ClipboardHistoryManager, translateManager: TranslateManager?) {
         clipboardHistoryManager = historyManager
         this.translateManager = translateManager
         initialize()

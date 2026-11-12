@@ -126,18 +126,10 @@ val defaultPinnedToolbarPref = entries.filterNot { it == CLOSE_HISTORY }.joinToS
     it.name + Separators.KV + false
 }
 
-val defaultClipboardToolbarPref by lazy {
-    val default = listOf(VOICE, CLEAR_CLIPBOARD, UP, DOWN, LEFT, RIGHT, UNDO, CUT, COPY, PASTE, SELECT_WORD, CLOSE_HISTORY)
-    val others = entries.filterNot { it in default }
-    default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
-            others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }
-}
-
 /** add missing keys, typically because a new key has been added */
 fun upgradeToolbarPrefs(prefs: SharedPreferences) {
     upgradeToolbarPref(prefs, Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)
     upgradeToolbarPref(prefs, Settings.PREF_PINNED_TOOLBAR_KEYS, defaultPinnedToolbarPref)
-    upgradeToolbarPref(prefs, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS, defaultClipboardToolbarPref)
 }
 
 private fun upgradeToolbarPref(prefs: SharedPreferences, pref: String, default: String) {
@@ -164,8 +156,6 @@ private fun upgradeToolbarPref(prefs: SharedPreferences, pref: String, default: 
 fun getEnabledToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)
 
 fun getPinnedToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_PINNED_TOOLBAR_KEYS, defaultPinnedToolbarPref)
-
-fun getEnabledClipboardToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS, defaultClipboardToolbarPref)
 
 fun addPinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
     // remove the existing version of this key and add the enabled one after the last currently enabled key

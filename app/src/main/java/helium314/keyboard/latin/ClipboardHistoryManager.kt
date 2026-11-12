@@ -104,12 +104,8 @@ class ClipboardHistoryManager(
     // when history is about to be shown
     fun prepareClipboardHistory() = clipboardDao?.clearOldClips(true)
 
-    fun getHistorySize() = clipboardDao?.count() ?: 0
-
     /** Snapshot of the whole history, most recent (or pinned) first */
     fun getHistoryEntries(): List<ClipboardHistoryEntry> = clipboardDao?.getAll().orEmpty()
-
-    fun getHistoryEntryContent(id: Long) = clipboardDao?.get(id)
 
     fun setHistoryChangeListener(listener: ClipboardDao.Listener?) {
         clipboardDao?.listener = listener

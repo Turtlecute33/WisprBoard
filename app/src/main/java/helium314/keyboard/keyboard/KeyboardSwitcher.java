@@ -22,8 +22,6 @@ import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodSubtype;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -65,8 +63,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private MainKeyboardView mKeyboardView;
     private EmojiPalettesView mEmojiPalettesView;
     private View mEmojiTabStripView;
-    private LinearLayout mClipboardStripView;
-    private HorizontalScrollView mClipboardStripScrollView;
     private SuggestionStripView mSuggestionStripView;
     private FrameLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
@@ -347,7 +343,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mEmojiPalettesView.setVisibility(View.GONE);
         mEmojiPalettesView.stopEmojiPalettes();
         mEmojiTabStripView.setVisibility(View.GONE);
-        mClipboardStripScrollView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(stripVisibility);
         mClipboardHistoryView.setVisibility(View.GONE);
         mClipboardHistoryView.stopClipboardHistory();
@@ -366,7 +361,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mKeyboardView.setVisibility(View.GONE);
         mSuggestionStripView.setVisibility(View.GONE);
         mStripContainer.setVisibility(getSecondaryStripVisibility());
-        mClipboardStripScrollView.setVisibility(View.GONE);
         mEmojiTabStripView.setVisibility(View.VISIBLE);
         mClipboardHistoryView.setVisibility(View.GONE);
         mEmojiPalettesView.startEmojiPalettes(mKeyboardView.getKeyVisualAttribute(),
@@ -390,11 +384,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         // No strip above the clipboard panel: the panel carries its own top bar with search, clear
         // all and close, and is measured a strip taller so the clips get that row.
         mStripContainer.setVisibility(View.GONE);
-        mClipboardStripScrollView.setVisibility(View.GONE);
         mEmojiPalettesView.setVisibility(View.GONE);
-        mClipboardHistoryView.startClipboardHistory(mLatinIME.getClipboardHistoryManager(), mKeyboardView.getKeyVisualAttribute(),
-                mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener,
-                mLatinIME.getTranslateManager());
+        mClipboardHistoryView.startClipboardHistory(mLatinIME.getClipboardHistoryManager(), mLatinIME.getTranslateManager());
         mClipboardHistoryView.setVisibility(View.VISIBLE);
     }
 
@@ -689,10 +680,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         return mEmojiTabStripView;
     }
 
-    public LinearLayout getClipboardStrip() {
-        return mClipboardStripView;
-    }
-
     public MainKeyboardView getMainKeyboardView() {
         return mKeyboardView;
     }
@@ -752,8 +739,6 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mClipboardHistoryView.setHardwareAcceleratedDrawingEnabled(isHardwareAcceleratedDrawingEnabled);
         mClipboardHistoryView.setKeyboardActionListener(mLatinIME.mKeyboardActionListener);
         mEmojiTabStripView = mCurrentInputView.findViewById(R.id.emoji_tab_strip);
-        mClipboardStripView = mCurrentInputView.findViewById(R.id.clipboard_strip);
-        mClipboardStripScrollView = mCurrentInputView.findViewById(R.id.clipboard_strip_scroll_view);
         mSuggestionStripView = mCurrentInputView.findViewById(R.id.suggestion_strip_view);
         mStripContainer = mCurrentInputView.findViewById(R.id.strip_container);
 
