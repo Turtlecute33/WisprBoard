@@ -221,6 +221,8 @@
     <string name="clipboard_clear_all">Clear history</string>
     <!-- Content description for the clear-all button once it is armed and one more tap will wipe the history -->
     <string name="clipboard_clear_all_confirm">Tap again to clear all clips</string>
+    <!-- Clipboard panel: button that deletes all text in the app's text field -->
+    <string name="clipboard_clear_field">Delete all text in the field</string>
     <!-- Clipboard panel: button that opens the actions of a clip -->
     <string name="clipboard_actions">Clip actions</string>
     <!-- Clipboard panel: accessibility label of the long press on a clip, which opens its actions -->

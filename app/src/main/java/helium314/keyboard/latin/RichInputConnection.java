@@ -862,6 +862,23 @@ public final class RichInputConnection implements PrivateCommandPerformer {
         } else mIC.performContextMenuAction(android.R.id.selectAll);
     }
 
+    /**
+     * Deletes all text in the field. The editor selects all and replaces the selection with
+     * nothing, so the IME does not need the text length. The composing text is finished first,
+     * because commitText replaces the composing region and not the selection.
+     */
+    public void clearAllText() {
+        if (!isConnected()) return;
+        synchronized (mCacheLock) {
+            clearTextCachesLocked();
+            mExpectedSelStart = 0;
+            mExpectedSelEnd = 0;
+        }
+        mIC.finishComposingText();
+        mIC.performContextMenuAction(android.R.id.selectAll);
+        mIC.commitText("", 1);
+    }
+
     public void selectWord(final SpacingAndPunctuations spacingAndPunctuations, final String script) {
         if (!isConnected()) return;
         if (mExpectedSelStart != mExpectedSelEnd) { // already something selected

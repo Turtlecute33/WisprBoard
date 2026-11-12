@@ -160,6 +160,12 @@ private fun PanelTopBar(state: ClipboardPanelState, actions: ClipboardPanelActio
             onClick = actions::onStartSearch,
             tonal = true
         )
+        // Away from Close and the bin: one tap deletes the text of the app's field.
+        RoundIconButton(
+            iconRes = R.drawable.sym_keyboard_delete_lxx,
+            description = stringResource(R.string.clipboard_clear_field),
+            onClick = actions::onClearField
+        )
         LazyRow(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 6.dp),

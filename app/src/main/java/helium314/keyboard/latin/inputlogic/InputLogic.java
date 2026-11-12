@@ -781,6 +781,15 @@ public final class InputLogic {
             case KeyCode.CLIPBOARD_CLEAR_HISTORY:
                 mLatinIME.getClipboardHistoryManager().clearHistory();
                 break;
+            case KeyCode.CLEAR_FIELD:
+                // The composing word goes away with the rest of the text.
+                resetComposingState(true /* alsoResetLastComposedWord */);
+                mConnection.clearAllText();
+                mSpaceState = SpaceState.NONE;
+                inputTransaction.setDidAffectContents();
+                inputTransaction.setRequiresUpdateSuggestions();
+                inputTransaction.requireShiftUpdate(InputTransaction.SHIFT_UPDATE_NOW);
+                break;
             case KeyCode.CLIPBOARD_CUT:
                 if (mConnection.hasSelection()) {
                     mConnection.copyText(true);

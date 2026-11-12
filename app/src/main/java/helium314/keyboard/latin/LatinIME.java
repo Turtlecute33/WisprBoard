@@ -2352,6 +2352,7 @@ public class LatinIME extends InputMethodService implements
         return code == KeyCode.DELETE
                 || code == KeyCode.CLIPBOARD_PASTE
                 || code == KeyCode.CLIPBOARD_CUT
+                || code == KeyCode.CLEAR_FIELD
                 || code == KeyCode.UNDO
                 || code == KeyCode.REDO;
     }

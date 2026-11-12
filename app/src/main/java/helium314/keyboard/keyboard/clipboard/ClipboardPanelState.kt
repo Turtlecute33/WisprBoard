@@ -191,5 +191,7 @@ interface ClipboardPanelActions {
     fun onStartSearch()
     fun onFinishTyping(commit: Boolean)
     fun onClearHistory()
+    /** Delete all text in the app's text field, so the user can paste a different clip. */
+    fun onClearField()
     fun onCloseHistory()
 }

@@ -256,6 +256,11 @@ class ClipboardHistoryView @JvmOverloads constructor(
         refreshClips()
     }
 
+    override fun onClearField() {
+        performKeyFeedback()
+        keyboardActionListener.onCodeInput(KeyCode.CLEAR_FIELD, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+    }
+
     override fun onCloseHistory() {
         keyboardActionListener.onCodeInput(KeyCode.ALPHA, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
     }

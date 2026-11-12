@@ -182,6 +182,8 @@ object KeyCode {
     const val META_RIGHT =                -10049
     const val EMOJI_SEARCH =              -10050
     const val INLINE_EMOJI_SEARCH_DONE =  -10051
+    // Deletes all text in the field. Only the clipboard panel sends it; layouts cannot use it.
+    const val CLEAR_FIELD =               -10052
 
 
     // Intents
