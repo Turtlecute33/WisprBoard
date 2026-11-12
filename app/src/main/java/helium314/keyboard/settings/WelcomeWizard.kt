@@ -87,9 +87,9 @@ import helium314.keyboard.latin.voice.resetUnsupportedModels
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.ListPickerDialog
 import helium314.keyboard.settings.dialogs.TextInputDialog
+import helium314.keyboard.settings.screens.launchApiKeySave
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -497,8 +497,12 @@ private fun AiProviderSetupStep(
         mutableStateOf(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER) ?: Defaults.PREF_AI_PROVIDER)
     }
     val selectedProvider = AiProvider.fromPref(providerPref)
-    var apiKeySet by remember {
-        mutableStateOf(SecretStore.getApiKey(ctx, selectedProvider.apiKeyPrefKey(), selectedProvider.defaultApiKey()).isNotBlank())
+    // The first read can open the vault (a KeyStore call), so load it off the UI thread (R-13).
+    var apiKeySet by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedProvider) {
+        apiKeySet = withContext(Dispatchers.IO) {
+            SecretStore.getApiKey(ctx, selectedProvider.apiKeyPrefKey(), selectedProvider.defaultApiKey()).isNotBlank()
+        }
     }
     var micGranted by remember {
         mutableStateOf(PermissionsUtil.checkAllPermissionsGranted(ctx, Manifest.permission.RECORD_AUDIO))
@@ -521,14 +525,11 @@ private fun AiProviderSetupStep(
         AiProvider.OPENROUTER -> ctx.getString(R.string.ai_provider_openrouter)
         AiProvider.PAYPERQ -> ctx.getString(R.string.ai_provider_payperq)
     }
-    fun refreshApiKeyState(provider: AiProvider = selectedProvider) {
-        apiKeySet = SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).isNotBlank()
-    }
+    // The LaunchedEffect above loads apiKeySet for the new provider.
     fun selectProvider(provider: AiProvider) {
         providerPref = provider.prefValue
         prefs.edit { putString(Settings.PREF_AI_PROVIDER, provider.prefValue) }
         provider.resetUnsupportedModels(prefs)
-        refreshApiKeyState(provider)
     }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -548,21 +549,9 @@ private fun AiProviderSetupStep(
             onDismissRequest = { showApiKeyDialog = false },
             onConfirmed = {
                 val key = it.trim()
-                // Optimistic state; the encrypted-prefs write is a disk commit plus a KeyStore
-                // round trip and must not run on the UI thread (see VoiceScreen.saveApiKey).
+                // Optimistic state; the save runs off the UI thread (see launchApiKeySave).
                 apiKeySet = key.isNotBlank()
-                scope.launch {
-                    val failed = withContext(Dispatchers.IO) {
-                        runCatching { SecretStore.setApiKey(ctx, selectedProvider.apiKeyPrefKey(), key) }.isFailure
-                    }
-                    if (failed) {
-                        val stillSet = withContext(Dispatchers.IO) {
-                            SecretStore.getApiKey(ctx, selectedProvider.apiKeyPrefKey(), selectedProvider.defaultApiKey()).isNotBlank()
-                        }
-                        Toast.makeText(ctx, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
-                        apiKeySet = stillSet
-                    }
-                }
+                scope.launchApiKeySave(ctx, selectedProvider, key) { storedLength -> apiKeySet = storedLength > 0 }
                 showApiKeyDialog = false
                 if (key.isNotBlank()) onApiKeyConfigured()
             },
@@ -582,6 +571,8 @@ private fun AiProviderSetupStep(
             },
             singleLine = true,
             isPassword = true,
+            // A key that cannot go into an HTTP header cannot be saved (R-01).
+            checkTextValid = { SecretStore.isValidApiKey(it.trim()) },
         )
     }
     if (showProviderDialog) {

@@ -16,13 +16,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -39,9 +39,11 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.permissions.PermissionsUtil
 import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.InputTooLargeException
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.previewDark
+import helium314.keyboard.latin.utils.readTextCapped
 import helium314.keyboard.latin.voice.AiProvider
 import helium314.keyboard.latin.voice.ModelCatalog
 import helium314.keyboard.latin.voice.OpenRouterClient
@@ -73,6 +75,7 @@ import helium314.keyboard.settings.preferences.SwitchPreference
 import helium314.keyboard.settings.preferences.TextInputPreference
 import helium314.keyboard.settings.preferences.rememberBooleanPreferenceState
 import helium314.keyboard.settings.preferences.rememberStringPreferenceState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -627,10 +630,29 @@ private fun VoiceSpeechEnginePreference(setting: Setting) {
     }
 }
 
+/**
+ * Saves [key] for [provider] (an empty key removes it) off the main thread: `SecretStore.setApiKey`
+ * does a synchronous `commit()` and an AndroidKeyStore call, hundreds of milliseconds on some
+ * devices. When the save fails, shows a toast and gives the length of the stored key to
+ * [onFailure]. [this] must live longer than the dialog and the row (R-33).
+ */
+internal fun CoroutineScope.launchApiKeySave(ctx: Context, provider: AiProvider, key: String, onFailure: (storedLength: Int) -> Unit) {
+    launch {
+        val storedLength = withContext(Dispatchers.IO) {
+            if (runCatching { SecretStore.setApiKey(ctx, provider.apiKeyPrefKey(), key) }.isSuccess) null
+            else SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).length
+        } ?: return@launch
+        Toast.makeText(ctx, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
+        onFailure(storedLength)
+    }
+}
+
 @Composable
 private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
+    // Not rememberCoroutineScope(): this row is in a LazyColumn, and a scroll would stop the save
+    // before it can report a failure (R-33).
+    val scope = LocalLifecycleOwner.current.lifecycleScope
     var showDialog by rememberSaveable { mutableStateOf(false) }
     // The first read can open the vault (a KeyStore call), so load the length off the UI thread.
     var storedLength by remember(provider) { mutableIntStateOf(0) }
@@ -640,27 +662,11 @@ private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
         }
     }
 
-    /**
-     * Persists the key off the main thread. `SecretStore.setApiKey` does a synchronous
-     * `commit()` into the vault prefs file, which means a disk write plus an AndroidKeyStore
-     * round trip — hundreds of milliseconds on some devices, and it was landing on the UI thread.
-     * The optimistic length update keeps the masked row in sync immediately either way.
-     */
+    // The optimistic length update keeps the row in sync at once; a failure puts the stored length back.
     fun saveApiKey(key: String) {
         storedLength = key.length
         apiKeyEdits.intValue++
-        scope.launch {
-            val failed = withContext(Dispatchers.IO) {
-                runCatching { SecretStore.setApiKey(ctx, provider.apiKeyPrefKey(), key) }.isFailure
-            }
-            if (failed) {
-                Toast.makeText(ctx, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
-                // Restore the mask from the actually-stored key; also a KeyStore read, so keep it off the UI thread.
-                storedLength = withContext(Dispatchers.IO) {
-                    SecretStore.getApiKey(ctx, provider.apiKeyPrefKey(), provider.defaultApiKey()).length
-                }
-            }
-        }
+        scope.launchApiKeySave(ctx, provider, key) { storedLength = it }
     }
 
     Preference(
@@ -672,10 +678,10 @@ private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
             }
             showDialog = true
         },
-        // Mask the key but reflect its length so the user can spot accidental truncation
-        // ("did I paste the whole thing?") without ever exposing the value itself. Capped to
-        // keep the row layout stable.
-        description = if (storedLength > 0) "•".repeat(storedLength.coerceIn(8, 24)) else setting.description,
+        // Show the length but never the key, so the user can see a cut paste (R-35).
+        description = if (storedLength > 0) {
+            pluralStringResource(R.plurals.voice_api_key_saved, storedLength, storedLength)
+        } else setting.description,
     )
     if (showDialog) {
         val hasStoredKey = storedLength > 0
@@ -685,9 +691,8 @@ private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
             // Deliberately not prefilled with the stored key. Loading the secret into an editable
             // field means anyone who can open Settings can read it back, and it puts the key in one
             // more place in memory for no benefit — you don't need to see a key to replace it.
-            // Confirm stays disabled while the field is empty (checkTextValid defaults to
-            // isNotBlank), so an untouched dialog can't wipe a working key; removing one is the
-            // explicit neutral button below.
+            // Confirm stays disabled while the field is empty, so an untouched dialog can't wipe a
+            // working key; removing one is the explicit neutral button below.
             initialText = "",
             description = if (hasStoredKey) {
                 { Text(stringResource(R.string.voice_api_key_replace_hint)) }
@@ -697,6 +702,8 @@ private fun VoiceApiKeyPreference(setting: Setting, provider: AiProvider) {
             title = { Text(setting.title) },
             singleLine = true,
             isPassword = true,
+            // A key that cannot go into an HTTP header cannot be saved (R-01).
+            checkTextValid = { SecretStore.isValidApiKey(it.trim()) },
         )
     }
 }
@@ -856,7 +863,8 @@ private fun VoiceTestKeyPreference(setting: Setting) {
                 try {
                     // With no model set, test the key only, then ask for a model.
                     val result = withContext(Dispatchers.IO) {
-                        val keyResult = probeApiKey(provider, apiKey, model)
+                        // Never throw (R-01): Settings would crash, and the exception text can hold the key.
+                        val keyResult = runCatching { probeApiKey(provider, apiKey, model) }.getOrDefault(TestResult.NETWORK)
                         if (keyResult == TestResult.OK && model == null) TestResult.NO_MODEL else keyResult
                     }
                     Toast.makeText(ctx, result.messageRes, Toast.LENGTH_SHORT).show()
@@ -882,44 +890,50 @@ private enum class TestResult(@StringRes val messageRes: Int) {
     TOO_LARGE(R.string.voice_test_key_response_too_large),
 }
 
+/**
+ * Sends one GET to [url] with [apiKey] and maps the reply with [onResponse]. The connection is made
+ * in the try: a header value that the HTTP stack refuses gives NETWORK, not a crash (R-01).
+ */
+private fun probeGet(url: String, apiKey: String, openRouter: Boolean, onResponse: (HttpURLConnection) -> TestResult): TestResult {
+    var conn: HttpURLConnection? = null
+    return try {
+        conn = (java.net.URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            setRequestProperty("Authorization", "Bearer $apiKey")
+            OpenRouterClient.applyNeutralHeaders(this)
+            if (openRouter) OpenRouterClient.applyOpenRouterAttributionHeaders(this)
+            connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
+            readTimeout = 10_000
+        }
+        onResponse(conn)
+    } catch (_: InputTooLargeException) {
+        TestResult.TOO_LARGE
+    } catch (_: Exception) {
+        TestResult.NETWORK
+    } finally {
+        conn?.disconnect()
+    }
+}
+
 /** Tests [apiKey], then [model] if it is not null. */
 private fun probeApiKey(provider: AiProvider, apiKey: String, model: String?): TestResult {
     if (provider == AiProvider.PAYPERQ) return probePayPerQApiKey(apiKey, model)
-    val keyConn = (java.net.URL(OpenRouterClient.KEY_ENDPOINT).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        setRequestProperty("Authorization", "Bearer $apiKey")
-        OpenRouterClient.applyNeutralHeaders(this)
-        OpenRouterClient.applyOpenRouterAttributionHeaders(this)
-        connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
-        readTimeout = 10_000
-    }
-    return try {
-        when (keyConn.responseCode) {
+    return probeGet(OpenRouterClient.KEY_ENDPOINT, apiKey, openRouter = true) { conn ->
+        when (conn.responseCode) {
             200 -> if (model == null) TestResult.OK else probeModel(apiKey, model)
             401, 403 -> TestResult.INVALID
             429 -> TestResult.RATE_LIMITED
             else -> TestResult.NETWORK
         }
-    } catch (_: Exception) {
-        TestResult.NETWORK
-    } finally {
-        keyConn.disconnect()
     }
 }
 
 private fun probePayPerQApiKey(apiKey: String, model: String?): TestResult {
     if (model != null && model.isBlank()) return TestResult.INVALID_MODEL
     val modelsEndpoint = if (model == null) OpenRouterClient.PAYPERQ_MODELS_ENDPOINT else payPerQModelsEndpoint(model)
-    val conn = (java.net.URL(modelsEndpoint).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        setRequestProperty("Authorization", "Bearer $apiKey")
-        OpenRouterClient.applyNeutralHeaders(this)
-        connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
-        readTimeout = 10_000
-    }
-    return try {
+    return probeGet(modelsEndpoint, apiKey, openRouter = false) { conn ->
         when (conn.responseCode) {
-            200 -> if (model == null || payPerQModelResponseContains(readProbeResponseCapped(conn.inputStream), model)) {
+            200 -> if (model == null || payPerQModelResponseContains(conn.inputStream.use { readTextCapped(it, MAX_PROBE_RESPONSE_BYTES) }, model)) {
                 TestResult.OK
             } else {
                 TestResult.INVALID_MODEL
@@ -928,12 +942,6 @@ private fun probePayPerQApiKey(apiKey: String, model: String?): TestResult {
             429 -> TestResult.RATE_LIMITED
             else -> TestResult.NETWORK
         }
-    } catch (_: ProbeResponseTooLargeException) {
-        TestResult.TOO_LARGE
-    } catch (_: Exception) {
-        TestResult.NETWORK
-    } finally {
-        conn.disconnect()
     }
 }
 
@@ -944,15 +952,7 @@ private fun probeModel(apiKey: String, model: String): TestResult {
     }
     val author = URLEncoder.encode(parts[0], StandardCharsets.UTF_8.name())
     val slug = URLEncoder.encode(parts[1], StandardCharsets.UTF_8.name())
-    val conn = (java.net.URL(OpenRouterClient.modelEndpointUrl(author, slug)).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        setRequestProperty("Authorization", "Bearer $apiKey")
-        OpenRouterClient.applyNeutralHeaders(this)
-        OpenRouterClient.applyOpenRouterAttributionHeaders(this)
-        connectTimeout = OpenRouterClient.DEFAULT_CONNECT_TIMEOUT_MS
-        readTimeout = 10_000
-    }
-    return try {
+    return probeGet(OpenRouterClient.modelEndpointUrl(author, slug), apiKey, openRouter = true) { conn ->
         when (conn.responseCode) {
             200 -> TestResult.OK
             401, 403 -> TestResult.INVALID
@@ -960,10 +960,6 @@ private fun probeModel(apiKey: String, model: String): TestResult {
             429 -> TestResult.RATE_LIMITED
             else -> TestResult.NETWORK
         }
-    } catch (_: Exception) {
-        TestResult.NETWORK
-    } finally {
-        conn.disconnect()
     }
 }
 
@@ -979,24 +975,6 @@ internal fun payPerQModelsEndpoint(model: String): String = if ("/" in model) {
     OpenRouterClient.PAYPERQ_MODELS_ENDPOINT
 } else {
     OpenRouterClient.PAYPERQ_AUDIO_MODELS_ENDPOINT
-}
-
-private class ProbeResponseTooLargeException : IllegalArgumentException("Probe response too large")
-
-private fun readProbeResponseCapped(input: java.io.InputStream): String {
-    val out = java.io.ByteArrayOutputStream()
-    val buffer = ByteArray(8 * 1024)
-    var total = 0
-    input.use { stream ->
-        while (true) {
-            val read = stream.read(buffer)
-            if (read == -1) break
-            total += read
-            if (total > MAX_PROBE_RESPONSE_BYTES) throw ProbeResponseTooLargeException()
-            out.write(buffer, 0, read)
-        }
-    }
-    return out.toString(Charsets.UTF_8.name())
 }
 
 private const val MAX_PROBE_RESPONSE_BYTES = 512 * 1024

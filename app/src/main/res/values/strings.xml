@@ -1211,9 +1211,9 @@ New dictionary:
     <string name="ai_provider_openrouter">OpenRouter</string>
     <string name="ai_provider_payperq">PayPerQ</string>
     <string name="openrouter_api_key">OpenRouter API Key</string>
-    <string name="openrouter_api_key_summary">Required before long-pressing Return to use voice input with your OpenRouter account</string>
+    <string name="openrouter_api_key_summary">Voice input, Text Fix and Translate use this key for your OpenRouter account</string>
     <string name="payperq_api_key">PayPerQ API Key</string>
-    <string name="payperq_api_key_summary">Required before using voice input or Text Fix with your PayPerQ account</string>
+    <string name="payperq_api_key_summary">Voice input, Text Fix and Translate use this key for your PayPerQ account</string>
     <!-- Voice/AI: let the model spend time on hidden reasoning before answering -->
     <string name="ai_allow_reasoning">Let the model think first</string>
     <string name="ai_allow_reasoning_summary">Allow the model to reason before it answers. Slower — often several seconds, occasionally much longer — and it rarely helps transcription or copy-editing. Turn it on only if you picked a model where you want the extra thinking.</string>
@@ -1305,6 +1305,11 @@ New dictionary:
     <string name="crash_report_save">Save</string>
     <string name="voice_api_key_replace_hint">A key is already saved. Enter a new one to replace it.</string>
     <string name="voice_api_key_remove">Remove key</string>
+    <!-- Settings row of a saved API key. The row does not show the key, only its length -->
+    <plurals name="voice_api_key_saved">
+        <item quantity="one">Key saved (%d character)</item>
+        <item quantity="other">Key saved (%d characters)</item>
+    </plurals>
     <string name="voice_mic_rationale_title">Microphone access</string>
     <string name="voice_mic_rationale_message">WisprBoard records audio only after you tap the voice key. It stops when you tap Stop, or at the time limit. With the Cloud AI engine, the recording goes over HTTPS to your selected AI provider with your API key, and no WisprBoard server is used. With the On-device engine, nothing is sent. You can remove microphone access at any time in Android app settings.</string>
     <string name="voice_mic_rationale_confirm">Allow microphone</string>
