@@ -89,29 +89,14 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     /**
-     * A very light single-pulse tick — used for subtle "I crossed something" feedback
-     * (e.g. dragging across popup buttons). Bypasses the app's vibrate-on-keypress toggle
-     * because callers gate this on their own pref. Picks the most delicate primitive the
-     * platform offers so it doesn't feel like a buzz.
+     * One light tick on [view] when a drag crosses into a popup key. Bypasses the app's
+     * vibrate-on-keypress toggle because callers gate this on their own pref (R-22).
+     * The system CLOCK_TICK, as before 7.14.0: EFFECT_TICK felt like two pulses on a Pixel.
      */
-    public void vibrateTick() {
+    public void vibrateTick(final View view) {
         if (!mHasVibrator || isQuietForCues() || userIntensity() == 0) return;
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // EFFECT_TICK is the OS-defined "scroll-tick"-style pulse: shorter and
-                // weaker than EFFECT_CLICK, single pulse, no buzz on stock Android.
-                mVibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK));
-                return;
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // Pre-Q: best we can do is a very short low-amplitude one-shot.
-                mVibrator.vibrate(VibrationEffect.createOneShot(8L, 40));
-                return;
-            }
-        } catch (final Exception ignore) {
-            // Some OEM vibrators reject specific effects — fall through to legacy.
-        }
-        mVibrator.vibrate(8L);
+        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK,
+                HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
     }
 
     public void vibrate(final long milliseconds) {

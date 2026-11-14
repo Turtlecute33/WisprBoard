@@ -265,7 +265,7 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
             // vibrateTick, not the key-press haptic: the setting works also when key-press
             // vibration is off, as its summary says (R-22).
             if (allowHaptic && Settings.getValues().mPopupDragHaptic) {
-                AudioAndHapticFeedbackManager.getInstance().vibrateTick();
+                AudioAndHapticFeedbackManager.getInstance().vibrateTick(this);
             }
         }
         return newKey;
