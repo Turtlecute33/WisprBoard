@@ -1270,6 +1270,8 @@ New dictionary:
     <string name="ai_error_too_large">The request is too large for this model. Make it shorter.</string>
     <!-- Text Fix or Translate: the model reply is longer than the limit; the app does not cut it (review R-02) -->
     <string name="ai_error_result_too_long">The result is too long. Select less text.</string>
+    <string name="ai_error_answer_cut">The answer was cut short, so nothing was changed. Select less text.</string>
+    <string name="ai_error_content_filter">The content filter of the provider stopped the answer, so nothing was changed.</string>
     <string name="ai_error_provider_down">The AI provider has a problem. Try again later.</string>
     <string name="ai_error_timeout">The AI provider did not reply in time. Try again.</string>
     <string name="voice_error_rate_limited">AI provider rate limit reached — try again in a moment</string>

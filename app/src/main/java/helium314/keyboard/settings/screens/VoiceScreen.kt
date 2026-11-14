@@ -169,7 +169,8 @@ internal fun buildVoiceScreenItems(
         if (cloud) Settings.PREF_AI_PROVIDER else null,
         if (cloud) provider.apiKeyPrefKey() else null,
         if (cloud && provider == AiProvider.OPENROUTER) Settings.PREF_OPENROUTER_ZDR_ENABLED else null,
-        if (cloud && provider == AiProvider.OPENROUTER) Settings.PREF_AI_ALLOW_REASONING else null,
+        // Both providers: PayPerQ obeys the switch on text requests (Text Fix, Translate, auto-polish).
+        if (cloud) Settings.PREF_AI_ALLOW_REASONING else null,
         if (cloud) Settings.PREF_VOICE_ACTION_TEST_KEY else null,
         // Traditional voice (chat-audio) subsection — independent of STT below.
         if (cloud) R.string.voice_traditional_category else null,

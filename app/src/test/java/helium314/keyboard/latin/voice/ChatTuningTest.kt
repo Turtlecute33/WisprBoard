@@ -64,9 +64,30 @@ class ChatTuningTest {
     }
 
     @Test
-    fun payPerQNeverReceivesTheReasoningFlag() {
+    fun payPerQTextRequestAsksTheModelNotToReason() {
+        // Measured on PayPerQ with one Text Fix request: Grok 4.3 went from 11.5 s to 1.6 s and
+        // DeepSeek V4 Flash from 6.1 s to 1.6 s with the switch.
         val body = client(provider = AiProvider.PAYPERQ).buildTextRequestBody("fix this", enforceZdr = false)
-        assertFalse(body.has("reasoning"), "PayPerQ was never probed for this parameter")
+        assertFalse(body.getJSONObject("reasoning").getBoolean("enabled"))
+        val allowed = client(provider = AiProvider.PAYPERQ, disableReasoning = false)
+            .buildTextRequestBody("fix this", enforceZdr = false)
+        assertFalse(allowed.has("reasoning"))
+    }
+
+    @Test
+    fun payPerQAudioRequestDoesNotGetTheReasoningFlag() {
+        // A model that refuses the switch costs a second upload of the recording, and the voice
+        // models of PayPerQ are not measured with it.
+        val (prefix, suffix) = client(provider = AiProvider.PAYPERQ).buildRequestEnvelope(enforceZdr = false)
+        assertFalse("\"reasoning\"" in prefix + suffix)
+    }
+
+    @Test
+    fun payPerQGetsAShortPrewarmGap() {
+        // PayPerQ closes an idle connection after 5 s. A gap longer than that skips the pre-warm
+        // when the connection is gone.
+        assertTrue(OpenRouterClient.prewarmMinGapMs(AiProvider.PAYPERQ) < 5_000L)
+        assertEquals(90_000L, OpenRouterClient.prewarmMinGapMs(AiProvider.OPENROUTER))
     }
 
     @Test

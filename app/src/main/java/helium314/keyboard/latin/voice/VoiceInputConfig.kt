@@ -119,6 +119,8 @@ internal fun actionableErrorResId(statusCode: Int): Int? = when (statusCode) {
     429 -> R.string.voice_error_rate_limited
     in 500..599 -> R.string.ai_error_provider_down
     OpenRouterClient.STATUS_NETWORK -> R.string.voice_error_no_network
+    OpenRouterClient.STATUS_ANSWER_CUT -> R.string.ai_error_answer_cut
+    OpenRouterClient.STATUS_CONTENT_FILTER -> R.string.ai_error_content_filter
     else -> null
 }
 
@@ -185,6 +187,8 @@ internal fun warnAfterZdrFallback(context: Context, model: String) {
  */
 internal const val AI_TEXT_REQUEST_BUDGET_MS = 90_000L
 
+// The key of each fact is the provider and the model ("payperq|x-ai/grok-4.3"): the two providers
+// share model slugs, and a fact learned on one says nothing about the other.
 private const val ROUTE_FACT_TTL_MS = 30 * 60 * 1000L
 private val zdrUnavailableSince = ConcurrentHashMap<String, Long>()
 private val reasoningControlRejectedSince = ConcurrentHashMap<String, Long>()

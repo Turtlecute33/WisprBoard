@@ -73,6 +73,58 @@ class ParseResponseTest {
     }
 
     @Test
+    fun errorEnvelopeWithAClearStatusIsNotRetried() {
+        // PayPerQ answers HTTP 200 with the real status in the envelope. Three requests (for a
+        // dictation, three uploads) cannot change a bad key, no credit or a refusal.
+        for (code in listOf(401, 402, 403, 404)) {
+            val body = """{"error":{"message":"Policy Violation: this user has been blocked","code":$code}}"""
+            assertStatus(code, body) { client().parseContent(it) }
+            assertStatus(code, body) { client().parseTranscriptionContent(it) }
+            assertFalse(OpenRouterClient.isRetryableStatus(code))
+        }
+        // A rate limit is tried again, but with the backoff of its status.
+        assertStatus(429, """{"error":{"message":"Too many requests","code":429}}""") { client().parseContent(it) }
+    }
+
+    @Test
+    fun reasoningRefusalInAnEnvelopeKeepsItsStatus() {
+        // The request then goes again without the switch (see withReasoningFallback).
+        val body = """{"error":{"message":"Reasoning is mandatory for this endpoint and cannot be disabled.","code":400}}"""
+        try {
+            client().parseContent(body)
+            fail("an error envelope should not parse")
+        } catch (e: OpenRouterException) {
+            assertEquals(400, e.statusCode)
+            assertTrue(isReasoningControlRejected(e.statusCode, e.errorBody))
+        }
+    }
+
+    @Test
+    fun aCutTextAnswerIsRefusedAndNotRetried() {
+        // The result replaces the user's text, so a cut answer deletes the end of it.
+        val cut = """{"choices":[{"message":{"content":"Hello th"},"finish_reason":"length"}]}"""
+        assertStatus(OpenRouterClient.STATUS_ANSWER_CUT, cut) { client().parseContent(it, replacesText = true) }
+        val filtered = """{"choices":[{"message":{"content":"Hello"},"finish_reason":"content_filter"}]}"""
+        assertStatus(OpenRouterClient.STATUS_CONTENT_FILTER, filtered) { client().parseContent(it, replacesText = true) }
+        assertFalse(OpenRouterClient.isRetryableStatus(OpenRouterClient.STATUS_ANSWER_CUT))
+        assertFalse(OpenRouterClient.isRetryableStatus(OpenRouterClient.STATUS_CONTENT_FILTER))
+        // The start of a dictation is better than nothing, so a transcription is still typed.
+        assertEquals("Hello th", client().parseContent(cut))
+    }
+
+    @Test
+    fun anAnswerThatStoppedWithAnErrorIsRetried() {
+        val body = """{"choices":[{"message":{"content":"Hello th"},"finish_reason":"error"}]}"""
+        assertStatus(OpenRouterClient.STATUS_UNUSABLE_RESPONSE, body) { client().parseContent(it) }
+        assertStatus(OpenRouterClient.STATUS_UNUSABLE_RESPONSE, body) { client().parseContent(it, replacesText = true) }
+    }
+
+    @Test
+    fun cloudflareEdgeErrorsAreRetried() {
+        for (status in 520..524) assertTrue(OpenRouterClient.isRetryableStatus(status), "status $status")
+    }
+
+    @Test
     fun malformedBodyIsRetryable() {
         assertStatus(OpenRouterClient.STATUS_UNUSABLE_RESPONSE, "<html>502 Bad Gateway</html>") {
             client().parseContent(it)

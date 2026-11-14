@@ -142,6 +142,8 @@ class VoiceScreenLogicTest {
         assertTrue(Settings.PREF_PAYPERQ_API_KEY in items)
         assertFalse(Settings.PREF_OPENROUTER_API_KEY in items)
         assertFalse(Settings.PREF_OPENROUTER_ZDR_ENABLED in items)
+        // PayPerQ obeys the reasoning switch on text requests, so its setting shows.
+        assertTrue(Settings.PREF_AI_ALLOW_REASONING in items)
     }
 
     @Test

@@ -80,6 +80,11 @@ class OpenRouterClient(
      * retry decision and inside the upload loops so a cancelled request stops sending audio.
      */
     @Volatile private var cancelled = false
+    /**
+     * Key for the routing facts. The two providers share model slugs, and a fact learned on one
+     * says nothing about the other, so the provider is part of the key.
+     */
+    private val routeKey = "${provider.prefValue}|$model"
     @Volatile var didFallbackFromZdr: Boolean = false
         private set
 
@@ -135,7 +140,24 @@ class OpenRouterClient(
         /** Sentinels for a timeout and a network failure, so that the error text is not found from the message (UX-012). */
         const val STATUS_TIMEOUT = -4
         const val STATUS_NETWORK = -5
-        private val RETRYABLE_STATUSES = setOf(408, 425, 429, 500, 502, 503, 504, STATUS_UNUSABLE_RESPONSE)
+        /**
+         * Sentinels for a text answer that stopped early: `finish_reason` "length" or
+         * "content_filter". The result replaces the user's text, so a cut answer deletes the end
+         * of it. A second request gives the same answer, so these are not tried again.
+         */
+        const val STATUS_ANSWER_CUT = -6
+        const val STATUS_CONTENT_FILTER = -7
+        /** 520 to 524 are errors of the Cloudflare edge in front of the provider. They clear in a moment. */
+        private val RETRYABLE_STATUSES =
+            setOf(408, 425, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524, STATUS_UNUSABLE_RESPONSE)
+        /**
+         * Statuses that an error envelope with HTTP 200 can name, where a second request cannot
+         * help and the user can do something: a bad key, no credit, a refusal, a model that is
+         * not there, a rate limit. PayPerQ answers this way. Other envelopes stay
+         * [STATUS_UNUSABLE_RESPONSE]: a code 400 "Provider returned error" was seen to clear on
+         * the next request.
+         */
+        private val ENVELOPE_STATUSES = setOf(401, 402, 403, 404, 429)
         // Sanity cap to prevent pathological responses from consuming unbounded memory.
         // Real transcription responses are kilobytes; 1 MB is ~3 orders of magnitude of headroom.
         private const val MAX_RESPONSE_BYTES = 1_000_000L
@@ -166,8 +188,17 @@ class OpenRouterClient(
         }
         private val prewarmInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
         /** Stamped by the pre-warm *and* by every real request, so the two never fight for a socket. */
-        @Volatile private var lastContactUptimeMs = 0L
+        @Volatile private var lastContactUptimeMs = -PREWARM_MIN_GAP_MS
         private const val PREWARM_MIN_GAP_MS = 90_000L
+        /**
+         * PayPerQ closes an idle connection after 5 s (`Keep-Alive: timeout=5`, measured
+         * 2026-11-14). A longer gap skips the pre-warm exactly when the connection is gone.
+         */
+        private const val PAYPERQ_PREWARM_MIN_GAP_MS = 4_000L
+
+        @VisibleForTesting
+        internal fun prewarmMinGapMs(provider: AiProvider): Long =
+            if (provider == AiProvider.PAYPERQ) PAYPERQ_PREWARM_MIN_GAP_MS else PREWARM_MIN_GAP_MS
         private const val PREWARM_TIMEOUT_MS = 5_000
 
         /**
@@ -176,8 +207,9 @@ class OpenRouterClient(
          * Worth 30–200 ms on OpenRouter and 300–500 ms on PayPerQ, which is 10–30 % of a
          * text-only Translate.
          *
-         * Call this ONLY where a request is already committed — when the Translate language menu
-         * opens, or when a Text Fix starts. It is deliberately NOT called on the voice path: today
+         * Call this ONLY where a request is already committed and the user still has something
+         * to do — when the Translate language menu opens. A Text Fix sends its request at once,
+         * so a pre-warm there has no time to gain. It is deliberately NOT called on the voice path: today
          * a recording the user cancels, or one too short or too quiet to send, produces no packets
          * at all, and pre-warming there would make "the user pressed the mic key" observable to
          * the network via SNI. That guarantee is worth more than 3–10 % of a dictation.
@@ -188,7 +220,7 @@ class OpenRouterClient(
         @JvmStatic
         fun prewarm(provider: AiProvider) {
             val now = SystemClock.elapsedRealtime()
-            if (now - lastContactUptimeMs < PREWARM_MIN_GAP_MS) return
+            if (now - lastContactUptimeMs < prewarmMinGapMs(provider)) return
             if (!prewarmInFlight.compareAndSet(false, true)) return
             prewarmExecutor.execute {
                 try {
@@ -243,7 +275,7 @@ class OpenRouterClient(
      * regardless of recording length. Throws [OpenRouterException] on non-retryable failures
      * or after retries are exhausted. The caller owns the file and must delete it.
      */
-    fun transcribe(audioFile: File): String = withOptionalZdr("Transcription", retryTimeouts = false) { enforceZdr ->
+    fun transcribe(audioFile: File): String = withOptionalZdr("Transcription", retryTimeouts = false, audio = true) { enforceZdr ->
         val dedicatedStt = transcriptionMode == VoiceTranscriptionMode.DEDICATED_STT
         when {
             provider == AiProvider.OPENROUTER && dedicatedStt ->
@@ -274,33 +306,33 @@ class OpenRouterClient(
      * reply. Uses [systemPrompt] as the system message. Retries transient failures with the
      * same policy as [transcribe].
      */
-    fun fixText(userText: String): String = withOptionalZdr("Request", retryTimeouts = true) { enforceZdr ->
+    fun fixText(userText: String): String = withOptionalZdr("Request", retryTimeouts = true, audio = false) { enforceZdr ->
         performTextRequest(userText, enforceZdr)
     }
 
-    private inline fun <T> withOptionalZdr(label: String, retryTimeouts: Boolean, request: (Boolean) -> T): T {
+    private inline fun <T> withOptionalZdr(label: String, retryTimeouts: Boolean, audio: Boolean, request: (Boolean) -> T): T {
         // Stamped once here, not inside withRetries: the ZDR fallback below enters withRetries a
         // second time and would otherwise be handed a fresh full budget.
         deadlineMs = totalBudgetMs?.let { SystemClock.elapsedRealtime() + it } ?: Long.MAX_VALUE
-        if (disableReasoning && isReasoningControlKnownRejected(model)) suppressReasoningControl = true
+        if (disableReasoning && isReasoningControlKnownRejected(routeKey)) suppressReasoningControl = true
         val zdrWanted = provider == AiProvider.OPENROUTER && useZeroDataRetention
         // A model whose ZDR route we have already found missing would otherwise re-upload the
         // whole clip on every single dictation just to rediscover it.
-        val zdrSuppressed = zdrWanted && isZdrRouteKnownUnavailable(model)
+        val zdrSuppressed = zdrWanted && isZdrRouteKnownUnavailable(routeKey)
         // Report the downgrade even when it comes from the cache rather than from a live refusal,
         // so the user is told on every affected request and not only the first one in 30 minutes.
         if (zdrSuppressed) didFallbackFromZdr = true
         val requestZdr = zdrWanted && !zdrSuppressed
         return try {
-            withReasoningFallback(label, requestZdr, retryTimeouts) { request(requestZdr) }
+            withReasoningFallback(label, requestZdr, retryTimeouts, audio) { request(requestZdr) }
         } catch (e: OpenRouterException) {
             if (!requestZdr || !e.isZdrRouteUnavailable()) throw e
             // ZDR is a preference, not a hard requirement. Retry once without the ZDR constraint,
             // but keep the data_collection "deny" floor (see putProviderPreferences), so that the
             // retry never goes to a provider that can store or train on the data.
-            if (isZdrRouteVerdictCacheable(e.statusCode, e.errorBody)) markZdrRouteUnavailable(model)
+            if (isZdrRouteVerdictCacheable(e.statusCode, e.errorBody)) markZdrRouteUnavailable(routeKey)
             didFallbackFromZdr = true
-            withReasoningFallback(label, false, retryTimeouts) { request(false) }
+            withReasoningFallback(label, false, retryTimeouts, audio) { request(false) }
         }
     }
 
@@ -313,13 +345,14 @@ class OpenRouterClient(
         label: String,
         enforceZdr: Boolean,
         retryTimeouts: Boolean,
+        audio: Boolean,
         request: () -> T,
     ): T = try {
         withRetries(label, enforceZdr, retryTimeouts, request)
     } catch (e: OpenRouterException) {
-        if (!chatTuningApplies() || !isReasoningControlRejected(e.statusCode, e.errorBody)) throw e
+        if (!chatTuningApplies(audio) || !isReasoningControlRejected(e.statusCode, e.errorBody)) throw e
         suppressReasoningControl = true
-        markReasoningControlRejected(model)
+        markReasoningControlRejected(routeKey)
         withRetries(label, enforceZdr, retryTimeouts, request)
     }
 
@@ -419,7 +452,7 @@ class OpenRouterClient(
             put("model", model)
             put("messages", messages)
             putProviderPreferences(this, enforceZdr)
-            putChatTuning(this)
+            putChatTuning(this, audio = false)
         }
     }
 
@@ -451,7 +484,7 @@ class OpenRouterClient(
                 throw OpenRouterException("API error: $responseCode", responseCode, retryAfterMs, errorBody)
             }
             val responseBody = readCappedString(connection.inputStream, MAX_RESPONSE_BYTES)
-            return parseContent(responseBody)
+            return parseContent(responseBody, replacesText = true)
         } finally {
             activeConnection = null
             markContacted()
@@ -476,15 +509,22 @@ class OpenRouterClient(
             put("model", model)
             put("messages", messages)
             putProviderPreferences(this, enforceZdr)
-            putChatTuning(this)
+            putChatTuning(this, audio = true)
         }.toString()
         val placeholderIndex = body.indexOf(AUDIO_PLACEHOLDER)
         check(placeholderIndex >= 0) { "Audio placeholder not found in request body" }
         return body.substring(0, placeholderIndex) to body.substring(placeholderIndex + AUDIO_PLACEHOLDER.length)
     }
 
-    private fun chatTuningApplies(): Boolean =
-        provider == AiProvider.OPENROUTER && disableReasoning && !suppressReasoningControl
+    /**
+     * OpenRouter gets the switch on each chat request. PayPerQ gets it on text requests only.
+     * PayPerQ obeys it there (measured 2026-11-14 on one Text Fix request: Grok 4.3 went from
+     * 11.5 s to 1.6 s, DeepSeek V4 Flash from 6.1 s to 1.6 s), and a model that refuses it costs
+     * one small request. On an audio request a refusal costs a second upload of the recording,
+     * the Gemini models of PayPerQ are known to refuse, and the other voice models are not measured.
+     */
+    private fun chatTuningApplies(audio: Boolean): Boolean =
+        (provider == AiProvider.OPENROUTER || !audio) && disableReasoning && !suppressReasoningControl
 
     /**
      * Chat-only request tuning. Deliberately separate from [putProviderPreferences], which returns
@@ -496,8 +536,8 @@ class OpenRouterClient(
      * take Text Fix down entirely.
      */
     @VisibleForTesting
-    internal fun putChatTuning(body: JSONObject) {
-        if (!chatTuningApplies()) return
+    internal fun putChatTuning(body: JSONObject, audio: Boolean) {
+        if (!chatTuningApplies(audio)) return
         body.put("reasoning", JSONObject().apply { put("enabled", false) })
     }
 
@@ -760,20 +800,35 @@ class OpenRouterClient(
         out.writeBytes("\r\n")
     }
 
+    /**
+     * @param replacesText true for a text request, where the answer replaces the user's text.
+     *   An answer that stopped early is then refused. A transcription that stopped early is still
+     *   typed: the start of a dictation is better than nothing.
+     */
     @VisibleForTesting
-    internal fun parseContent(responseBody: String): String {
+    internal fun parseContent(responseBody: String, replacesText: Boolean = false): String {
         val json = try {
             JSONObject(responseBody)
         } catch (e: JSONException) {
             throw unusableResponse("Malformed API response")
         }
         logCacheUsage(json)
+        throwForErrorEnvelope(json, responseBody)
         val choices = json.optJSONArray("choices")
         if (choices == null || choices.length() == 0) {
             // PayPerQ serves `{"error": {...}}` with a 200 when its upstream fails, so an absent
             // `choices` is an upstream fault rather than a malformed reply. Either way it is the
             // same transient, retryable condition.
             throw unusableResponse("API response missing choices")
+        }
+        when (choices.optJSONObject(0)?.optString("finish_reason")) {
+            // The upstream failed in the middle of the answer. What came back is only a part,
+            // and a second request usually works.
+            "error" -> throw unusableResponse("The answer stopped with an error")
+            "length" -> if (replacesText) throw OpenRouterException("The answer was cut short", STATUS_ANSWER_CUT)
+            "content_filter" -> if (replacesText) {
+                throw OpenRouterException("The content filter stopped the answer", STATUS_CONTENT_FILTER)
+            }
         }
         val message = choices.optJSONObject(0)?.optJSONObject("message")
         val content = extractMessageText(message)
@@ -790,6 +845,19 @@ class OpenRouterClient(
 
     private fun unusableResponse(message: String) =
         OpenRouterException(message, STATUS_UNUSABLE_RESPONSE)
+
+    /**
+     * An error envelope served with HTTP 200. When its code is one of [ENVELOPE_STATUSES], the
+     * code is the real status: the request is not sent three times (for a dictation, three
+     * uploads) and the user gets the message of that status. A refusal of the reasoning switch
+     * also keeps its status, so that the request goes again without the switch.
+     */
+    private fun throwForErrorEnvelope(json: JSONObject, responseBody: String) {
+        val code = json.optJSONObject("error")?.optInt("code", 0) ?: return
+        if (code in ENVELOPE_STATUSES || isReasoningControlRejected(code, responseBody)) {
+            throw OpenRouterException("API error: $code", code, -1L, responseBody.take(MAX_ERROR_BYTES.toInt()))
+        }
+    }
 
     @VisibleForTesting
     internal fun extractMessageText(message: JSONObject?): String {
@@ -824,6 +892,8 @@ class OpenRouterClient(
             return responseBody.trim().takeIf { it.isNotEmpty() }
                 ?: throw unusableResponse("Malformed API response")
         }
+        // Without this, an envelope such as "out of credit" has no text and reads as "no speech".
+        throwForErrorEnvelope(json, responseBody)
         // OpenRouter answers with `text`; PayPerQ mirrors the same value under `transcription`.
         val text = json.optString("text").trim().takeIf { it.isNotEmpty() }
             ?: json.optString("transcription").trim()

@@ -99,6 +99,8 @@ class VoiceInputConfigTest {
         assertEquals(R.string.ai_error_timeout, actionableErrorResId(OpenRouterClient.STATUS_TIMEOUT))
         assertEquals(R.string.ai_error_timeout, actionableErrorResId(408))
         assertEquals(R.string.voice_error_no_network, actionableErrorResId(OpenRouterClient.STATUS_NETWORK))
+        assertEquals(R.string.ai_error_answer_cut, actionableErrorResId(OpenRouterClient.STATUS_ANSWER_CUT))
+        assertEquals(R.string.ai_error_content_filter, actionableErrorResId(OpenRouterClient.STATUS_CONTENT_FILTER))
         // Unknown statuses fall back to the caller's generic text.
         assertNull(actionableErrorResId(-1))
         assertNull(actionableErrorResId(418))
