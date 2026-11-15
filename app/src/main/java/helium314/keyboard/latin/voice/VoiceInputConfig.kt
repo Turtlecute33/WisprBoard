@@ -6,8 +6,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.SystemClock
-import android.widget.Toast
 import androidx.annotation.StringRes
+import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
@@ -165,12 +165,18 @@ internal fun safeUserFacingError(context: Context, e: Throwable, @StringRes fall
  * model: an IME process lives for days, so a single notice hides later downgrades.
  */
 internal fun warnAfterZdrFallback(context: Context, model: String) {
-    Toast.makeText(
-        context,
-        context.getString(R.string.voice_warning_zdr_unenforceable, model),
-        Toast.LENGTH_LONG,
-    ).show()
+    showImeToast(context, context.getString(R.string.voice_warning_zdr_unenforceable, model), long = true)
 }
+
+/**
+ * Shows a message from IME code. The keyboard shows it in its own view when it is on the screen,
+ * because the system drops a toast of an IME on API 33 and later (see [KeyboardSwitcher.showToast]).
+ */
+internal fun showImeToast(context: Context, @StringRes textResId: Int, long: Boolean = false) =
+    showImeToast(context, context.getString(textResId), long)
+
+internal fun showImeToast(context: Context, text: String, long: Boolean = false) =
+    KeyboardSwitcher.getInstance().showToast(context, text, !long)
 
 /**
  * Routing facts learned the expensive way, remembered briefly so the next request does not repeat

@@ -6,7 +6,6 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
-import android.widget.Toast
 import androidx.annotation.StringRes
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Defaults
@@ -119,25 +118,25 @@ class TextFixManager(
         val prefs = context.prefs()
 
         if (!prefs.getBoolean(variant.enabledPref, variant.enabledDefault)) {
-            Toast.makeText(context, R.string.text_fix_error_not_enabled, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.text_fix_error_not_enabled)
             return
         }
         callbacks.getBlockedErrorResId()?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            showImeToast(context, it)
             return
         }
         if (!SecretStore.isSecureStorageAvailable(context)) {
-            Toast.makeText(context, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_secure_storage_unavailable)
             return
         }
         val provider = AiProvider.fromPref(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
         val apiKey = SecretStore.getApiKey(context, provider.apiKeyPrefKey(), provider.defaultApiKey())
         if (apiKey.isBlank()) {
-            Toast.makeText(context, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_no_api_key)
             return
         }
         if (!isNetworkAvailable(context)) {
-            Toast.makeText(context, R.string.voice_error_no_network, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_no_network)
             return
         }
 
@@ -147,11 +146,11 @@ class TextFixManager(
             // and let a second press send it.
             val message = if (callbacks.selectAllText()) R.string.text_fix_all_text_selected
                 else R.string.text_fix_error_no_selection
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            showImeToast(context, message)
             return
         }
         if (selected.length > MAX_INPUT_LENGTH) {
-            Toast.makeText(context, R.string.text_fix_error_too_long, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.text_fix_error_too_long)
             return
         }
         val input = selected
@@ -160,7 +159,7 @@ class TextFixManager(
         val customModel = prefs.getString(Settings.PREF_TEXT_FIX_MODEL_CUSTOM, Defaults.PREF_TEXT_FIX_MODEL_CUSTOM) ?: ""
         val model = resolveProviderModel(selectedModel, customModel)
         if (model == null) {
-            Toast.makeText(context, R.string.voice_error_no_model, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_no_model)
             return
         }
         val prompt = (prefs.getString(variant.promptPref, variant.promptDefault) ?: variant.promptDefault)

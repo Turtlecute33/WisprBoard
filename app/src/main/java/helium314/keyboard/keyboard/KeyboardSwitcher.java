@@ -26,6 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
 import androidx.annotation.Nullable;
 
 import helium314.keyboard.event.Event;
@@ -67,6 +68,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private FrameLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
     private TextView mFakeToastView;
+    private Runnable mHideFakeToast;
     private LatinIME mLatinIME;
     private RichInputMethodManager mRichImm;
     private boolean mIsHardwareAcceleratedDrawingEnabled;
@@ -560,24 +562,39 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
      * @param text The text to display in the toast message.
      * @param briefToast If true, the toast duration will be short; otherwise, it will last longer.
      */
-    public void showToast(final String text, final boolean briefToast){
+    public void showToast(final String text, final boolean briefToast) {
+        showToast(mLatinIME, text, briefToast);
+    }
+
+    public void showToast(@StringRes final int textResId, final boolean briefToast) {
+        showToast(mLatinIME, mLatinIME.getString(textResId), briefToast);
+    }
+
+    /**
+     * Displays a message from IME code. On API 33 and later the system drops a toast of an app
+     * that has no notification permission and is not in the foreground, and an IME is not in the
+     * foreground. The keyboard thus shows the message in its own view when it is on the screen.
+     *
+     * @param context The context for a system toast, used when the keyboard is not on the screen.
+     */
+    public void showToast(@NonNull final Context context, final String text, final boolean briefToast) {
         // Callers include the suggestion worker thread (InputLogic.getSuggestedWords catches there
         // and reports through here). Both branches below need the main thread: Toast needs a
         // looper, and showFakeToast touches an attached View.
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            mLatinIME.mHandler.post(() -> showToast(text, briefToast));
+            mLatinIME.mHandler.post(() -> showToast(context, text, briefToast));
             return;
         }
-        // In API 32 and below, toasts can be shown without a notification permission.
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
-            final int toastLength = briefToast ? Toast.LENGTH_SHORT : Toast.LENGTH_LONG;
-            final Toast toast = Toast.makeText(mLatinIME, text, toastLength);
-            toast.setGravity(Gravity.CENTER, 0, 0);
-            toast.show();
-        } else {
-            final int toastLength = briefToast ? 2000 : 3500;
-            showFakeToast(text, toastLength);
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2
+                && mFakeToastView != null && mCurrentInputView != null && mCurrentInputView.isShown()) {
+            showFakeToast(mFakeToastView, text, briefToast ? 2000 : 3500);
+            return;
         }
+        // API 32 and below show a toast without a notification permission. On newer versions
+        // this is the only possible channel while the keyboard is not on the screen.
+        final Toast toast = Toast.makeText(context, text, briefToast ? Toast.LENGTH_SHORT : Toast.LENGTH_LONG);
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) toast.setGravity(Gravity.CENTER, 0, 0);
+        toast.show();
     }
 
     private static int getSecondaryStripVisibility() {
@@ -585,25 +602,31 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     // Displays a toast-like message with the provided text for a specified duration.
-    private void showFakeToast(final String text, final int timeMillis) {
-        // Keyboard load can fail before onCreateInputView has resolved the view.
-        if (mFakeToastView == null || mFakeToastView.getVisibility() == View.VISIBLE) return;
+    private void showFakeToast(@NonNull final TextView toastView, final String text, final int timeMillis) {
+        // A new message replaces the message on the screen, so that an error is not lost.
+        if (mHideFakeToast != null) toastView.removeCallbacks(mHideFakeToast);
+        final boolean wasVisible = toastView.getVisibility() == View.VISIBLE;
 
-        final Drawable appIcon = mFakeToastView.getCompoundDrawables()[0];
+        final Drawable appIcon = toastView.getCompoundDrawables()[0];
         if (appIcon != null) {
-            final int bound = mFakeToastView.getLineHeight();
+            final int bound = toastView.getLineHeight();
             appIcon.setBounds(0, 0, bound, bound);
-            mFakeToastView.setCompoundDrawables(appIcon, null, null, null);
+            toastView.setCompoundDrawables(appIcon, null, null, null);
         }
-        mFakeToastView.setText(text);
-        mFakeToastView.setVisibility(View.VISIBLE);
-        mFakeToastView.bringToFront();
-        mFakeToastView.startAnimation(AnimationUtils.loadAnimation(mLatinIME, R.anim.fade_in));
+        toastView.setText(text);
+        if (!wasVisible) {
+            toastView.setVisibility(View.VISIBLE);
+            toastView.bringToFront();
+            toastView.startAnimation(AnimationUtils.loadAnimation(mLatinIME, R.anim.fade_in));
+        }
+        // A system toast is spoken by TalkBack, so this view must be spoken too.
+        toastView.announceForAccessibility(text);
 
-        mFakeToastView.postDelayed(() -> {
-            mFakeToastView.startAnimation(AnimationUtils.loadAnimation(mLatinIME, R.anim.fade_out));
-            mFakeToastView.setVisibility(View.GONE);
-        }, timeMillis);
+        mHideFakeToast = () -> {
+            toastView.startAnimation(AnimationUtils.loadAnimation(mLatinIME, R.anim.fade_out));
+            toastView.setVisibility(View.GONE);
+        };
+        toastView.postDelayed(mHideFakeToast, timeMillis);
     }
 
     // Implements {@link KeyboardState.SwitchActions}.

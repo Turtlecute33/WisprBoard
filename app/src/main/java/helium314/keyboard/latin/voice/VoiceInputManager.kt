@@ -9,7 +9,6 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
-import android.widget.Toast
 import androidx.annotation.StringRes
 import helium314.keyboard.compat.credentialProtectedDataDir
 import helium314.keyboard.compat.isUserLocked
@@ -177,12 +176,12 @@ class VoiceInputManager(
         val prefs = context.prefs()
 
         if (!prefs.getBoolean(Settings.PREF_VOICE_INPUT_ENABLED, Defaults.PREF_VOICE_INPUT_ENABLED)) {
-            Toast.makeText(context, R.string.voice_error_not_enabled, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_not_enabled)
             return
         }
 
         callbacks.getBlockedErrorResId()?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            showImeToast(context, it)
             return
         }
 
@@ -199,7 +198,7 @@ class VoiceInputManager(
         if (!useDedicatedStt && !prefs.getBoolean(
                 Settings.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED, Defaults.PREF_VOICE_TRADITIONAL_BUTTON_ENABLED)) {
             if (!prefs.getBoolean(Settings.PREF_VOICE_STT_ENABLED, Defaults.PREF_VOICE_STT_ENABLED)) {
-                Toast.makeText(context, R.string.voice_error_not_enabled, Toast.LENGTH_SHORT).show()
+                showImeToast(context, R.string.voice_error_not_enabled)
                 return
             }
             currentUseDedicatedStt = true
@@ -207,29 +206,29 @@ class VoiceInputManager(
 
         // Before the first unlock, credential-encrypted storage is not available for the clip.
         if (isUserLocked(context)) {
-            Toast.makeText(context, R.string.voice_error_user_locked, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_user_locked)
             return
         }
 
         if (!SecretStore.isSecureStorageAvailable(context)) {
-            Toast.makeText(context, R.string.voice_error_secure_storage_unavailable, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_secure_storage_unavailable)
             return
         }
 
         val provider = AiProvider.fromPref(prefs.getString(Settings.PREF_AI_PROVIDER, Defaults.PREF_AI_PROVIDER))
         val apiKey = SecretStore.getApiKey(context, provider.apiKeyPrefKey(), provider.defaultApiKey())
         if (apiKey.isBlank()) {
-            Toast.makeText(context, R.string.voice_error_no_api_key, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_no_api_key)
             return
         }
 
         if (!PermissionsUtil.checkAllPermissionsGranted(context, Manifest.permission.RECORD_AUDIO)) {
-            Toast.makeText(context, R.string.voice_error_no_permission, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_no_permission)
             return
         }
 
         if (!isNetworkAvailable(context)) {
-            Toast.makeText(context, R.string.voice_error_no_network, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_no_network)
             return
         }
 
@@ -273,7 +272,7 @@ class VoiceInputManager(
             currentAudioFile?.takeIf { it.exists() }?.delete()
             currentAudioFile = null
             // Nothing was recorded or sent, so not "transcription failed" (R-20).
-            Toast.makeText(context, R.string.voice_error_mic_unavailable, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_mic_unavailable)
             return
         }
 
@@ -322,13 +321,13 @@ class VoiceInputManager(
      */
     private fun startOnDeviceRecording(prefs: SharedPreferences) {
         if (!PermissionsUtil.checkAllPermissionsGranted(context, Manifest.permission.RECORD_AUDIO)) {
-            Toast.makeText(context, R.string.voice_error_no_permission, Toast.LENGTH_SHORT).show()
+            showImeToast(context, R.string.voice_error_no_permission)
             return
         }
         // The explicit SDK_INT check is what lets us construct the API 31+ recognizer below; the
         // availability call alone tells lint nothing.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !isOnDeviceRecognitionAvailable(context)) {
-            Toast.makeText(context, R.string.voice_error_on_device_unavailable, Toast.LENGTH_LONG).show()
+            showImeToast(context, R.string.voice_error_on_device_unavailable, long = true)
             return
         }
 
@@ -378,7 +377,7 @@ class VoiceInputManager(
         if (!recognizer.start(listener, localeHint, maxDurationSec * 1000L)) {
             onDeviceRecognizer = null
             state = State.IDLE
-            Toast.makeText(context, R.string.voice_error_on_device_unavailable, Toast.LENGTH_LONG).show()
+            showImeToast(context, R.string.voice_error_on_device_unavailable, long = true)
             return
         }
         callbacks.onRecordingStarted()

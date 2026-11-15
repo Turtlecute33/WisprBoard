@@ -34,7 +34,6 @@ import android.view.inputmethod.InlineSuggestionsRequest;
 import android.view.inputmethod.InlineSuggestionsResponse;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodSubtype;
-import android.widget.Toast;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.compat.ConfigurationCompatKt;
@@ -704,7 +703,7 @@ public class LatinIME extends InputMethodService implements
                             mVoiceInputManager.getCurrentDurationMs()));
                     mSuggestionStripView.showRecordingOverlay();
                 } else {
-                    Toast.makeText(LatinIME.this, R.string.voice_recording, Toast.LENGTH_SHORT).show();
+                    mKeyboardSwitcher.showToast(R.string.voice_recording, true);
                 }
             }
 
@@ -712,7 +711,7 @@ public class LatinIME extends InputMethodService implements
             public void onTranscribing() {
                 if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(15L);
                 if (mSuggestionStripView != null) mSuggestionStripView.showTranscribingOverlay();
-                else Toast.makeText(LatinIME.this, R.string.voice_transcribing, Toast.LENGTH_SHORT).show();
+                else mKeyboardSwitcher.showToast(R.string.voice_transcribing, true);
             }
 
             @Override
@@ -765,7 +764,7 @@ public class LatinIME extends InputMethodService implements
                 final Integer blocked = getBlockedErrorResId();
                 if (blocked != null) {
                     Log.i(TAG, "Discarding transcription: editor no longer accepts voice input");
-                    Toast.makeText(LatinIME.this, blocked, Toast.LENGTH_LONG).show();
+                    mKeyboardSwitcher.showToast(blocked, false);
                     return;
                 }
                 if (isVoiceHapticEnabled())
@@ -778,13 +777,13 @@ public class LatinIME extends InputMethodService implements
                 clearVoiceTarget();
                 if (isVoiceHapticEnabled())
                     AudioAndHapticFeedbackManager.getInstance().vibrateVoiceError();
-                Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
+                mKeyboardSwitcher.showToast(message, false);
             }
 
             @Override
             public void onMaxDurationReached() {
                 if (isVoiceHapticEnabled()) AudioAndHapticFeedbackManager.getInstance().vibrate(50L);
-                Toast.makeText(LatinIME.this, R.string.voice_max_duration_reached, Toast.LENGTH_LONG).show();
+                mKeyboardSwitcher.showToast(R.string.voice_max_duration_reached, false);
             }
 
             @Nullable
@@ -882,7 +881,7 @@ public class LatinIME extends InputMethodService implements
                 // shown: both together made TalkBack say the error two times (R-24). Auto-hide a
                 // few seconds later so it doesn't linger after they move on.
                 if (!isSuggestionStripShown()) {
-                    Toast.makeText(LatinIME.this, message, Toast.LENGTH_LONG).show();
+                    mKeyboardSwitcher.showToast(message, false);
                 } else {
                     mSuggestionStripView.showTextFixError(message);
                     final SuggestionStripView strip = mSuggestionStripView;
@@ -968,12 +967,12 @@ public class LatinIME extends InputMethodService implements
         if (IsLockedCompatKt.isDeviceLocked(this)) return;
         // The language menu shows only in the strip. Check before the clipboard is read.
         if (!isSuggestionStripShown()) {
-            Toast.makeText(this, R.string.ai_needs_suggestion_strip, Toast.LENGTH_LONG).show();
+            mKeyboardSwitcher.showToast(R.string.ai_needs_suggestion_strip, false);
             return;
         }
         final String reason = mTranslateManager.unavailableReason();
         if (reason != null) {
-            Toast.makeText(this, reason, Toast.LENGTH_LONG).show();
+            mKeyboardSwitcher.showToast(reason, false);
             return;
         }
         CharSequence source = null;
@@ -987,7 +986,7 @@ public class LatinIME extends InputMethodService implements
             final int selectionLength = Math.abs(mInputLogic.mConnection.getExpectedSelectionEnd()
                     - mInputLogic.mConnection.getExpectedSelectionStart());
             if (selectionLength > TranslateManagerKt.TRANSLATE_MAX_INPUT_LENGTH) {
-                Toast.makeText(this, R.string.translate_error_too_long, Toast.LENGTH_LONG).show();
+                mKeyboardSwitcher.showToast(R.string.translate_error_too_long, false);
                 return;
             }
             try {
@@ -997,7 +996,7 @@ public class LatinIME extends InputMethodService implements
             }
         }
         if (source == null || source.toString().trim().isEmpty()) {
-            Toast.makeText(this, R.string.translate_error_no_selection, Toast.LENGTH_LONG).show();
+            mKeyboardSwitcher.showToast(R.string.translate_error_no_selection, false);
             return;
         }
         // Voice, Text Fix and Translate all take over the suggestion strip; make them mutually
@@ -1088,9 +1087,9 @@ public class LatinIME extends InputMethodService implements
         // and drop the text in a blocked field (no clipboard rescue, like the voice path).
         final Integer blocked = currentFieldBlockedErrorResId();
         if (blocked != null) {
-            Toast.makeText(this, blocked == R.string.text_fix_error_sensitive_field
+            mKeyboardSwitcher.showToast(blocked == R.string.text_fix_error_sensitive_field
                     ? R.string.translate_error_sensitive_field
-                    : R.string.translate_error_unsupported_field, Toast.LENGTH_LONG).show();
+                    : R.string.translate_error_unsupported_field, false);
             return;
         }
         // Compose apps share one InputConnection host, so also compare the connection itself.
@@ -1147,7 +1146,7 @@ public class LatinIME extends InputMethodService implements
      */
     private void rescueTranscription(@NonNull final String text) {
         mClipboardHistoryManager.copyToSystemClipboard(text);
-        Toast.makeText(this, R.string.voice_copied_field_changed, Toast.LENGTH_LONG).show();
+        mKeyboardSwitcher.showToast(R.string.voice_copied_field_changed, false);
     }
 
     /**
@@ -1159,7 +1158,7 @@ public class LatinIME extends InputMethodService implements
      */
     private void rescueTranslation(@NonNull final String translated) {
         mClipboardHistoryManager.copyToSystemClipboard(translated);
-        Toast.makeText(this, R.string.translate_copied_selection_changed, Toast.LENGTH_LONG).show();
+        mKeyboardSwitcher.showToast(R.string.translate_copied_selection_changed, false);
     }
 
     /**
@@ -1180,7 +1179,7 @@ public class LatinIME extends InputMethodService implements
         // The strip is unavailable in ToolbarMode.HIDDEN, during emoji search, and while the
         // clipboard panel owns the view, so a toast is the only channel there.
         if (!isSuggestionStripShown()) {
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+            mKeyboardSwitcher.showToast(message, false);
             clearPendingTranslateState();
             return;
         }
@@ -1254,11 +1253,11 @@ public class LatinIME extends InputMethodService implements
         try {
             selected = mInputLogic.mConnection.getSelectedText(0);
         } catch (Exception e) {
-            Toast.makeText(this, R.string.text_fix_error_selection_changed, Toast.LENGTH_LONG).show();
+            mKeyboardSwitcher.showToast(R.string.text_fix_error_selection_changed, false);
             return;
         }
         if (selected == null || !original.contentEquals(selected)) {
-            Toast.makeText(this, R.string.text_fix_error_selection_changed, Toast.LENGTH_LONG).show();
+            mKeyboardSwitcher.showToast(R.string.text_fix_error_selection_changed, false);
             return;
         }
         cancelPendingTextFixErrorOverlayHide();
@@ -1876,7 +1875,7 @@ public class LatinIME extends InputMethodService implements
      */
     private void noticeAiRequestCancelled(final boolean wasRunning) {
         if (wasRunning && !isAiRequestRunning()) {
-            Toast.makeText(this, R.string.ai_request_cancelled, Toast.LENGTH_SHORT).show();
+            mKeyboardSwitcher.showToast(R.string.ai_request_cancelled, true);
         }
     }
 
@@ -2296,7 +2295,7 @@ public class LatinIME extends InputMethodService implements
                     if (IsLockedCompatKt.isDeviceLocked(this)) return;
                     // The proposal and Replace show only in the strip: no strip, no paid request.
                     if (!isSuggestionStripShown()) {
-                        Toast.makeText(this, R.string.ai_needs_suggestion_strip, Toast.LENGTH_LONG).show();
+                        mKeyboardSwitcher.showToast(R.string.ai_needs_suggestion_strip, false);
                         return;
                     }
                     // onWorking cancels voice and Translate after the checks pass.
