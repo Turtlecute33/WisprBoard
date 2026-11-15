@@ -15,6 +15,7 @@ import androidx.core.view.isGone
 import helium314.keyboard.compat.ClipboardManagerCompat
 import helium314.keyboard.compat.isDeviceLocked
 import helium314.keyboard.event.HapticEvent
+import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.isValidNumber
@@ -162,7 +163,7 @@ class ClipboardHistoryManager(
         latinIME.mSettings.getCustomTypeface()?.let { textView.typeface = it }
         textView.text = (if (isClipSensitive(clipData.description, inputType)) "*".repeat(content.length) else content)
             .take(200) // truncate displayed text for performance reasons
-        val clipIcon = latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.PASTE.name.lowercase())
+        val clipIcon = KeyboardIconsSet.instance.getIconDrawable(ToolbarKey.PASTE.name.lowercase())
         textView.setCompoundDrawablesRelativeWithIntrinsicBounds(clipIcon, null, null, null)
         textView.setOnClickListener {
             dontShowCurrentSuggestion = true
@@ -171,7 +172,7 @@ class ClipboardHistoryManager(
             binding.root.isGone = true
         }
         val closeButton = binding.clipboardSuggestionClose
-        closeButton.setImageDrawable(latinIME.mKeyboardSwitcher.keyboard.mIconsSet.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
+        closeButton.setImageDrawable(KeyboardIconsSet.instance.getIconDrawable(ToolbarKey.CLOSE_HISTORY.name.lowercase()))
         closeButton.setOnClickListener { removeClipboardSuggestion() }
 
         val colors = latinIME.mSettings.current.mColors
