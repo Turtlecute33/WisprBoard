@@ -439,7 +439,7 @@ class SuggestTest {
             getSuggestedWords(false, "", WordComposer.CAPS_MODE_AUTO_SHIFT_LOCKED).mSuggestedWordInfoList.map { it.mWord })
     }
 
-    @Test fun `no autocorrect if more than one uppercase character in typed word, but not all uppercase`() {
+    @Test fun `no autocorrect if more than one uppercase character in typed word`() {
         enableAutocorrect(thresholdVeryAggressive)
         tapTypingSuggestions = suggestionResults(listOf(
             suggestion("but", 650000),
@@ -461,9 +461,10 @@ class SuggestTest {
         assert(!result3.mWillAutoCorrect)
         assertEquals(listOf("BUr", "but", "bit", "buy", "😢", "Butter"), result3.mSuggestedWordInfoList.map { it.mWord })
 
+        // todo: maybe we want autocorrect in this case? especially because it works with manual shift mode, so it would feel more consistent
         val result4 = getSuggestedWords(false, "BUR", WordComposer.CAPS_MODE_OFF)
-        assert(result4.mWillAutoCorrect)
-        assertEquals(listOf("BUR", "BUT", "BUR", "BIT", "BUY", "😢", "BUTTER"), result4.mSuggestedWordInfoList.map { it.mWord })
+        assert(!result4.mWillAutoCorrect)
+        assertEquals(listOf("BUR", "BUT", "BIT", "BUY", "😢", "BUTTER"), result4.mSuggestedWordInfoList.map { it.mWord })
     }
 
     @Test fun `suggestions use manual caps modes`() {

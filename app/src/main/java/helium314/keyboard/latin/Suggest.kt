@@ -205,7 +205,9 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             || !wordComposer.isComposingWord // If we are doing prediction, then we never auto-correct of course
             || suggestionResults.isEmpty() // If we don't have suggestion results, we can't evaluate the first suggestion for auto-correction
             || wordComposer.hasDigits() // If the word has digits, we never auto-correct because it's likely the word was type with a lot of care // todo: but what if user touched the number row?
-            || (wordComposer.isMostlyCaps && !wordComposer.isAllUpperCase) // If the word is mostly caps, we never auto-correct because this is almost certainly intentional
+            // If the word is mostly caps, we never auto-correct because this is almost certainly intentional.
+            // This includes a word in all caps: an abbreviation that is not in the dictionary must stay as typed.
+            || wordComposer.isMostlyCaps
             || wordComposer.isResumed // We never auto-correct when suggestions are resumed because it would be unexpected
             // If we don't have a main dictionary, we never want to auto-correct. The reason
             // for this is, the user may have a contact whose name happens to match a valid
