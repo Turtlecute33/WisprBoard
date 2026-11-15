@@ -44,6 +44,7 @@ You're chatting in English, Italian, German, whatever isn't your strongest. You 
 
 - Works in every language your model supports
 - Good for typos, clumsy phrasing, or shifting tone (formal ↔ casual)
+- No selection? The first Fix selects the full text of the field, and the second Fix sends it. Nothing goes out before you see the selection
 - Review the message and decide if you want to replace the original one. Tap the proposal to read the full text
 
 <br>
