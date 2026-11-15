@@ -498,6 +498,10 @@ class DictionaryFacilitatorImpl : DictionaryFacilitator {
             if (dictionaryGroups.none { it.getSubDict(Dictionary.TYPE_USER_HISTORY) === userHistoryDictionary })
                 return@launch
             UserHistoryDictionary.addToDictionary(userHistoryDictionary, ngramContext, wordToUse, isValid, timeStampInSeconds)
+            // The file is written when the user leaves the field, and that can be before this add.
+            // Write it again when no more words wait, so that the end of the process does not lose them.
+            if (synchronized(wordsWaitingForHistory) { wordsWaitingForHistory.isEmpty() })
+                userHistoryDictionary.onFinishInput()
         }
         // we use the original word, because that's the one that is "unlearned" when the user corrects the word
         synchronized(wordsWaitingForHistory) { wordsWaitingForHistory[word] = addJob }
