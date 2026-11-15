@@ -836,6 +836,20 @@ public class LatinIME extends InputMethodService implements
             }
 
             @Override
+            public boolean selectAllText() {
+                final RichInputConnection connection = mInputLogic.mConnection;
+                // With a selection, "select all" is a toggle and would remove it.
+                if (connection.hasSelection()) return false;
+                final CharSequence before = connection.getTextBeforeCursor(1, 0);
+                if ((before == null || before.length() == 0) && !connection.hasTextAfterCursor()) {
+                    return false;
+                }
+                // The same path as the toolbar key, so that a word in composition is handled the same way.
+                onCodeInput(KeyCode.CLIPBOARD_SELECT_ALL, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
+                return true;
+            }
+
+            @Override
             public void onWorking() {
                 // Cancel the other AI features only now, after all Text Fix checks passed.
                 cancelVoiceRecordingIfCapturing();

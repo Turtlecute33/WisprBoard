@@ -96,6 +96,8 @@ class TextFixManager(
         fun getBlockedErrorResId(): Int?
         /** Return the currently selected text, or null/empty if nothing is selected. */
         fun getSelectedText(): CharSequence?
+        /** Select all text of the field. Return false when there is nothing to select. */
+        fun selectAllText(): Boolean
         fun onWorking()
         fun onFinished()
         fun onResult(originalText: String, proposedText: String)
@@ -141,7 +143,11 @@ class TextFixManager(
 
         val selected = callbacks.getSelectedText()?.toString().orEmpty()
         if (selected.isBlank()) {
-            Toast.makeText(context, R.string.text_fix_error_no_selection, Toast.LENGTH_SHORT).show()
+            // No text goes out without a selection that the user can see. Select the full text
+            // and let a second press send it.
+            val message = if (callbacks.selectAllText()) R.string.text_fix_all_text_selected
+                else R.string.text_fix_error_no_selection
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             return
         }
         if (selected.length > MAX_INPUT_LENGTH) {
