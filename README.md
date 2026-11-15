@@ -116,7 +116,7 @@ cd WisprBoard
 ./gradlew assembleDebug
 ```
 
-Needs JDK 17, Android SDK 35, NDK `28.0.13004108`. APK lands in `app/build/outputs/apk/debug/`.
+Needs JDK 21, Android SDK 35, NDK `28.0.13004108`. APK lands in `app/build/outputs/apk/debug/`.
 
 <details>
 <summary>Dependency verification</summary>
