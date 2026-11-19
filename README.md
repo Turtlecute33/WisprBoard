@@ -94,6 +94,8 @@ WisprBoard has no backend, no analytics, no tracking. Once your audio or selecte
 
 Requests to OpenRouter include three [app attribution](https://openrouter.ai/docs/app-attribution) headers: the app name, the URL of this repository and the category `writing-assistant`. These headers contain no user data. OpenRouter uses them to show the total use of all WisprBoard users in its public app rankings. Requests to PayPerQ do not include these headers.
 
+*WisprBoard Settings → About → Support* has links to donate and to the developer on X and Nostr. They open in your browser. The app itself does not connect to these hosts.
+
 
 <br>
 

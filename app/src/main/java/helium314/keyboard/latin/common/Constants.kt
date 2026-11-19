@@ -23,6 +23,10 @@ object Links {
      * selectable when the device ships without a recogniser of its own.
      */
     const val ON_DEVICE_SPEECH_SERVICE = "https://play.google.com/store/apps/details?id=com.google.android.tts"
+    /** Support links on the About screen. The browser opens them; the keyboard does not connect to these hosts. */
+    const val DONATE = "https://btcpay.priorato.org/api/v1/invoices?storeId=31ntjiLSTmSSuTC6FrR81z6AAku46bLF2FKAL3MFHtV5&orderId=Donation&checkoutDesc=Donation&currency=USD"
+    const val X = "https://x.com/turtlecute33"
+    const val NOSTR = "https://primal.net/turtlecute"
 }
 
 val combiningRange = 0x300..0x35b

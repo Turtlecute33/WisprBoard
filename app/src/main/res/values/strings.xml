@@ -874,6 +874,15 @@ New dictionary:
     <string name="license">Open-source license</string>
     <!-- license link for about screen-->
     <string name="gnu_gpl">GNU General Public License v3.0</string>
+    <!-- Title of the group with the donation and contact links on the about screen -->
+    <string name="settings_category_support">Support</string>
+    <!-- Donation link on the about screen -->
+    <string name="support_donate">Donate bitcoin</string>
+    <string name="support_donate_summary" translatable="false">btcpay.priorato.org</string>
+    <string name="support_x" translatable="false">X</string>
+    <string name="support_x_summary" translatable="false">\@turtlecute33</string>
+    <string name="support_nostr" translatable="false">Nostr</string>
+    <string name="support_nostr_summary" translatable="false">turtlecute@primal.net</string>
     <!-- Button to close a dialog where neither "ok" nor "cancel" are suitable. Preferably 10 characters or less. -->
     <string name="dialog_close">Close</string>
     <!-- Hint for users to tap the languages for settings -->

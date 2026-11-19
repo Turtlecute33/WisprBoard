@@ -11,6 +11,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,6 +63,10 @@ fun AboutScreen(
         SettingsWithoutKey.GITHUB_WIKI,
         SettingsWithoutKey.GITHUB,
         SettingsWithoutKey.SAVE_LOG,
+        R.string.settings_category_support,
+        SettingsWithoutKey.SUPPORT_DONATE,
+        SettingsWithoutKey.SUPPORT_X,
+        SettingsWithoutKey.SUPPORT_NOSTR,
     )
     SearchSettingsScreen(
         onClickBack = onClickBack,
@@ -206,7 +212,29 @@ fun createAboutSettings(context: Context) = listOf(
             icon = R.drawable.ic_settings_about_log
         )
     },
+    supportSetting(context, SettingsWithoutKey.SUPPORT_DONATE, R.string.support_donate, R.string.support_donate_summary,
+        Links.DONATE, R.drawable.ic_settings_support_donate),
+    supportSetting(context, SettingsWithoutKey.SUPPORT_X, R.string.support_x, R.string.support_x_summary,
+        Links.X, R.drawable.ic_settings_support_x),
+    supportSetting(context, SettingsWithoutKey.SUPPORT_NOSTR, R.string.support_nostr, R.string.support_nostr_summary,
+        Links.NOSTR, R.drawable.ic_settings_support_nostr),
 )
+
+/**
+ * A row that opens a fixed https [url] in the browser. With no browser, the click does nothing:
+ * a crash would also stop the keyboard, which shares the process.
+ */
+private fun supportSetting(
+    context: Context, key: String, @StringRes title: Int, @StringRes summary: Int, url: String, @DrawableRes icon: Int
+) = Setting(context, key, title, summary) {
+    val ctx = LocalContext.current
+    Preference(
+        name = it.title,
+        description = it.description,
+        onClick = { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
+        icon = icon
+    )
+}
 
 @Preview
 @Composable
