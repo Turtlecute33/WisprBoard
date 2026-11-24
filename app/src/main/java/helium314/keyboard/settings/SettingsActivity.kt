@@ -149,6 +149,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             && System.currentTimeMillis() < END_DATE_EPOCH_MILLIS + TWO_WEEKS_IN_MILLIS
                         ) {
                             GestureDataPromotionReminderDialog()
+                        } else {
+                            DonatePrompt(this@SettingsActivity)
                         }
                     }
                     if (dictUri != null) {

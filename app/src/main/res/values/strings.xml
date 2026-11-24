@@ -883,6 +883,11 @@ New dictionary:
     <string name="support_x_summary" translatable="false">\@turtlecute33</string>
     <string name="support_nostr" translatable="false">Nostr</string>
     <string name="support_nostr_summary" translatable="false">turtlecute@primal.net</string>
+    <!-- Donation card when Settings opens from the launcher (DonatePrompt) -->
+    <string name="donate_title">Enjoying WisprBoard?</string>
+    <string name="donate_text">Buy the dev a beer or send a few sats. Sats buy AI tokens for security reviews. Beer buys a happy dev.</string>
+    <string name="donate_action">Donate</string>
+    <string name="donate_later">Remind me in 3 months</string>
     <!-- Button to close a dialog where neither "ok" nor "cancel" are suitable. Preferably 10 characters or less. -->
     <string name="dialog_close">Close</string>
     <!-- Hint for users to tap the languages for settings -->

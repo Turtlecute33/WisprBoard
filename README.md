@@ -96,6 +96,8 @@ Requests to OpenRouter include three [app attribution](https://openrouter.ai/doc
 
 *WisprBoard Settings → About → Support* has links to donate and to the developer on X and Nostr. They open in your browser. The app itself does not connect to these hosts.
 
+A small donation card shows when you open WisprBoard Settings from the launcher: first 7 days after the install, then at most once each 3 months. It never shows in the keyboard, sends no notification and makes no request.
+
 
 <br>
 
